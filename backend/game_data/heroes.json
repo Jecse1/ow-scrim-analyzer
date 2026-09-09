@@ -1,0 +1,1444 @@
+{
+  "_meta": {
+    "note": "SSOT. 정본 키=로그 표기. 승인 델타: (A)banpick dmon, (E)KHM 프레야/벤데타/우양.",
+    "generated_by": "scripts/make_game_data_json.py"
+  },
+  "heroes": [
+    {
+      "id": "dva",
+      "logName": "D.Va",
+      "en": "D.Va",
+      "ko": "D.Va",
+      "displayKo": "디바",
+      "role": "tank",
+      "image": "dva",
+      "aliases": [
+        "디바"
+      ],
+      "skills": {
+        "Ability 1": "부스터",
+        "Ability 2": "마이크로 미사일",
+        "Ultimate": "자폭"
+      },
+      "koreanHeroMap": {
+        "디바": "D.Va"
+      },
+      "roleForms": [
+        "디바",
+        "D.Va"
+      ],
+      "banpick": {
+        "id": "dva",
+        "name": "디바",
+        "role": "Tank",
+        "order": 0
+      }
+    },
+    {
+      "id": "doomfist",
+      "logName": "둠피스트",
+      "en": "Doomfist",
+      "ko": "둠피스트",
+      "role": "tank",
+      "image": "둠피스트",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "지진 강타",
+        "Ability 2": "파워 블락",
+        "Ultimate": "파멸의 일격"
+      },
+      "koreanHeroMap": {
+        "둠피스트": "Doomfist"
+      },
+      "roleForms": [
+        "둠피스트",
+        "Doomfist"
+      ],
+      "banpick": {
+        "id": "doomfist",
+        "name": "둠피스트",
+        "role": "Tank",
+        "order": 1
+      }
+    },
+    {
+      "id": "junkerqueen",
+      "logName": "정커퀸",
+      "en": "Junker Queen",
+      "ko": "정커퀸",
+      "role": "tank",
+      "image": "정커퀸",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "지휘의 외침",
+        "Ability 2": "육식 도살",
+        "Ultimate": "광란"
+      },
+      "koreanHeroMap": {
+        "정커퀸": "Junker Queen"
+      },
+      "roleForms": [
+        "정커퀸",
+        "Junker Queen"
+      ],
+      "banpick": {
+        "id": "junker-queen",
+        "name": "정커퀸",
+        "role": "Tank",
+        "order": 11
+      }
+    },
+    {
+      "id": "mauga",
+      "logName": "마우가",
+      "en": "Mauga",
+      "ko": "마우가",
+      "role": "tank",
+      "image": "마우가",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "돌파",
+        "Ability 2": "터질 듯한 심장",
+        "Ultimate": "케이지 혈투"
+      },
+      "koreanHeroMap": {
+        "마우가": "Mauga"
+      },
+      "roleForms": [
+        "마우가",
+        "Mauga"
+      ],
+      "banpick": {
+        "id": "mauga",
+        "name": "마우가",
+        "role": "Tank",
+        "order": 6
+      }
+    },
+    {
+      "id": "orisa",
+      "logName": "오리사",
+      "en": "Orisa",
+      "ko": "오리사",
+      "role": "tank",
+      "image": "오리사",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "방어 강화",
+        "Ability 2": "투창",
+        "Ultimate": "대지의 창"
+      },
+      "koreanHeroMap": {
+        "오리사": "Orisa"
+      },
+      "roleForms": [
+        "오리사",
+        "Orisa"
+      ],
+      "banpick": {
+        "id": "orisa",
+        "name": "오리사",
+        "role": "Tank",
+        "order": 8
+      }
+    },
+    {
+      "id": "ramattra",
+      "logName": "라마트라",
+      "en": "Ramattra",
+      "ko": "라마트라",
+      "role": "tank",
+      "image": "라마트라",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "네메시스 형태",
+        "Ability 2": "탐식의 소용돌이",
+        "Ultimate": "절멸"
+      },
+      "koreanHeroMap": {
+        "라마트라": "Ramattra"
+      },
+      "roleForms": [
+        "라마트라",
+        "Ramattra"
+      ],
+      "banpick": {
+        "id": "ramattra",
+        "name": "라마트라",
+        "role": "Tank",
+        "order": 2
+      }
+    },
+    {
+      "id": "reinhardt",
+      "logName": "라인하르트",
+      "en": "Reinhardt",
+      "ko": "라인하르트",
+      "role": "tank",
+      "image": "라인하르트",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "돌진",
+        "Ability 2": "화염 강타",
+        "Ultimate": "대지분쇄"
+      },
+      "koreanHeroMap": {
+        "라인하르트": "Reinhardt"
+      },
+      "roleForms": [
+        "라인하르트",
+        "Reinhardt"
+      ],
+      "banpick": {
+        "id": "reinhardt",
+        "name": "라인하르트",
+        "role": "Tank",
+        "order": 3
+      }
+    },
+    {
+      "id": "roadhog",
+      "logName": "로드호그",
+      "en": "Roadhog",
+      "ko": "로드호그",
+      "role": "tank",
+      "image": "로드호그",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "갈고리 사슬",
+        "Ability 2": "숨 돌리기",
+        "Ultimate": "돼재앙"
+      },
+      "koreanHeroMap": {
+        "로드호그": "Roadhog"
+      },
+      "roleForms": [
+        "로드호그",
+        "Roadhog"
+      ],
+      "banpick": {
+        "id": "roadhog",
+        "name": "로드호그",
+        "role": "Tank",
+        "order": 5
+      }
+    },
+    {
+      "id": "sigma",
+      "logName": "시그마",
+      "en": "Sigma",
+      "ko": "시그마",
+      "role": "tank",
+      "image": "시그마",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "키네틱 손아귀",
+        "Ability 2": "강착",
+        "Ultimate": "중력 붕괴"
+      },
+      "koreanHeroMap": {
+        "시그마": "Sigma"
+      },
+      "roleForms": [
+        "시그마",
+        "Sigma"
+      ],
+      "banpick": {
+        "id": "sigma",
+        "name": "시그마",
+        "role": "Tank",
+        "order": 7
+      }
+    },
+    {
+      "id": "winston",
+      "logName": "윈스턴",
+      "en": "Winston",
+      "ko": "윈스턴",
+      "role": "tank",
+      "image": "윈스턴",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "점프 팩",
+        "Ability 2": "방벽 생성기",
+        "Ultimate": "원시의 분노"
+      },
+      "koreanHeroMap": {
+        "윈스턴": "Winston"
+      },
+      "roleForms": [
+        "윈스턴",
+        "Winston"
+      ],
+      "banpick": {
+        "id": "winston",
+        "name": "윈스턴",
+        "role": "Tank",
+        "order": 9
+      }
+    },
+    {
+      "id": "wreckingball",
+      "logName": "레킹볼",
+      "en": "Wrecking Ball",
+      "ko": "레킹볼",
+      "role": "tank",
+      "image": "레킹볼",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "구르기",
+        "Ability 2": "적응형 보호막",
+        "Ultimate": "지뢰밭"
+      },
+      "koreanHeroMap": {
+        "레킹볼": "Wrecking Ball"
+      },
+      "roleForms": [
+        "레킹볼",
+        "Wrecking Ball"
+      ],
+      "banpick": {
+        "id": "wrecking-ball",
+        "name": "레킹볼",
+        "role": "Tank",
+        "order": 4
+      }
+    },
+    {
+      "id": "zarya",
+      "logName": "자리야",
+      "en": "Zarya",
+      "ko": "자리야",
+      "role": "tank",
+      "image": "자리야",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "입자 방벽",
+        "Ability 2": "방벽 씌우기",
+        "Ultimate": "중력자탄"
+      },
+      "koreanHeroMap": {
+        "자리야": "Zarya"
+      },
+      "roleForms": [
+        "자리야",
+        "Zarya"
+      ],
+      "banpick": {
+        "id": "zarya",
+        "name": "자리야",
+        "role": "Tank",
+        "order": 10
+      }
+    },
+    {
+      "id": "hazard",
+      "logName": "해저드",
+      "en": "Hazard",
+      "ko": "해저드",
+      "role": "tank",
+      "image": "해저드",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "가시",
+        "Ability 2": "매복",
+        "Ultimate": "폭우"
+      },
+      "koreanHeroMap": {
+        "해저드": "Hazard"
+      },
+      "roleForms": [
+        "해저드",
+        "Hazard"
+      ],
+      "banpick": {
+        "id": "hazard",
+        "name": "해저드",
+        "role": "Tank",
+        "order": 12
+      }
+    },
+    {
+      "id": "domina",
+      "logName": "도미나",
+      "en": "Domina",
+      "ko": "도미나",
+      "role": "tank",
+      "image": "도미나",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "소닉 리펄서",
+        "Ability 2": "수정 발사",
+        "Ultimate": "판옵티콘"
+      },
+      "koreanHeroMap": {
+        "도미나": "Domina"
+      },
+      "roleForms": [
+        "도미나",
+        "Domina"
+      ],
+      "banpick": {
+        "id": "domina",
+        "name": "도미나",
+        "role": "Tank",
+        "order": 13
+      }
+    },
+    {
+      "id": "dmon",
+      "logName": "D.Mon",
+      "en": "D.Mon",
+      "ko": "D.Mon",
+      "displayKo": "디몬",
+      "role": "tank",
+      "image": "디몬",
+      "aliases": [
+        "디몬"
+      ],
+      "skills": {
+        "Ability 1": "추진기",
+        "Ability 2": "융합 연발총",
+        "Ultimate": "한계 돌파"
+      },
+      "koreanHeroMap": {
+        "디몬": "D.Mon"
+      },
+      "roleForms": [
+        "디몬",
+        "D.Mon"
+      ],
+      "banpick": {
+        "id": "dmon",
+        "name": "디몬",
+        "role": "Tank",
+        "order": 14
+      }
+    },
+    {
+      "id": "ashe",
+      "logName": "애쉬",
+      "en": "Ashe",
+      "ko": "애쉬",
+      "role": "damage",
+      "image": "애쉬",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "충격 샷건",
+        "Ability 2": "다이너마이트",
+        "Ultimate": "B.O.B"
+      },
+      "koreanHeroMap": {
+        "애쉬": "Ashe"
+      },
+      "roleForms": [
+        "애쉬",
+        "Ashe"
+      ],
+      "banpick": {
+        "id": "ashe",
+        "name": "애쉬",
+        "role": "Damage",
+        "order": 24
+      }
+    },
+    {
+      "id": "bastion",
+      "logName": "바스티온",
+      "en": "Bastion",
+      "ko": "바스티온",
+      "role": "damage",
+      "image": "바스티온",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "설정: 강습",
+        "Ability 2": "A-36 전술 수류탄",
+        "Ultimate": "설정: 포격"
+      },
+      "koreanHeroMap": {
+        "바스티온": "Bastion"
+      },
+      "roleForms": [
+        "바스티온",
+        "Bastion"
+      ],
+      "banpick": {
+        "id": "bastion",
+        "name": "바스티온",
+        "role": "Damage",
+        "order": 18
+      }
+    },
+    {
+      "id": "cassidy",
+      "logName": "캐서디",
+      "en": "Cassidy",
+      "ko": "캐서디",
+      "role": "damage",
+      "image": "캐서디",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "구르기",
+        "Ability 2": "자석 수류탄",
+        "Ultimate": "황야의 무법자"
+      },
+      "koreanHeroMap": {
+        "캐서디": "Cassidy"
+      },
+      "roleForms": [
+        "캐서디",
+        "Cassidy"
+      ],
+      "banpick": {
+        "id": "cassidy",
+        "name": "캐서디",
+        "role": "Damage",
+        "order": 28
+      }
+    },
+    {
+      "id": "echo",
+      "logName": "에코",
+      "en": "Echo",
+      "ko": "에코",
+      "role": "damage",
+      "image": "에코",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "비행",
+        "Ability 2": "광선 집중",
+        "Ultimate": "복제"
+      },
+      "koreanHeroMap": {
+        "에코": "Echo"
+      },
+      "roleForms": [
+        "에코",
+        "Echo"
+      ],
+      "banpick": {
+        "id": "echo",
+        "name": "에코",
+        "role": "Damage",
+        "order": 25
+      }
+    },
+    {
+      "id": "genji",
+      "logName": "겐지",
+      "en": "Genji",
+      "ko": "겐지",
+      "role": "damage",
+      "image": "겐지",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "질풍참",
+        "Ability 2": "튕겨내기",
+        "Ultimate": "용검"
+      },
+      "koreanHeroMap": {
+        "겐지": "Genji"
+      },
+      "roleForms": [
+        "겐지",
+        "Genji"
+      ],
+      "banpick": {
+        "id": "genji",
+        "name": "겐지",
+        "role": "Damage",
+        "order": 15
+      }
+    },
+    {
+      "id": "hanzo",
+      "logName": "한조",
+      "en": "Hanzo",
+      "ko": "한조",
+      "role": "damage",
+      "image": "한조",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "폭풍 화살",
+        "Ability 2": "음파 화살",
+        "Ultimate": "용의 일격"
+      },
+      "koreanHeroMap": {
+        "한조": "Hanzo"
+      },
+      "roleForms": [
+        "한조",
+        "Hanzo"
+      ],
+      "banpick": {
+        "id": "hanzo",
+        "name": "한조",
+        "role": "Damage",
+        "order": 33
+      }
+    },
+    {
+      "id": "junkrat",
+      "logName": "정크랫",
+      "en": "Junkrat",
+      "ko": "정크랫",
+      "role": "damage",
+      "image": "정크랫",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "충격 지뢰",
+        "Ability 2": "강철 덫",
+        "Ultimate": "죽이는 타이어"
+      },
+      "koreanHeroMap": {
+        "정크랫": "Junkrat"
+      },
+      "roleForms": [
+        "정크랫",
+        "Junkrat"
+      ],
+      "banpick": {
+        "id": "junkrat",
+        "name": "정크랫",
+        "role": "Damage",
+        "order": 27
+      }
+    },
+    {
+      "id": "mei",
+      "logName": "메이",
+      "en": "Mei",
+      "ko": "메이",
+      "role": "damage",
+      "image": "메이",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "급속 빙결",
+        "Ability 2": "빙벽",
+        "Ultimate": "눈보라"
+      },
+      "koreanHeroMap": {
+        "메이": "Mei"
+      },
+      "roleForms": [
+        "메이",
+        "Mei"
+      ],
+      "banpick": {
+        "id": "mei",
+        "name": "메이",
+        "role": "Damage",
+        "order": 17
+      }
+    },
+    {
+      "id": "pharah",
+      "logName": "파라",
+      "en": "Pharah",
+      "ko": "파라",
+      "role": "damage",
+      "image": "파라",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "점프 추진기",
+        "Ability 2": "충격탄",
+        "Ultimate": "포화"
+      },
+      "koreanHeroMap": {
+        "파라": "Pharah"
+      },
+      "roleForms": [
+        "파라",
+        "Pharah"
+      ],
+      "banpick": {
+        "id": "pharah",
+        "name": "파라",
+        "role": "Damage",
+        "order": 31
+      }
+    },
+    {
+      "id": "reaper",
+      "logName": "리퍼",
+      "en": "Reaper",
+      "ko": "리퍼",
+      "role": "damage",
+      "image": "리퍼",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "망령화",
+        "Ability 2": "그림자 밟기",
+        "Ultimate": "죽음의 꽃"
+      },
+      "koreanHeroMap": {
+        "리퍼": "Reaper"
+      },
+      "roleForms": [
+        "리퍼",
+        "Reaper"
+      ],
+      "banpick": {
+        "id": "reaper",
+        "name": "리퍼",
+        "role": "Damage",
+        "order": 16
+      }
+    },
+    {
+      "id": "sojourn",
+      "logName": "소전",
+      "en": "Sojourn",
+      "ko": "소전",
+      "role": "damage",
+      "image": "소전",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "파워 슬라이드",
+        "Ability 2": "분열 사격",
+        "Ultimate": "오버클럭"
+      },
+      "koreanHeroMap": {
+        "소전": "Sojourn"
+      },
+      "roleForms": [
+        "소전",
+        "Sojourn"
+      ],
+      "banpick": {
+        "id": "sojourn",
+        "name": "소전",
+        "role": "Damage",
+        "order": 20
+      }
+    },
+    {
+      "id": "soldier76",
+      "logName": "솔저: 76",
+      "en": "Soldier: 76",
+      "ko": "솔저: 76",
+      "role": "damage",
+      "image": "soldier76",
+      "aliases": [
+        "솔저 76",
+        "솔저76"
+      ],
+      "skills": {
+        "Ability 1": "질주",
+        "Ability 2": "생체장",
+        "Ultimate": "전술 조준경"
+      },
+      "koreanHeroMap": {
+        "솔저: 76": "Soldier: 76",
+        "솔저 76": "Soldier: 76"
+      },
+      "roleForms": [
+        "솔저: 76",
+        "솔저 76",
+        "솔저76",
+        "Soldier: 76"
+      ],
+      "banpick": {
+        "id": "soldier-76",
+        "name": "솔저 76",
+        "role": "Damage",
+        "order": 21
+      }
+    },
+    {
+      "id": "sombra",
+      "logName": "솜브라",
+      "en": "Sombra",
+      "ko": "솜브라",
+      "role": "damage",
+      "image": "솜브라",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "은신",
+        "Ability 2": "바이러스",
+        "Ultimate": "EMP"
+      },
+      "koreanHeroMap": {
+        "솜브라": "Sombra"
+      },
+      "roleForms": [
+        "솜브라",
+        "Sombra"
+      ],
+      "banpick": {
+        "id": "sombra",
+        "name": "솜브라",
+        "role": "Damage",
+        "order": 22
+      }
+    },
+    {
+      "id": "symmetra",
+      "logName": "시메트라",
+      "en": "Symmetra",
+      "ko": "시메트라",
+      "role": "damage",
+      "image": "시메트라",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "감시 포탑",
+        "Ability 2": "순간이동기",
+        "Ultimate": "광자 방벽"
+      },
+      "koreanHeroMap": {
+        "시메트라": "Symmetra"
+      },
+      "roleForms": [
+        "시메트라",
+        "Symmetra"
+      ],
+      "banpick": {
+        "id": "symmetra",
+        "name": "시메트라",
+        "role": "Damage",
+        "order": 23
+      }
+    },
+    {
+      "id": "torbjorn",
+      "logName": "토르비욘",
+      "en": "Torbjorn",
+      "ko": "토르비욘",
+      "role": "damage",
+      "image": "토르비욘",
+      "aliases": [
+        "Torbjörn"
+      ],
+      "skills": {
+        "Ability 1": "포탑 설치",
+        "Ability 2": "과부하",
+        "Ultimate": "초고열 용광로"
+      },
+      "koreanHeroMap": {
+        "토르비욘": "Torbjorn"
+      },
+      "roleForms": [
+        "토르비욘",
+        "Torbjorn",
+        "Torbjörn"
+      ],
+      "banpick": {
+        "id": "torbjorn",
+        "name": "토르비욘",
+        "role": "Damage",
+        "order": 29
+      }
+    },
+    {
+      "id": "tracer",
+      "logName": "트레이서",
+      "en": "Tracer",
+      "ko": "트레이서",
+      "role": "damage",
+      "image": "트레이서",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "점멸",
+        "Ability 2": "시간 역행",
+        "Ultimate": "펄스 폭탄"
+      },
+      "koreanHeroMap": {
+        "트레이서": "Tracer"
+      },
+      "roleForms": [
+        "트레이서",
+        "Tracer"
+      ],
+      "banpick": {
+        "id": "tracer",
+        "name": "트레이서",
+        "role": "Damage",
+        "order": 30
+      }
+    },
+    {
+      "id": "venture",
+      "logName": "벤처",
+      "en": "Venture",
+      "ko": "벤처",
+      "role": "damage",
+      "image": "벤처",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "잠복",
+        "Ability 2": "드릴 돌진",
+        "Ultimate": "지각 충격"
+      },
+      "koreanHeroMap": {
+        "벤처": "Venture"
+      },
+      "roleForms": [
+        "벤처",
+        "Venture"
+      ],
+      "banpick": {
+        "id": "venture",
+        "name": "벤처",
+        "role": "Damage",
+        "order": 19
+      }
+    },
+    {
+      "id": "widowmaker",
+      "logName": "위도우메이커",
+      "en": "Widowmaker",
+      "ko": "위도우메이커",
+      "role": "damage",
+      "image": "위도우메이커",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "갈고리 발사",
+        "Ability 2": "맹독 지뢰",
+        "Ultimate": "적외선 투시"
+      },
+      "koreanHeroMap": {
+        "위도우메이커": "Widowmaker"
+      },
+      "roleForms": [
+        "위도우메이커",
+        "Widowmaker"
+      ],
+      "banpick": {
+        "id": "widowmaker",
+        "name": "위도우메이커",
+        "role": "Damage",
+        "order": 26
+      }
+    },
+    {
+      "id": "anran",
+      "logName": "안란",
+      "en": "Anran",
+      "ko": "안란",
+      "role": "damage",
+      "image": "안란",
+      "aliases": [],
+      "skills": null,
+      "koreanHeroMap": {
+        "안란": "Anran"
+      },
+      "roleForms": [
+        "안란"
+      ],
+      "banpick": {
+        "id": "anran",
+        "name": "안란",
+        "role": "Damage",
+        "order": 35
+      }
+    },
+    {
+      "id": "emre",
+      "logName": "엠레",
+      "en": "Emre",
+      "ko": "엠레",
+      "role": "damage",
+      "image": "엠레",
+      "aliases": [],
+      "skills": null,
+      "koreanHeroMap": {
+        "엠레": "Emre"
+      },
+      "roleForms": [
+        "엠레"
+      ],
+      "banpick": {
+        "id": "emre",
+        "name": "엠레",
+        "role": "Damage",
+        "order": 36
+      }
+    },
+    {
+      "id": "shion",
+      "logName": "시온",
+      "en": "Shion",
+      "ko": "시온",
+      "role": "damage",
+      "image": "시온",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "피하기",
+        "Ability 2": "조이라이드",
+        "Ultimate": "광란의 살육"
+      },
+      "koreanHeroMap": {
+        "시온": "Shion"
+      },
+      "roleForms": [
+        "시온"
+      ],
+      "banpick": {
+        "id": "shion",
+        "name": "시온",
+        "role": "Damage",
+        "order": 37
+      }
+    },
+    {
+      "id": "ana",
+      "logName": "아나",
+      "en": "Ana",
+      "ko": "아나",
+      "role": "support",
+      "image": "아나",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "수면총",
+        "Ability 2": "생체 수류탄",
+        "Ultimate": "나노 강화제"
+      },
+      "koreanHeroMap": {
+        "아나": "Ana"
+      },
+      "roleForms": [
+        "아나",
+        "Ana"
+      ],
+      "banpick": {
+        "id": "ana",
+        "name": "아나",
+        "role": "Support",
+        "order": 44
+      }
+    },
+    {
+      "id": "baptiste",
+      "logName": "바티스트",
+      "en": "Baptiste",
+      "ko": "바티스트",
+      "role": "support",
+      "image": "바티스트",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "치유 파동",
+        "Ability 2": "불사 장치",
+        "Ultimate": "증폭 매트릭스"
+      },
+      "koreanHeroMap": {
+        "바티스트": "Baptiste"
+      },
+      "roleForms": [
+        "바티스트",
+        "Baptiste"
+      ],
+      "banpick": {
+        "id": "baptiste",
+        "name": "바티스트",
+        "role": "Support",
+        "order": 42
+      }
+    },
+    {
+      "id": "brigitte",
+      "logName": "브리기테",
+      "en": "Brigitte",
+      "ko": "브리기테",
+      "role": "support",
+      "image": "브리기테",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "방패 밀쳐내기",
+        "Ability 2": "도리깨 투척",
+        "Ultimate": "집결"
+      },
+      "koreanHeroMap": {
+        "브리기테": "Brigitte"
+      },
+      "roleForms": [
+        "브리기테",
+        "Brigitte"
+      ],
+      "banpick": {
+        "id": "brigitte",
+        "name": "브리기테",
+        "role": "Support",
+        "order": 43
+      }
+    },
+    {
+      "id": "illari",
+      "logName": "일리아리",
+      "en": "Illari",
+      "ko": "일리아리",
+      "role": "support",
+      "image": "일리아리",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "분출",
+        "Ability 2": "치유의 태양석",
+        "Ultimate": "태양 작렬"
+      },
+      "koreanHeroMap": {
+        "일리아리": "Illari"
+      },
+      "roleForms": [
+        "일리아리",
+        "Illari"
+      ],
+      "banpick": {
+        "id": "illari",
+        "name": "일리아리",
+        "role": "Support",
+        "order": 46
+      }
+    },
+    {
+      "id": "juno",
+      "logName": "주노",
+      "en": "Juno",
+      "ko": "주노",
+      "role": "support",
+      "image": "주노",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "글라이드 부스트",
+        "Ability 2": "하이퍼 링",
+        "Ultimate": "궤도 광선"
+      },
+      "koreanHeroMap": {
+        "주노": "Juno"
+      },
+      "roleForms": [
+        "주노",
+        "Juno"
+      ],
+      "banpick": {
+        "id": "juno",
+        "name": "주노",
+        "role": "Support",
+        "order": 48
+      }
+    },
+    {
+      "id": "kiriko",
+      "logName": "키리코",
+      "en": "Kiriko",
+      "ko": "키리코",
+      "role": "support",
+      "image": "키리코",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "순보",
+        "Ability 2": "정화의 방울",
+        "Ultimate": "여우길"
+      },
+      "koreanHeroMap": {
+        "키리코": "Kiriko"
+      },
+      "roleForms": [
+        "키리코",
+        "Kiriko"
+      ],
+      "banpick": {
+        "id": "kiriko",
+        "name": "키리코",
+        "role": "Support",
+        "order": 49
+      }
+    },
+    {
+      "id": "lifeweaver",
+      "logName": "라이프위버",
+      "en": "Lifeweaver",
+      "ko": "라이프위버",
+      "role": "support",
+      "image": "라이프위버",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "연꽃 단상",
+        "Ability 2": "구원의 손길",
+        "Ultimate": "생명의 나무"
+      },
+      "koreanHeroMap": {
+        "라이프위버": "Lifeweaver"
+      },
+      "roleForms": [
+        "라이프위버",
+        "Lifeweaver"
+      ],
+      "banpick": {
+        "id": "lifeweaver",
+        "name": "라이프위버",
+        "role": "Support",
+        "order": 38
+      }
+    },
+    {
+      "id": "lucio",
+      "logName": "루시우",
+      "en": "Lucio",
+      "ko": "루시우",
+      "role": "support",
+      "image": "루시우",
+      "aliases": [
+        "Lúcio"
+      ],
+      "skills": {
+        "Ability 1": "분위기 전환",
+        "Ability 2": "볼륨을 높여라",
+        "Ultimate": "소리 방벽"
+      },
+      "koreanHeroMap": {
+        "루시우": "Lucio"
+      },
+      "roleForms": [
+        "루시우",
+        "Lucio"
+      ],
+      "banpick": {
+        "id": "lucio",
+        "name": "루시우",
+        "role": "Support",
+        "order": 39
+      }
+    },
+    {
+      "id": "mercy",
+      "logName": "메르시",
+      "en": "Mercy",
+      "ko": "메르시",
+      "role": "support",
+      "image": "메르시",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "수호천사",
+        "Ability 2": "부활",
+        "Ultimate": "발키리"
+      },
+      "koreanHeroMap": {
+        "메르시": "Mercy"
+      },
+      "roleForms": [
+        "메르시",
+        "Mercy"
+      ],
+      "banpick": {
+        "id": "mercy",
+        "name": "메르시",
+        "role": "Support",
+        "order": 40
+      }
+    },
+    {
+      "id": "moira",
+      "logName": "모이라",
+      "en": "Moira",
+      "ko": "모이라",
+      "role": "support",
+      "image": "모이라",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "소멸",
+        "Ability 2": "생체 구슬",
+        "Ultimate": "융화"
+      },
+      "koreanHeroMap": {
+        "모이라": "Moira"
+      },
+      "roleForms": [
+        "모이라",
+        "Moira"
+      ],
+      "banpick": {
+        "id": "moira",
+        "name": "모이라",
+        "role": "Support",
+        "order": 41
+      }
+    },
+    {
+      "id": "zenyatta",
+      "logName": "젠야타",
+      "en": "Zenyatta",
+      "ko": "젠야타",
+      "role": "support",
+      "image": "젠야타",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "조화의 구슬",
+        "Ability 2": "부조화의 구슬",
+        "Ultimate": "초월"
+      },
+      "koreanHeroMap": {
+        "젠야타": "Zenyatta"
+      },
+      "roleForms": [
+        "젠야타",
+        "Zenyatta"
+      ],
+      "banpick": {
+        "id": "zenyatta",
+        "name": "젠야타",
+        "role": "Support",
+        "order": 47
+      }
+    },
+    {
+      "id": "mizuki",
+      "logName": "미즈키",
+      "en": "Mizuki",
+      "ko": "미즈키",
+      "role": "support",
+      "image": "미즈키",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "종이 인형 분신술",
+        "Ability 2": "속박 사슬",
+        "Ultimate": "결계 성역"
+      },
+      "koreanHeroMap": {
+        "미즈키": "Mizuki"
+      },
+      "roleForms": [
+        "미즈키",
+        "Mizuki"
+      ],
+      "banpick": {
+        "id": "mizuki",
+        "name": "미즈키",
+        "role": "Support",
+        "order": 50
+      }
+    },
+    {
+      "id": "jetpackcat",
+      "logName": "제트팩 캣",
+      "en": "Jetpack Cat",
+      "ko": "제트팩 캣",
+      "role": "support",
+      "image": "jetpackcat",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "생명줄",
+        "Ability 2": "골골대기",
+        "Ultimate": "납치한다냥"
+      },
+      "koreanHeroMap": {
+        "제트팩 캣": "Jetpack Cat"
+      },
+      "roleForms": [
+        "제트팩 캣",
+        "Jetpack Cat"
+      ],
+      "banpick": {
+        "id": "jetpack-cat",
+        "name": "제트팩 캣",
+        "role": "Support",
+        "order": 51
+      }
+    },
+    {
+      "id": "sierra",
+      "logName": "시에라",
+      "en": "Sierra",
+      "ko": "시에라",
+      "role": "damage",
+      "image": "Sierra",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "앵커 드론",
+        "Ability 2": "진동 폭약",
+        "Ultimate": "개척자"
+      },
+      "koreanHeroMap": {
+        "시에라": "Sierra"
+      },
+      "roleForms": [
+        "시에라",
+        "Sierra"
+      ],
+      "banpick": {
+        "id": "sierra",
+        "name": "시에라",
+        "role": "Support",
+        "order": 52
+      }
+    },
+    {
+      "id": "freja",
+      "logName": "프레야",
+      "en": "Freja",
+      "ko": "프레야",
+      "role": "damage",
+      "image": "프레야",
+      "aliases": [],
+      "skills": null,
+      "koreanHeroMap": {},
+      "roleForms": [
+        "프레야",
+        "Freja"
+      ],
+      "banpick": {
+        "id": "freja",
+        "name": "프레야",
+        "role": "Damage",
+        "order": 32
+      }
+    },
+    {
+      "id": "vendetta",
+      "logName": "벤데타",
+      "en": "Vendetta",
+      "ko": "벤데타",
+      "role": "damage",
+      "image": "벤데타",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "소용돌이 질주",
+        "Ability 2": "치솟는 베기",
+        "Ultimate": "갈라내는 칼날"
+      },
+      "koreanHeroMap": {},
+      "roleForms": [
+        "벤데타",
+        "Vendetta"
+      ],
+      "banpick": {
+        "id": "vendetta",
+        "name": "벤데타",
+        "role": "Damage",
+        "order": 34
+      }
+    },
+    {
+      "id": "wuyang",
+      "logName": "우양",
+      "en": "Wuyang",
+      "ko": "우양",
+      "role": "support",
+      "image": "우양",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "격류",
+        "Ability 2": "수호의 파도",
+        "Ultimate": "해일 폭발"
+      },
+      "koreanHeroMap": {},
+      "roleForms": [
+        "우양",
+        "Wuyang"
+      ],
+      "banpick": {
+        "id": "wuyang",
+        "name": "우양",
+        "role": "Support",
+        "order": 45
+      }
+    }
+  ],
+  "heroEn2koExplicit": {
+    "Lúcio": "루시우",
+    "Lucio": "루시우",
+    "Freja": "프레야",
+    "Vendetta": "벤데타",
+    "Wuyang": "우양",
+    "D.Va": "D.Va",
+    "D.Mon": "D.Mon"
+  }
+}

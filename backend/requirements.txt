@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+numpy
+pandas
+requests
+jinja2
+sqlalchemy>=2.0
+aiosqlite
+alembic

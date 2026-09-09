@@ -1,0 +1,90 @@
+# ============================================================================
+#  Scrim Analyzer — .gitignore
+#  ⚠️  Team data (logs / DB) must NEVER be committed. Rules below are deliberately
+#      broad. Do not loosen them. The only sample data allowed is under sample_data/.
+# ============================================================================
+
+# ============== Team data: raw logs / databases / dumps ==============
+**/scrim_rowdata_log/
+**/scrim_data.json
+*.db
+*.db.*
+*.sqlite
+*.sqlite3
+backend/data/
+backend/uploads/
+backend/reports/
+
+# ============== Python ==============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ============== Virtual environments ==============
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+frontend/venv/
+
+# ============== Node / frontend build ==============
+node_modules/
+frontend/node_modules/
+dist/
+build/
+frontend/dist/
+frontend/build/
+.vite/
+
+# ============== Environment / secrets ==============
+.env
+.env.local
+.env.*.local
+*.env
+*.key
+*.pem
+
+# ============== Logs ==============
+*.log
+nohup.out
+*.out
+
+# ============== IDE / OS ==============
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============== Claude Code / local tooling ==============
+.claude/
+
+# ============== Quarantine: screenshots from the internal build (internal-team branding) ==============
+# Not for the public repo — delete or recapture from the sanitized build before use.
+docs/_internal_do_not_publish/
+
+# ============== SQLite temp ==============
+*.db-shm
+*.db-wal
+*.db-journal
+
+# ============== Misc ==============
+*.bak
+*.tmp
+.cache/
+
+# ---- allowlist: keep the anonymized sample even though *.txt logs are data ----
+!sample_data/
+!sample_data/**

@@ -1,0 +1,754 @@
+{
+  "_meta": {
+    "note": "SSOT. 맵 타입(화물)과 모드(호위) 별도. 정본 ko=로그(MAP_EN2KO) 우선.",
+    "generated_by": "scripts/make_game_data_json.py"
+  },
+  "maps": [
+    {
+      "id": "nepal",
+      "ko": "네팔",
+      "en": "Nepal",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "네팔": "쟁탈",
+        "Nepal": "Control"
+      },
+      "controlKeywords": [
+        "네팔",
+        "Nepal"
+      ],
+      "en2ko": {
+        "Nepal": "네팔"
+      },
+      "banpick": {
+        "id": "nepal",
+        "name": "네팔",
+        "type": "Control",
+        "order": 1
+      }
+    },
+    {
+      "id": "lijiang",
+      "ko": "리장 타워",
+      "en": "Lijiang Tower",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "리장 타워": "쟁탈",
+        "Lijiang Tower": "Control"
+      },
+      "controlKeywords": [
+        "리장",
+        "Lijiang"
+      ],
+      "en2ko": {},
+      "banpick": {
+        "id": "lijiang",
+        "name": "리장 타워",
+        "type": "Control",
+        "order": 2
+      }
+    },
+    {
+      "id": "busan",
+      "ko": "부산",
+      "en": "Busan",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "부산": "쟁탈",
+        "Busan": "Control"
+      },
+      "controlKeywords": [
+        "부산",
+        "Busan"
+      ],
+      "en2ko": {},
+      "banpick": {
+        "id": "busan",
+        "name": "부산",
+        "type": "Control",
+        "order": 3
+      }
+    },
+    {
+      "id": "oasis",
+      "ko": "오아시스",
+      "en": "Oasis",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "오아시스": "쟁탈",
+        "Oasis": "Control"
+      },
+      "controlKeywords": [
+        "오아시스",
+        "Oasis"
+      ],
+      "en2ko": {},
+      "banpick": {
+        "id": "oasis",
+        "name": "오아시스",
+        "type": "Control",
+        "order": 5
+      }
+    },
+    {
+      "id": "ilios",
+      "ko": "일리오스",
+      "en": "Ilios",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "일리오스": "쟁탈",
+        "Ilios": "Control"
+      },
+      "controlKeywords": [
+        "일리오스",
+        "Ilios"
+      ],
+      "en2ko": {},
+      "banpick": {
+        "id": "ilios",
+        "name": "일리오스",
+        "type": "Control",
+        "order": 6
+      }
+    },
+    {
+      "id": "antarctic",
+      "ko": "남극 반도",
+      "en": "Antarctic Peninsula",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "남극 반도": "쟁탈",
+        "Antarctic Peninsula": "Control"
+      },
+      "controlKeywords": [
+        "남극",
+        "Antarctic"
+      ],
+      "en2ko": {},
+      "banpick": {
+        "id": "antarctic",
+        "name": "남극반도",
+        "type": "Control",
+        "order": 0
+      }
+    },
+    {
+      "id": "samoa",
+      "ko": "사모아",
+      "en": "Samoa",
+      "type": "control",
+      "typeLabelKo": "쟁탈",
+      "modeLabelKo": "쟁탈",
+      "aliases": [],
+      "controlKeyword": true,
+      "mapTypeData": {
+        "사모아": "쟁탈",
+        "Samoa": "Control"
+      },
+      "controlKeywords": [
+        "사모아",
+        "Samoa"
+      ],
+      "en2ko": {
+        "Samoa": "사모아"
+      },
+      "banpick": {
+        "id": "samoa",
+        "name": "사모아",
+        "type": "Control",
+        "order": 4
+      }
+    },
+    {
+      "id": "dorado",
+      "ko": "도라도",
+      "en": "Dorado",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "도라도": "화물",
+        "Dorado": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "dorado",
+        "name": "도라도",
+        "type": "Escort",
+        "order": 9
+      }
+    },
+    {
+      "id": "rialto",
+      "ko": "리알토",
+      "en": "Rialto",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "리알토": "화물",
+        "Rialto": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "rialto",
+        "name": "리알토",
+        "type": "Escort",
+        "order": 10
+      }
+    },
+    {
+      "id": "circuit",
+      "ko": "서킷 로얄",
+      "en": "Circuit Royal",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "서킷 로얄": "화물",
+        "Circuit Royal": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "circuit",
+        "name": "서킷 로얄",
+        "type": "Escort",
+        "order": 12
+      }
+    },
+    {
+      "id": "junkertown",
+      "ko": "쓰레기촌",
+      "en": "Junkertown",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "쓰레기촌": "화물",
+        "Junkertown": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "junkertown",
+        "name": "쓰레기촌",
+        "type": "Escort",
+        "order": 13
+      }
+    },
+    {
+      "id": "route66",
+      "ko": "66번 국도",
+      "en": "Route 66",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "66번 국도": "화물",
+        "Route 66": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {
+        "Route 66": "66번 국도"
+      },
+      "banpick": {
+        "id": "route66",
+        "name": "66번 국도",
+        "type": "Escort",
+        "order": 7
+      }
+    },
+    {
+      "id": "gibraltar",
+      "ko": "감시 기지: 지브롤터",
+      "en": "Watchpoint: Gibraltar",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [
+        "지브롤터"
+      ],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "감시 기지: 지브롤터": "화물",
+        "지브롤터": "화물",
+        "Watchpoint: Gibraltar": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "gibraltar",
+        "name": "감시기지 지브롤터",
+        "type": "Escort",
+        "order": 8
+      }
+    },
+    {
+      "id": "shambali",
+      "ko": "샴발리 수도원",
+      "en": "Shambali Monastery",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "샴발리 수도원": "화물",
+        "Shambali Monastery": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "shambali",
+        "name": "샴발리 수도원",
+        "type": "Escort",
+        "order": 11
+      }
+    },
+    {
+      "id": "havana",
+      "ko": "하바나",
+      "en": "Havana",
+      "type": "escort",
+      "typeLabelKo": "화물",
+      "modeLabelKo": "호위",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "하바나": "화물",
+        "Havana": "Escort"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "havana",
+        "name": "하바나",
+        "type": "Escort",
+        "order": 14
+      }
+    },
+    {
+      "id": "numbani",
+      "ko": "눔바니",
+      "en": "Numbani",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "눔바니": "혼합",
+        "Numbani": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "numbani",
+        "name": "눔바니",
+        "type": "Hybrid",
+        "order": 15
+      }
+    },
+    {
+      "id": "midtown",
+      "ko": "미드타운",
+      "en": "Midtown",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "미드타운": "혼합",
+        "Midtown": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "midtown",
+        "name": "미드타운",
+        "type": "Hybrid",
+        "order": 16
+      }
+    },
+    {
+      "id": "blizzardworld",
+      "ko": "블리자드 월드",
+      "en": "Blizzard World",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "블리자드 월드": "혼합",
+        "Blizzard World": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "blizzardworld",
+        "name": "블리자드 월드",
+        "type": "Hybrid",
+        "order": 17
+      }
+    },
+    {
+      "id": "eichenwalde",
+      "ko": "아이헨발데",
+      "en": "Eichenwalde",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "아이헨발데": "혼합",
+        "Eichenwalde": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {
+        "Eichenwalde": "아이헨발데"
+      },
+      "banpick": {
+        "id": "eichenwalde",
+        "name": "아이헨발데",
+        "type": "Hybrid",
+        "order": 18
+      }
+    },
+    {
+      "id": "kingsrow",
+      "ko": "왕의 길",
+      "en": "King's Row",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "왕의 길": "혼합",
+        "King's Row": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "kingsrow",
+        "name": "왕의 길",
+        "type": "Hybrid",
+        "order": 19
+      }
+    },
+    {
+      "id": "paraiso",
+      "ko": "파라이소",
+      "en": "Paraíso",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [
+        "파라이수"
+      ],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "파라이소": "혼합",
+        "파라이수": "혼합",
+        "Paraíso": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "paraiso",
+        "name": "파라이수",
+        "type": "Hybrid",
+        "order": 20
+      }
+    },
+    {
+      "id": "hollywood",
+      "ko": "할리우드",
+      "en": "Hollywood",
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "할리우드": "혼합",
+        "Hollywood": "Hybrid"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "hollywood",
+        "name": "할리우드",
+        "type": "Hybrid",
+        "order": 21
+      }
+    },
+    {
+      "id": "neoncross",
+      "ko": "네온교차로",
+      "en": null,
+      "type": "hybrid",
+      "typeLabelKo": "혼합",
+      "modeLabelKo": "혼합",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "네온교차로": "혼합"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "neoncross",
+        "name": "네온 교차로",
+        "type": "Hybrid",
+        "order": 22
+      }
+    },
+    {
+      "id": "newqueenstreet",
+      "ko": "뉴 퀸 스트리트",
+      "en": "New Queen Street",
+      "type": "push",
+      "typeLabelKo": "밀기",
+      "modeLabelKo": "밀기",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "뉴 퀸 스트리트": "밀기",
+        "New Queen Street": "Push"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "newqueenstreet",
+        "name": "뉴 퀸 스트리트",
+        "type": "Push",
+        "order": 23
+      }
+    },
+    {
+      "id": "colosseo",
+      "ko": "콜로세오",
+      "en": "Colosseo",
+      "type": "push",
+      "typeLabelKo": "밀기",
+      "modeLabelKo": "밀기",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "콜로세오": "밀기",
+        "Colosseo": "Push"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "colosseo",
+        "name": "콜로세오",
+        "type": "Push",
+        "order": 25
+      }
+    },
+    {
+      "id": "esperanca",
+      "ko": "이스페란사",
+      "en": "Esperança",
+      "type": "push",
+      "typeLabelKo": "밀기",
+      "modeLabelKo": "밀기",
+      "aliases": [
+        "에스페란사"
+      ],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "에스페란사": "밀기",
+        "Esperança": "Push",
+        "이스페란사": "밀기"
+      },
+      "controlKeywords": [],
+      "en2ko": {
+        "Esperança": "이스페란사"
+      },
+      "banpick": {
+        "id": "esperanca",
+        "name": "이스페란사",
+        "type": "Push",
+        "order": 24
+      }
+    },
+    {
+      "id": "lunasafi",
+      "ko": "룬아사피",
+      "en": "Runasapi",
+      "type": "push",
+      "typeLabelKo": "밀기",
+      "modeLabelKo": "밀기",
+      "aliases": [
+        "루나사피"
+      ],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "룬아사피": "밀기",
+        "루나사피": "밀기",
+        "Runasapi": "Push"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "lunasafi",
+        "name": "루나사피",
+        "type": "Push",
+        "order": 26
+      }
+    },
+    {
+      "id": "newjunkcity",
+      "ko": "뉴 정크 시티",
+      "en": "New Junk City",
+      "type": "flashpoint",
+      "typeLabelKo": "플래시포인트",
+      "modeLabelKo": "플래시포인트",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "뉴 정크 시티": "플래시포인트",
+        "New Junk City": "Flashpoint"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "newjunkcity",
+        "name": "뉴 정크 시티",
+        "type": "Flashpoint",
+        "order": 27
+      }
+    },
+    {
+      "id": "suravasa",
+      "ko": "수라바사",
+      "en": "Suravasa",
+      "type": "flashpoint",
+      "typeLabelKo": "플래시포인트",
+      "modeLabelKo": "플래시포인트",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "수라바사": "플래시포인트",
+        "Suravasa": "Flashpoint"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": {
+        "id": "suravasa",
+        "name": "수라바사",
+        "type": "Flashpoint",
+        "order": 28
+      }
+    },
+    {
+      "id": "atliss",
+      "ko": "아틀리스",
+      "en": "Aatlis",
+      "type": "flashpoint",
+      "typeLabelKo": "플래시포인트",
+      "modeLabelKo": "플래시포인트",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "아틀리스": "플래시포인트",
+        "Aatlis": "Flashpoint"
+      },
+      "controlKeywords": [],
+      "en2ko": {
+        "Aatlis": "아틀리스"
+      },
+      "banpick": {
+        "id": "atliss",
+        "name": "아틀리스",
+        "type": "Flashpoint",
+        "order": 29
+      }
+    },
+    {
+      "id": "hanaoka",
+      "ko": "하나오카",
+      "en": "Hanaoka",
+      "type": "clash",
+      "typeLabelKo": "격돌",
+      "modeLabelKo": "격돌",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "하나오카": "격돌",
+        "Hanaoka": "Clash"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": null
+    },
+    {
+      "id": "throneofanubis",
+      "ko": "아누비스의 왕좌",
+      "en": "Throne of Anubis",
+      "type": "clash",
+      "typeLabelKo": "격돌",
+      "modeLabelKo": "격돌",
+      "aliases": [],
+      "controlKeyword": false,
+      "mapTypeData": {
+        "아누비스의 왕좌": "격돌",
+        "Throne of Anubis": "Clash"
+      },
+      "controlKeywords": [],
+      "en2ko": {},
+      "banpick": null
+    }
+  ],
+  "modeEn2ko": {
+    "Control": "쟁탈",
+    "Push": "밀기",
+    "Hybrid": "혼합",
+    "Flashpoint": "플래시포인트",
+    "Escort": "호위",
+    "Clash": "격돌"
+  }
+}

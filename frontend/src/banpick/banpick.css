@@ -1,0 +1,371 @@
+/* 밴픽 시뮬레이터 전용 스코프드 스타일.
+ * 원본(ow2-banpick)은 Tailwind 유틸리티 className을 쓰지만, 분석기에 Tailwind를
+ * 도입하면 전역 오염 위험이 있어 여기서 사용된 유틸리티만 .bp-root 하위로 한정해
+ * 직접 정의한다. 색은 전부 분석기 다크 theme 톤으로 리매핑, 글래스모피즘/그라데이션/
+ * 링은 플랫하게 제거. → 전역 CSS 오염 0, Tailwind 의존 0.
+ * (분석기 화면은 className을 전혀 쓰지 않으므로 이 클래스명들과 충돌하지 않는다.) */
+
+.bp-root {
+  --bp-bg: #09090b;
+  --bp-surface: #18181b;
+  --bp-surface2: #27272a;
+  --bp-border: #27272a;
+  --bp-border2: #3f3f46;
+  --bp-text: #fafafa;
+  --bp-textsub: #a1a1aa;
+  --bp-primary: #3b82f6;
+  --bp-danger: #ef4444;
+  --bp-green: #5bb98b;
+  color-scheme: dark;
+  color: var(--bp-text);
+}
+
+/* #4 라이트 모드 — 분석기 라이트 팔레트로 변수만 오버라이드(대부분 색이 var 기반이라 자동 반영).
+   .bp-root.light 는 분석기 테마가 라이트일 때 부여됨. */
+.bp-root.light {
+  --bp-bg: #ffffff;
+  --bp-surface: #f4f4f5;
+  --bp-surface2: #e4e4e7;
+  --bp-border: #e4e4e7;
+  --bp-border2: #d4d4d8;
+  --bp-text: #09090b;
+  --bp-textsub: #71717a;
+  --bp-primary: #2563eb;
+  --bp-danger: #dc2626;
+  --bp-green: #5bb98b;
+  color-scheme: light;
+}
+/* 라이트에서 흰 배경 클래스는 순백으로, 칩은 옅게 */
+.bp-root.light .bg-white { background: #ffffff; }
+.bp-root.light .bp-chip { background: rgba(0,0,0,0.06); color: #18181b; }
+
+/* #3 입력칸 오버플로우 — preflight의 `*{box-sizing:border-box}`가 없어 발생.
+   패딩/보더 포함 너비 계산으로 카드 밖으로 나가는 문제 해결(스코프 한정). */
+.bp-root *, .bp-root *::before, .bp-root *::after { box-sizing: border-box; }
+
+/* 버튼 기본 리셋 — preflight 부재로 UA 기본 패딩+배경(buttonface 연회색)이 남아
+   맵 카드 이미지 사방에 회색 여백처럼 보였음. 패딩/배경 제거(유틸 클래스가 재지정). */
+.bp-root button {
+  padding: 0;
+  background-color: transparent;
+  background-image: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ── theme 객체용 커스텀 클래스 (원본 theme.* 를 이 클래스로 교체) ── */
+.bp-root .bp-root-base { min-height: 100vh; background: var(--bp-bg); color: var(--bp-text); font-size: 13px; }
+.bp-root .bp-header { position: sticky; top: 0; z-index: 10; background: var(--bp-surface); border-bottom: 1px solid var(--bp-border); }
+.bp-root .bp-panel { background: var(--bp-surface); border-radius: 14px; border: 1px solid var(--bp-border); }
+.bp-root .bp-btnborder { border-color: var(--bp-border2); }
+.bp-root .bp-chip { background: rgba(0,0,0,0.35); color: #fff; }
+.bp-root .bp-active { border-color: var(--bp-green); background: rgba(91,185,139,0.15); color: var(--bp-green); }
+
+/* ── 색상 유틸 (분석기 톤으로 리매핑) ── */
+.bp-root .bg-neutral-900 { background: var(--bp-bg); }
+.bp-root .bg-neutral-800 { background: var(--bp-surface); }
+.bp-root .bg-neutral-100,
+.bp-root .bg-neutral-50,
+.bp-root .bg-white { background: var(--bp-surface2); }
+/* bare .border = 1px solid 전체 테두리. preflight 미사용이라 명시 정의(없으면 폭/스타일 0 → 안 보임). */
+.bp-root .border { border-width: 1px; border-style: solid; }
+.bp-root .border-b { border-bottom: 1px solid var(--bp-border); }
+.bp-root .border-neutral-700 { border-color: var(--bp-border2); }
+/* 카드/슬롯/필 기본 테두리 — 어두운 배경에서 잘 보이도록 borderHighlight 톤으로 */
+.bp-root .border-neutral-300 { border-color: var(--bp-border2); }
+.bp-root .border-neutral-200 { border-color: var(--bp-border); }
+.bp-root .text-neutral-400 { color: var(--bp-textsub); }
+.bp-root .text-neutral-900 { color: var(--bp-text); }
+.bp-root .text-white { color: #fff; }
+.bp-root .border-emerald-500 { border-color: var(--bp-green); }
+.bp-root .border-blue-500 { border-color: var(--bp-primary); }
+.bp-root .bg-black\/60 { background: rgba(0,0,0,0.6); }
+.bp-root .bg-blue-600\/80 { background: rgba(59,130,246,0.85); }
+.bp-root .bg-red-600\/80,
+.bp-root .bg-red-600\/90 { background: var(--bp-danger); }
+.bp-root .bg-rose-600\/80 { background: var(--bp-danger); }
+.bp-root .bg-green-600\/90 { background: var(--bp-green); }
+
+/* 글래스모피즘/그라데이션/링 → 플랫 제거 */
+.bp-root .bg-gradient-to-br,
+.bp-root .from-neutral-100,
+.bp-root .to-neutral-200 { background-image: none; background-color: var(--bp-surface); }
+.bp-root .ring-2,
+.bp-root .ring-blue-500\/60,
+.bp-root .ring-emerald-500\/60 { box-shadow: none; }
+
+/* ── 레이아웃/디스플레이 ── */
+.bp-root .flex { display: flex; }
+.bp-root .grid { display: grid; }
+.bp-root .inline-block { display: inline-block; }
+.bp-root .flex-col { flex-direction: column; }
+.bp-root .flex-1 { flex: 1 1 0%; }
+.bp-root .shrink-0 { flex-shrink: 0; }
+.bp-root .items-center { align-items: center; }
+.bp-root .items-baseline { align-items: baseline; }
+.bp-root .justify-between { justify-content: space-between; }
+.bp-root .justify-center { justify-content: center; }
+.bp-root .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.bp-root .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bp-root .relative { position: relative; }
+.bp-root .absolute { position: absolute; }
+.bp-root .fixed { position: fixed; }
+.bp-root .inset-0 { inset: 0; }
+.bp-root .left-1\/2 { left: 50%; }
+.bp-root .top-1\/2 { top: 50%; }
+.bp-root .bottom-1 { bottom: 0.25rem; }
+.bp-root .bottom-6 { bottom: 1.5rem; }
+.bp-root .right-1 { right: 0.25rem; }
+.bp-root .z-10 { z-index: 10; }
+.bp-root .z-30 { z-index: 30; }
+.bp-root .z-40 { z-index: 40; }
+.bp-root .z-50 { z-index: 50; }
+.bp-root .overflow-hidden { overflow: hidden; }
+.bp-root .overflow-visible { overflow: visible; }
+.bp-root .overflow-y-auto { overflow-y: auto; }
+.bp-root .pointer-events-none { pointer-events: none; }
+.bp-root .object-contain { object-fit: contain; }
+.bp-root .object-cover { object-fit: cover; }
+.bp-root .object-center { object-position: center; }
+.bp-root .aspect-square { aspect-ratio: 1 / 1; }
+.bp-root .aspect-\[16\/9\] { aspect-ratio: 16 / 9; }   /* 맵 카드(와이드) */
+.bp-root .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-root .cursor-pointer { cursor: pointer; }
+.bp-root .cursor-not-allowed { cursor: not-allowed; }
+.bp-root .min-w-0 { min-width: 0; }
+
+/* ── 간격 (gap / padding / margin) ── */
+.bp-root .gap-1 { gap: 0.25rem; }
+.bp-root .gap-2 { gap: 0.5rem; }
+.bp-root .gap-3 { gap: 0.75rem; }
+.bp-root .gap-4 { gap: 1rem; }
+.bp-root .p-2 { padding: 0.5rem; }
+.bp-root .p-3 { padding: 0.75rem; }
+.bp-root .p-4 { padding: 1rem; }
+.bp-root .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+.bp-root .px-1\.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+.bp-root .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.bp-root .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.bp-root .px-4 { padding-left: 1rem; padding-right: 1rem; }
+.bp-root .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.bp-root .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+.bp-root .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.bp-root .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.bp-root .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.bp-root .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.bp-root .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.bp-root .pb-1 { padding-bottom: 0.25rem; }
+.bp-root .pb-5 { padding-bottom: 1.25rem; }
+.bp-root .pr-2 { padding-right: 0.5rem; }
+.bp-root .mb-0\.5 { margin-bottom: 0.125rem; }
+.bp-root .mb-1 { margin-bottom: 0.25rem; }
+.bp-root .mb-2 { margin-bottom: 0.5rem; }
+.bp-root .mb-3 { margin-bottom: 0.75rem; }
+.bp-root .mb-4 { margin-bottom: 1rem; }
+.bp-root .mt-1 { margin-top: 0.25rem; }
+.bp-root .mt-3 { margin-top: 0.75rem; }
+.bp-root .mt-4 { margin-top: 1rem; }
+.bp-root .ml-2 { margin-left: 0.5rem; }
+.bp-root .ml-auto { margin-left: auto; }
+.bp-root .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
+.bp-root .mx-auto { margin-left: auto; margin-right: auto; }
+.bp-root .space-y-1 > * + * { margin-top: 0.25rem; }
+.bp-root .space-y-3 > * + * { margin-top: 0.75rem; }
+
+/* ── 크기 ── */
+.bp-root .w-full { width: 100%; }
+.bp-root .h-full { height: 100%; }
+.bp-root .w-4 { width: 1rem; }
+.bp-root .w-5 { width: 1.25rem; }
+.bp-root .w-14 { width: 3.5rem; }
+.bp-root .h-4 { height: 1rem; }
+.bp-root .h-5 { height: 1.25rem; }
+.bp-root .max-w-none { max-width: none; }
+.bp-root .max-w-xs { max-width: 20rem; }
+.bp-root .max-w-md { max-width: 28rem; }
+.bp-root .max-w-2xl { max-width: 42rem; }
+.bp-root .max-w-6xl { max-width: 72rem; }
+.bp-root .max-h { max-height: 100%; }
+
+/* ── 라운드 (분석기 규격으로 다소 플랫하게) ── */
+.bp-root .rounded-lg { border-radius: 8px; }
+.bp-root .rounded-xl { border-radius: 10px; }
+.bp-root .rounded-full { border-radius: 9999px; }
+.bp-root .rounded { border-radius: 6px; }
+/* rounded-2xl(원본 카드) → 분석기 카드 반경으로 */
+.bp-root .rounded-2xl { border-radius: 14px; }
+
+/* ── 타이포 ── */
+.bp-root .text-xs { font-size: 12px; line-height: 1rem; }
+.bp-root .text-sm { font-size: 14px; line-height: 1.25rem; }
+.bp-root .text-base { font-size: 16px; line-height: 1.5rem; }
+.bp-root .text-lg { font-size: 18px; line-height: 1.5rem; }
+.bp-root .text-2xl { font-size: 24px; line-height: 2rem; }
+.bp-root .font-medium { font-weight: 500; }
+.bp-root .font-semibold { font-weight: 600; }
+.bp-root .font-bold { font-weight: 700; }
+.bp-root .font-extrabold { font-weight: 800; }
+.bp-root .leading-tight { line-height: 1.25; }
+.bp-root .text-center { text-align: center; }
+.bp-root .text-left { text-align: left; }
+.bp-root .uppercase { text-transform: uppercase; }
+.bp-root .italic { font-style: italic; }
+
+/* ── 투명도 ── */
+.bp-root .opacity-50 { opacity: 0.5; }
+.bp-root .opacity-60 { opacity: 0.6; }
+.bp-root .opacity-70 { opacity: 0.7; }
+.bp-root .opacity-80 { opacity: 0.8; }
+
+/* ── 임의값(arbitrary) — 히어로/맵 그리드는 반드시 필요 ── */
+.bp-root .\[grid-template-columns\:repeat\(auto-fill\,minmax\(156px\,1fr\)\)\] { grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); }
+.bp-root .\[grid-template-columns\:repeat\(auto-fill\,minmax\(168px\,1fr\)\)\] { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+.bp-root .\[grid-template-columns\:repeat\(auto-fill\,minmax\(180px\,1fr\)\)\] { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.bp-root .text-\[10px\] { font-size: 10px; }
+.bp-root .text-\[11px\] { font-size: 11px; }
+.bp-root .text-\[12px\] { font-size: 12px; }
+.bp-root .text-\[13px\] { font-size: 13px; }
+.bp-root .w-\[260px\] { width: 260px; }
+.bp-root .w-\[300px\] { width: 300px; }
+.bp-root .h-\[5px\] { height: 5px; }
+.bp-root .h-\[50vh\] { height: 50vh; }
+.bp-root .h-\[calc\(100vh-180px\)\] { height: calc(100vh - 180px); }
+.bp-root .max-h-\[60vh\] { max-height: 60vh; }
+.bp-root .max-h-\[90vh\] { max-height: 90vh; }
+.bp-root .min-h-\[18px\] { min-height: 18px; }
+.bp-root .min-w-\[220px\] { min-width: 220px; }
+.bp-root .max-w-\[140px\] { max-width: 140px; }
+.bp-root .max-w-\[220px\] { max-width: 220px; }
+.bp-root .max-w-\[320px\] { max-width: 320px; }
+.bp-root .max-w-\[1440px\] { max-width: 1440px; }
+.bp-root .max-w-\[1720px\] { max-width: 1720px; }
+.bp-root .left-\[-30\%\] { left: -30%; }
+.bp-root .right-\[-30\%\] { right: -30%; }
+.bp-root .top-\[calc\(50\%\+11px\)\] { top: calc(50% + 11px); }
+
+/* 맵 타입 아이콘 — 어두운 PNG를 테마 텍스트 색 실루엣으로 렌더해 식별 복구.
+   다크: 흰색(brightness0→검정 후 invert→흰), 라이트: 검정. */
+.bp-root .bp-mapicon { width: 16px; height: 16px; flex: 0 0 16px; filter: brightness(0) invert(1); opacity: 0.92; }
+.bp-root.light .bp-mapicon { filter: brightness(0); opacity: 0.8; }
+
+/* 역할 아이콘(탱커/딜러/힐러) — 동일 원인(어두운 PNG가 다크 배경에 묻힘).
+   테마 텍스트 색 실루엣으로 렌더 — 다크: 흰색, 라이트: 검정. 테마 전환에 반응. */
+.bp-root .bp-roleicon { width: 14px; height: 14px; flex: 0 0 14px; filter: brightness(0) invert(1); opacity: 0.92; }
+.bp-root.light .bp-roleicon { filter: brightness(0); opacity: 0.8; }
+
+/* 밴 표시용 붉은 사선(BanSlashOverlay)은 유지 — 기능 시각요소 */
+.bp-root .-rotate-45 { transform: rotate(-45deg); }
+
+/* #5 선택 하이라이트 강화 — 굵은 테두리(3px)+은은한 글로우. 밴=빨강, 픽=파랑, B픽=자주. */
+.bp-root .bp-sel-ban { border-width: 3px; border-color: var(--bp-danger); box-shadow: 0 0 0 1px var(--bp-danger), 0 0 12px 1px rgba(239, 68, 68, 0.35); }
+.bp-root .bp-sel-pick { border-width: 3px; border-color: var(--bp-primary); box-shadow: 0 0 0 1px var(--bp-primary), 0 0 12px 1px rgba(59, 130, 246, 0.35); }
+.bp-root .bp-sel-pickb { border-width: 3px; border-color: #d18ac0; box-shadow: 0 0 0 1px #d18ac0, 0 0 12px 1px rgba(209, 138, 192, 0.32); }
+.bp-root .bp-sel-both { border-width: 3px; border-color: #b98fd0; box-shadow: 0 0 0 1px #b98fd0, 0 0 12px 1px rgba(185, 143, 208, 0.32); }
+
+/* ── 보강: 문자열 상수/.join() 패턴에서 쓰인 유틸 ── */
+.bp-root .max-w-xl { max-width: 36rem; }
+.bp-root .p-5 { padding: 1.25rem; }
+.bp-root .p-6 { padding: 1.5rem; }
+.bp-root .shadow-lg { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+/* 픽/락 활성 상태색: A=초록, B=자주, 상황별 blue/rose. 링은 플랫 제거 */
+.bp-root .bg-emerald-50,
+.bp-root .bg-emerald-900\/30 { background: rgba(91, 185, 139, 0.15); }
+.bp-root .text-emerald-100,
+.bp-root .text-emerald-900 { color: var(--bp-green); }
+.bp-root .border-blue-600 { border-color: var(--bp-primary); }
+.bp-root .border-rose-600 { border-color: var(--bp-danger); }
+.bp-root .border-fuchsia-500 { border-color: #c084fc; }
+.bp-root .ring-blue-500\/60,
+.bp-root .ring-blue-600\/60,
+.bp-root .ring-rose-600\/60,
+.bp-root .ring-fuchsia-500\/60 { box-shadow: none; }
+
+/* ── 반응형 변형 (원본 md:/lg:/sm:/2xl:) — 픽 3열 flex 레이아웃 등 복원 ── */
+@media (min-width: 640px) {
+  .bp-root .sm\:px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+@media (min-width: 768px) {
+  .bp-root .md\:flex { display: flex; }
+  .bp-root .md\:w-\[260px\] { width: 260px; }
+  .bp-root .md\:max-w-\[220px\] { max-width: 220px; }
+  .bp-root .md\:text-sm { font-size: 14px; line-height: 1.25rem; }
+  .bp-root .md\:text-2xl { font-size: 24px; line-height: 2rem; }
+  .bp-root .md\:text-\[12px\] { font-size: 12px; }
+  .bp-root .md\:text-\[14px\] { font-size: 14px; }
+  .bp-root .md\:\[grid-template-columns\:repeat\(auto-fill\,minmax\(168px\,1fr\)\)\] { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .bp-root .lg\:w-\[300px\] { width: 300px; }
+  .bp-root .lg\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+@media (min-width: 1536px) {
+  .bp-root .\32 xl\:max-w-\[1720px\] { max-width: 1720px; }
+}
+
+/* 인풋/셀렉트 기본 톤(원본이 라이트 전제라 다크로 보정) */
+.bp-root input,
+.bp-root select,
+.bp-root textarea {
+  background: var(--bp-bg);
+  color: var(--bp-text);
+  border-color: var(--bp-border2);
+}
+.bp-root input::placeholder { color: var(--bp-textsub); }
+
+/* ============================================================
+   모바일 최적화 (밴픽 화면 한정) — 모바일=기본값, 데스크톱=md:이상에서 원복.
+   상태머신/WS 무변경 · 표시 레이어만. 데스크톱 회귀 없음.
+   ============================================================ */
+
+/* 디스플레이 토글 */
+.bp-root .hidden { display: none; }
+.bp-root .flex-wrap { flex-wrap: wrap; }
+@media (min-width: 768px) {
+  /* 이 블록은 파일 하단(.hidden 뒤)이라 소스 순서상 .hidden을 이김 → 데스크톱 표시 보장 */
+  .bp-root .md\:hidden { display: none; }
+  .bp-root .md\:block { display: block; }
+  .bp-root .md\:flex { display: flex; }
+  /* 데스크톱: 요약 승리 버튼 2열 복원(모바일은 grid-cols-1 세로 스택) */
+  .bp-root .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 터치 타깃 — 모바일에서 입력/버튼 최소 44px 확보(버튼은 내용 중앙정렬).
+   데스크톱 회귀 없게 min-height만 부여(고정 높이 아님). */
+.bp-root .bp-touch { min-height: 44px; }
+.bp-root button.bp-touch { display: inline-flex; align-items: center; justify-content: center; }
+
+/* 맵/밴 그리드 — 모바일 열수 축소(기본), md:이상은 기존 값 복원.
+   맵: 104px(≈3열/390px) · 밴: 96px(≈3열, 타일 64px 이상). */
+.bp-root .bp-grid-map { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.bp-root .bp-grid-ban { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+@media (min-width: 768px) {
+  .bp-root .bp-grid-map { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .bp-root .bp-grid-ban { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+}
+
+/* 하단 고정 액션바(밴/맵 확정 등) — 모바일만 sticky, 주소창/홈바 안전영역 확보.
+   섹션(p-4=16px) 기준 풀블리드. 데스크톱은 정적으로 원복. */
+.bp-root .bp-actionbar {
+  position: sticky; bottom: 0; z-index: 20;
+  background: var(--bp-bg);
+  margin: 8px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--bp-border);
+}
+@media (min-width: 768px) {
+  .bp-root .bp-actionbar {
+    position: static; background: transparent;
+    margin: 0; padding: 0; border-top: none;
+  }
+}
+
+/* 상단 고정 턴/타이머 바(픽 화면 모바일) — 스크롤 무관 항상 노출. 데스크톱 미사용(md:hidden). */
+.bp-root .bp-turnbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bp-bg);
+  margin: 0 -16px 8px; padding: 8px 16px;
+  border-bottom: 1px solid var(--bp-border);
+}
