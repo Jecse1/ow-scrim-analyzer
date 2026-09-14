@@ -143,10 +143,10 @@ def _first_fight_from_events(events: list, t1: str, t2: str):
 
 def _round_start_sec(r: "DBRound", m: "DBMatch") -> float:
     """라운드 시작 시점을 '실제(real) 좌표' 초로 반환. buildVideoLink가 game_setup_sec를 빼서
-    영상 위치로 환산하므로, 여기서는 -8 보정을 되돌린 real 좌표를 돌려준다 (round 1 == game_setup_sec).
+    영상 위치로 환산하므로, 여기서는 -2 보정을 되돌린 real 좌표를 돌려준다 (round 1 == game_setup_sec).
 
-    events.timestamp는 -8 보정된 stored 좌표, rounds.duration_sec는 게임시간 누적이므로
-    (round_end_ts - duration_sec)는 stored 좌표의 라운드 시작이고, +8 하면 real 좌표가 된다.
+    events.timestamp는 -2 보정된 stored 좌표, rounds.duration_sec는 게임시간 누적이므로
+    (round_end_ts - duration_sec)는 stored 좌표의 라운드 시작이고, +2 하면 real 좌표가 된다.
     round_start 이벤트 자체는 결측/부정확이 많아 쓰지 않는다.
     """
     round_end_ts = None
@@ -155,7 +155,7 @@ def _round_start_sec(r: "DBRound", m: "DBMatch") -> float:
             if round_end_ts is None or ev.timestamp > round_end_ts:
                 round_end_ts = ev.timestamp
     if round_end_ts is not None and r.duration_sec is not None:
-        return (round_end_ts - r.duration_sec) + 8.0
+        return (round_end_ts - r.duration_sec) + 2.0
     # 폴백 1: 1라운드는 game_setup_sec(=real 좌표 라운드 시작)
     if r.round_number == 1 and m.game_setup_sec is not None:
         return float(m.game_setup_sec)
@@ -163,7 +163,7 @@ def _round_start_sec(r: "DBRound", m: "DBMatch") -> float:
     kts = [ev.timestamp for ev in (r.events or [])
            if ev.event_type in ("kill", "ultimate_start") and ev.timestamp is not None]
     if kts:
-        return min(kts) + 8.0
+        return min(kts) + 2.0
     return 0.0
 
 

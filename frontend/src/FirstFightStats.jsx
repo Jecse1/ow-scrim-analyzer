@@ -12,8 +12,6 @@ const API_BASE = "";
 const OUR_TEAM = BASE_TEAM;
 const opponentOf = (it) => (it.team1_name === OUR_TEAM ? it.team2_name : it.team1_name);
 
-// 재생 기점: 각 라운드 시작 후 이 초만큼 뒤. (백엔드 round_start_sec는 real 좌표라 그대로 +가능)
-const ROUND_START_LEAD_SEC = 10;
 
 const fmtClock = (sec) => {
     const s = Math.max(0, Math.floor(Number(sec) || 0));
@@ -146,7 +144,8 @@ export default function FirstFightStats() {
                                         const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)';
                                         const videoUrl = it.video_url || "";
                                         const match = { video_url: videoUrl, video_offset: it.video_offset, game_setup_sec: it.game_setup_sec, pauses: it.pauses || [] };
-                                        const jumpTs = Math.max(0, (Number(it.round_start_sec) || 0) + ROUND_START_LEAD_SEC);
+                                        // 첫한타 시작 시점으로 점프 (stored 좌표 — 파서 -2초 리드 포함)
+                                        const jumpTs = Math.max(0, Number(it.start_timestamp) || 0);
                                         const link = hasVideo(videoUrl) ? buildVideoLink(videoUrl, jumpTs, match) : null;
                                         return (
                                             <tr key={`${it.match_id}-${it.round_number ?? 'm'}-${idx}`} style={{ background: rowBg, borderBottom: `1px solid ${theme.border}40` }}>

@@ -572,16 +572,15 @@ const comboStat = (fights) => {
 };
 
 // ── 해당 장면 VOD 목록 (콤보/시퀀스 표 행 클릭 시 펼침) ──────────────────────
-// 링크 = buildVideoLink(video_url, 한타 시작 - VOD_LEAD_SEC, 매치) — 첫한타 탭과 동일 유틸 재사용.
-// start_timestamp는 stored 좌표(-8 보정 포함)라 영상상 한타 시작 약 12초 전부터 재생된다.
+// 링크 = buildVideoLink(video_url, 한타 시작, 매치) — 첫한타 탭과 동일 유틸 재사용.
+// start_timestamp는 stored 좌표(파서 -2초 리드 포함)라 영상상 한타 시작 2초 전부터 재생된다.
 // 집계 로직 무수정 — 집계가 이미 보유한 표본 한타 목록의 표시 전용 코드.
-export const VOD_LEAD_SEC = 4;
 export const VOD_PAGE = 20;
 
 const vodLinkOf = (r) => {
     if (!hasVideo(r.video_url)) return null;
     const match = { video_offset: r.video_offset, game_setup_sec: r.game_setup_sec, pauses: r.pauses || [] };
-    return buildVideoLink(r.video_url, Math.max(0, (Number(r.start_timestamp) || 0) - VOD_LEAD_SEC), match);
+    return buildVideoLink(r.video_url, Math.max(0, Number(r.start_timestamp) || 0), match);
 };
 
 // 표시 전용 반응시간 — 집계(collectFollowups)와 동일 규칙(선택 궁 첫 사용 이후 응수 창 내 최소 간격)

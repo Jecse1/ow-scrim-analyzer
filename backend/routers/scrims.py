@@ -288,8 +288,8 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             db_match.total_final_blows_t2 = target_match.get("total_final_blows_t2", 0)
 
             # 신규 방식: setup_complete의 real_timestamp 추출 → game_setup_sec 저장
-            # -8 보정 없이 real_ts 그대로 저장. events.timestamp는 이미 (real_ts - 8)이므로
-            # 빼면 자연스럽게 8초 전 점프 효과 발생 (사용자 의도 유지)
+            # -2 보정 없이 real_ts 그대로 저장. events.timestamp는 이미 (real_ts - 2)이므로
+            # 빼면 자연스럽게 2초 전 점프 효과 발생 (사용자 의도 유지)
             game_setup_sec = None
             for _line in log_text.splitlines():
                 if ",setup_complete," in _line:
@@ -438,7 +438,7 @@ async def rebuild_database():
                     calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
                     target_match["video_offset"] = offset_save
                     target_match["pauses"] = pauses_save
-                    # setup_complete real_timestamp 추출 (-8 보정 없이)
+                    # setup_complete real_timestamp 추출 (-2 보정 없이)
                     _gss = None
                     for _line in log_text.splitlines():
                         if ",setup_complete," in _line:

@@ -9,7 +9,6 @@ import {
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
-import { VOD_LEAD_SEC } from "./FightLabStats"; // 궁극기 타임라인 VOD 점프 리드(한타 분석 탭과 동일 상수)
 import { getDisplayName, HERO_SKILL_MAP, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES } from "./gameData";
 import NoVideoModal from "./NoVideoModal";
 import { computeFights } from './utils/fightAnalysis';
@@ -1335,7 +1334,7 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
 // [4.5] 궁극기 타임라인 뷰 (UltTimelineView)
 // 현재 보는 매치/라운드 범위(dataSummary.fights — 킬 로그와 동일 computeFights 결과)의
 // 한타별 궁 흐름 뷰어. 계산 로직 신규 없음: 이미 계산된 fights를 그대로 표시.
-// VOD 점프 = buildVideoLink(한타 시작 - VOD_LEAD_SEC) — 한타 분석 탭과 동일 계산(영상상 약 12초 전).
+// VOD 점프 = buildVideoLink(한타 시작) — 한타 분석 탭과 동일 계산(파서 -2초 리드가 이미 반영됨).
 // =================================================================================
 const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
   const { theme } = useTheme();
@@ -1362,7 +1361,7 @@ const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
 
   const openVod = (f) => {
     if (!videoExists) { setNoVideoModal(true); return; }
-    const url = buildVideoLink(matchData.video_url, Math.max(0, f.startTime - VOD_LEAD_SEC), matchData);
+    const url = buildVideoLink(matchData.video_url, Math.max(0, f.startTime), matchData);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 

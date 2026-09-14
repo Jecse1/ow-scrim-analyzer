@@ -1,4 +1,6 @@
 /**
+ * 장면 −2초 리드는 파서(events.timestamp)에 이미 반영됨. 여기서 추가 보정 금지.
+ *
  * YouTube 링크에 이벤트 시점 t= 파라미터를 추가해 반환.
  *
  * 신 방식 (game_setup_sec != null):

@@ -135,7 +135,8 @@ def parse_overwatch_log(log_text: str, custom_t1: str = None, custom_t2: str = N
         
         clean_line = line.strip()
         real_timestamp = parse_log_timestamp(clean_line)
-        play_timestamp = max(0, real_timestamp - 8)
+        # 로그 시각 대비 −2초 보정. 영상 링크 리드는 이 값 하나로만 결정됨. 프론트에서 추가 보정 금지
+        play_timestamp = max(0, real_timestamp - 2)
         parts = clean_line.split(',')
         
         if ",match_start," in clean_line:
