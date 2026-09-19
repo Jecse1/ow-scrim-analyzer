@@ -126,6 +126,8 @@ reverse-proxies `/api` (and `/ws`) to uvicorn.
 `docker-compose.yml` 로 두 서비스를 빌드합니다. nginx 가 빌드된 프론트를 서빙하고
 `/api`·`/ws` 를 uvicorn 으로 리버스 프록시합니다.
 
+Docker 없이 저사양 서버(1GB RAM)에 venv+pm2+nginx 로 배포하려면 [docs/DEPLOY.md](docs/DEPLOY.md) 참조.
+
 ```bash
 docker compose up --build
 # frontend on :80, backend on :8000

@@ -90,5 +90,35 @@ BANPICK_MAPS: list = [
     for _m in sorted((_x for _x in MAPS_DATA if _x.get("banpick")), key=lambda _x: _x["banpick"].get("order", 0))
 ]
 
+# ── 선수 별칭 파생 ──────────────────────────────────────────────────────────
+# players.json: {"playerAliases": {정본명: [별칭...]}}. 부계정·개명 시 여기에 별칭만
+# 추가하면 파서(normalize_player_name)가 저장 직전에 정본명으로 흡수한다(영웅 별칭과 별개).
+# 공개판 기본은 빈 사전. "playerAliases" 키 부재 시 {}로 처리하고,
+# "_"로 시작하는 키(_comment 등)는 무시한다.
+_PLAYERS_DOC = _load("players.json")
+PLAYER_ALIASES: dict = {
+    _canon: _aliases
+    for _canon, _aliases in _PLAYERS_DOC.get("playerAliases", {}).items()
+    if not _canon.startswith("_")
+}
+
+# 역방향 조회 맵: casefold(별칭|정본) → 정본. 정본 자신도 키로 넣어
+# 대소문자 변형(NAME/name 등)을 사전 추가 없이 흡수한다.
+PLAYER_NAME_LOOKUP: dict = {}
+for _canon, _aliases in PLAYER_ALIASES.items():
+    _cf = _canon.casefold()
+    if _cf in PLAYER_NAME_LOOKUP and PLAYER_NAME_LOOKUP[_cf] != _canon:
+        raise ValueError(f"players.json 정본명 casefold 충돌: {_canon} vs {PLAYER_NAME_LOOKUP[_cf]}")
+    PLAYER_NAME_LOOKUP[_cf] = _canon
+    for _a in _aliases:
+        _acf = _a.casefold()
+        if _acf in PLAYER_NAME_LOOKUP and PLAYER_NAME_LOOKUP[_acf] != _canon:
+            raise ValueError(f"players.json 별칭 충돌: {_a} → {_canon} vs {PLAYER_NAME_LOOKUP[_acf]}")
+        PLAYER_NAME_LOOKUP[_acf] = _canon
+
 # 정리(모듈 네임스페이스 오염 방지)
 del _h, _k, _v, _forms, _role, _m
+for _n in ("_canon", "_aliases", "_cf", "_a", "_acf"):
+    if _n in dir():
+        del globals()[_n]
+del _n

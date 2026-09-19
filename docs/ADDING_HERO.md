@@ -82,6 +82,14 @@ node frontend/scripts/screenshot.mjs
 
 ---
 
+## 미결 TODO
+
+- **독트린(doctrine, order 53)**: `en` 공란·초상화 이미지 없음 상태로 등록됨.
+  공식 영문명 확정 시 `en`·`aliases`·`heroEn2koExplicit` 보강, 초상화 확보 시
+  `{image}.png` 추가 후 `check_image_fields.mjs` 재검증.
+
+---
+
 ## 절대 규칙
 - `image` 값과 실제 파일명은 **대/소문자까지** 일치. (자동 검사: `check_image_fields.mjs`)
 - 초상화 파일은 삭제/개명하지 말 것(중복 정리는 배포 방식 확정 후 별도 단계).

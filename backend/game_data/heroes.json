@@ -1430,6 +1430,30 @@
         "role": "Support",
         "order": 45
       }
+    },
+    {
+      "id": "doctrine",
+      "logName": "독트린",
+      "en": "",
+      "ko": "독트린",
+      "role": "support",
+      "image": "독트린",
+      "aliases": [],
+      "skills": {
+        "Ability 1": "추진형 장막",
+        "Ability 2": "활기 드론",
+        "Ultimate": "구제"
+      },
+      "koreanHeroMap": {},
+      "roleForms": [
+        "독트린"
+      ],
+      "banpick": {
+        "id": "doctrine",
+        "name": "독트린",
+        "role": "Support",
+        "order": 53
+      }
     }
   ],
   "heroEn2koExplicit": {

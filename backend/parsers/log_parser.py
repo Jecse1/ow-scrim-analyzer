@@ -12,6 +12,11 @@ from config import (
     KOREAN_HERO_MAP, TANKS, SUPPORTS, PLAYER_ROLE_OVERRIDES,
     CONTROL_MAP_KEYWORDS, MAP_TYPE_DATA, _MAP_TYPE_DATA_NOSPACE, _MATCH_LEVEL_MAP_TYPES,
 )
+from game_data import PLAYER_NAME_LOOKUP
+
+def normalize_player_name(name: str) -> str:
+    # 선수 부계정·개명 별칭을 정본명으로 흡수(game_data/players.json). 미등록 이름은 원문 유지.
+    return PLAYER_NAME_LOOKUP.get(name.casefold(), name)
 
 def normalize_team_name(name: str) -> str:
     try:
@@ -312,7 +317,7 @@ def parse_overwatch_log(log_text: str, custom_t1: str = None, custom_t2: str = N
                 game_time = float(parts[base_idx + 1])
 
                 p_team = map_team(parts[base_idx + 3])
-                p_name = parts[base_idx + 4].strip()
+                p_name = normalize_player_name(parts[base_idx + 4].strip())
                 p_hero_kr = parts[base_idx + 5].strip()
                 p_hero_en = KOREAN_HERO_MAP.get(p_hero_kr, p_hero_kr)
                 team_names.add(p_team)
@@ -357,9 +362,9 @@ def parse_overwatch_log(log_text: str, custom_t1: str = None, custom_t2: str = N
             try:
                 base_idx = parts.index("kill")
                 game_time = float(parts[base_idx + 1])
-                p_name = parts[base_idx + 3].strip()
+                p_name = normalize_player_name(parts[base_idx + 3].strip())
                 p_hero = parts[base_idx + 4].strip()
-                t_name = parts[base_idx + 6].strip()
+                t_name = normalize_player_name(parts[base_idx + 6].strip())
                 t_hero = parts[base_idx + 7].strip()
                 ability = parts[base_idx + 8].strip()
 
@@ -385,7 +390,7 @@ def parse_overwatch_log(log_text: str, custom_t1: str = None, custom_t2: str = N
             try:
                 base_idx = parts.index("ultimate_start")
                 game_time = float(parts[base_idx + 1])
-                p_name = parts[base_idx + 3].strip()
+                p_name = normalize_player_name(parts[base_idx + 3].strip())
                 p_hero = parts[base_idx + 4].strip()
 
                 event_key = (game_time, "ultimate_start", p_name)
