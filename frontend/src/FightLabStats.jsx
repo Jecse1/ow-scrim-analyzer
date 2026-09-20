@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
-import { getMapDisplayName } from './gameData';
+import { getMapDisplayName, getDisplayName } from './gameData';
 import { ChevronDown, ChevronRight, Youtube, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
@@ -359,7 +359,7 @@ function PlayerBreakdown({ pfs, rangeA, rangeB, compareOn, minSample, perspectiv
                                 <tr key={e.key} className="flb-row" style={{ background: rowBg, borderBottom: `1px solid ${T.divider}`, opacity: lowSample ? 0.45 : 1 }}>
                                     <td style={tdCell}>
                                         {e.player}{side === 'them' ? <span style={{ color: T.sub }}> ({e.team})</span> : null}
-                                        {byHero && <span style={{ fontSize: '11px', color: T.sub }}> · {e.hero}</span>}
+                                        {byHero && <span style={{ fontSize: '11px', color: T.sub }}> · {getDisplayName(e.hero)}</span>}
                                         {lowSample && <span style={{ marginLeft: '6px', fontSize: '10px', color: T.yellow }}>{t.flLowSample}</span>}
                                     </td>
                                     <td title={compareOn ? `${t.flPastShort} ${rowsBMap[e.key]?.fights ?? 0}` : undefined} style={tdCell}>{e.fights}</td>
@@ -449,7 +449,7 @@ function PlayerBreakdown({ pfs, rangeA, rangeB, compareOn, minSample, perspectiv
                                             style={{ borderBottom: `1px solid ${T.divider}`, background: e.x.side === 'us' ? T.header : 'transparent' }}>
                                             <td style={{ padding: '5px 12px', fontSize: '13px', fontVariantNumeric: 'tabular-nums', color: e.rank <= 3 ? T.purple : T.text }}>{e.rank}</td>
                                             <td style={{ padding: '5px 12px', fontSize: '13px' }}>
-                                                {e.x.player}{e.x.hero && <span style={{ fontSize: '11px', color: T.sub }}> · {e.x.hero}</span>}
+                                                {e.x.player}{e.x.hero && <span style={{ fontSize: '11px', color: T.sub }}> · {getDisplayName(e.x.hero)}</span>}
                                             </td>
                                             <td style={{ padding: '5px 12px', fontSize: '12px', color: e.x.side === 'us' ? T.purple : T.sub }}>{e.x.team}</td>
                                             <td style={{ padding: '5px 12px', fontSize: '13px', fontVariantNumeric: 'tabular-nums' }}>{lb.m.fmt(e.v)}</td>
@@ -460,7 +460,7 @@ function PlayerBreakdown({ pfs, rangeA, rangeB, compareOn, minSample, perspectiv
                                         <tr key={e.x.key} style={{ borderBottom: `1px solid ${T.divider}`, opacity: 0.45 }}>
                                             <td style={{ padding: '5px 12px', fontSize: '11px', color: T.sub, whiteSpace: 'nowrap' }}>{t.flLbUnranked}</td>
                                             <td style={{ padding: '5px 12px', fontSize: '13px' }}>
-                                                {e.x.player}{e.x.hero && <span style={{ fontSize: '11px', color: T.sub }}> · {e.x.hero}</span>}
+                                                {e.x.player}{e.x.hero && <span style={{ fontSize: '11px', color: T.sub }}> · {getDisplayName(e.x.hero)}</span>}
                                             </td>
                                             <td style={{ padding: '5px 12px', fontSize: '12px', color: T.sub }}>{e.x.team}</td>
                                             <td style={{ padding: '5px 12px', fontSize: '13px', color: T.sub, fontVariantNumeric: 'tabular-nums' }}>{e.v == null ? '-' : lb.m.fmt(e.v)}</td>
@@ -543,7 +543,8 @@ function collectCombos(recs, groupBy, comboSize, windowSec = COMBO_WINDOW_SEC) {
             const seen = new Map();
             chain.forEach(u => {
                 const k = groupBy === 'h' ? (u.hero || '?') : `${u.player} (${u.hero})`;
-                if (!seen.has(k)) seen.set(k, { key: k, role: u.role || 'other' });
+                // hero/player 원본 보존은 표시명 재조립용 — 키(k) 계산은 무변경(집계 불변)
+                if (!seen.has(k)) seen.set(k, { key: k, role: u.role || 'other', hero: u.hero || '?', player: groupBy === 'h' ? null : u.player });
             });
             const members = Array.from(seen.values()).sort((a, b) =>
                 ((CMB_ROLE_ORDER[a.role] ?? 3) - (CMB_ROLE_ORDER[b.role] ?? 3)) || a.key.localeCompare(b.key));
@@ -734,7 +735,8 @@ export function UltimateComboSection({ recsNow, recsPast, compareOn, t, GREEN, R
                                 <React.Fragment key={e.key}>
                                     <tr className="flb-row" onClick={() => toggleVod(id)}
                                         style={{ borderBottom: `1px solid ${T.divider}`, opacity: e.ok ? 1 : 0.45, cursor: 'pointer' }}>
-                                        <td style={{ ...tdCell, whiteSpace: 'normal' }}>{e.key}</td>
+                                        {/* 라벨은 members 순서 그대로 표시명으로 재조립(키는 정본 유지) */}
+                                        <td style={{ ...tdCell, whiteSpace: 'normal' }}>{e.members.map(m => m.player ? `${m.player} (${getDisplayName(m.hero)})` : getDisplayName(m.hero)).join(' + ')}</td>
                                         <td style={{ ...tdCell, color: T.sub }}>{rolesText(e.members)}</td>
                                         <td style={{ ...tdCell, color: T.sub }}>{e.sample}</td>
                                         <td style={tdCell}>{pct(e.win)}</td>
@@ -913,7 +915,7 @@ export function UltimateSequenceSection({ recsNow, recsPast, compareOn, t, GREEN
     useEffect(() => { if (hero2 && !hero2List.includes(hero2)) setHero2(hero2List[0] || ''); }, [hero2List]); // eslint-disable-line
 
     const sideLabel = (s) => s === 'us' ? t.flSeqSideOur : t.flSeqSideOpp;
-    const ultLabel = (s, h) => `${sideLabel(s)} ${h}`;
+    const ultLabel = (s, h) => `${sideLabel(s)} ${getDisplayName(h)}`;
     const fmtD = (d) => d == null ? '—' : `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}${t.flUnitPp}`;
     const trendText = (tr) => tr == null ? '—'
         : `${tr >= 1 ? '↑' : tr <= -1 ? '↓' : '→'} ${tr > 0 ? '+' : tr < 0 ? '−' : ''}${Math.abs(Math.round(tr))}${t.flUnitPp}`;
@@ -1080,7 +1082,7 @@ export function UltimateSequenceSection({ recsNow, recsPast, compareOn, t, GREEN
                 <div>
                     <div style={ctlLabel}>{t.flSeqHero}</div>
                     <select value={hero1} onChange={e => setHero1(e.target.value)} style={{ ...ctlSelect, minWidth: '140px' }}>
-                        {heroList.map(h => <option key={h} value={h}>{h}</option>)}
+                        {heroList.map(h => <option key={h} value={h}>{getDisplayName(h)}</option>)}
                     </select>
                 </div>
                 <div>
@@ -1149,7 +1151,7 @@ export function UltimateSequenceSection({ recsNow, recsPast, compareOn, t, GREEN
                             <div style={ctlLabel}>{t.flSeqHero}</div>
                             <select value={hero2} onChange={e => { setHero2(e.target.value); setPrefill(''); }} style={{ ...ctlSelect, minWidth: '140px' }}>
                                 <option value="">-</option>
-                                {hero2List.map(h => <option key={h} value={h}>{h}</option>)}
+                                {hero2List.map(h => <option key={h} value={h}>{getDisplayName(h)}</option>)}
                             </select>
                         </div>
                         <button disabled={!hero2 || sameUlt}
@@ -1307,7 +1309,7 @@ export function UltimateCounterSection({ recsNow, t, GREEN, RED, perspective }) 
                     <select value={selHero} onChange={e => setSelHero(e.target.value)}
                         style={{ ...ctlNumber, width: 'auto', minWidth: '140px', cursor: 'pointer' }}>
                         <option value="all">{t.all}</option>
-                        {enemyHeroList.map(h => <option key={h} value={h}>{h}</option>)}
+                        {enemyHeroList.map(h => <option key={h} value={h}>{getDisplayName(h)}</option>)}
                     </select>
                 </div>
             </div>
@@ -1331,12 +1333,12 @@ export function UltimateCounterSection({ recsNow, t, GREEN, RED, perspective }) 
                                         {drillOpen[row.hero]
                                             ? <ChevronDown size={12} color={T.sub} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
                                             : <ChevronRight size={12} color={T.sub} style={{ verticalAlign: '-2px', marginRight: '4px' }} />}
-                                        {themWord} {row.hero}
+                                        {themWord} {getDisplayName(row.hero)}
                                     </td>
                                     <td style={{ ...tdCell, color: T.sub }}>{row.sample}</td>
                                     <td style={tdCell}>{pct(row.winWith)}</td>
                                     <td title={`${t.flCtrColNoResp}: ${row.noRespN}`} style={tdCell}>{pct(row.noRespWin)}</td>
-                                    <td style={tdCell}>{row.best ? `${usWord} ${row.best.hero}` : <span style={{ color: T.yellow }}>{t.flLowSample}</span>}</td>
+                                    <td style={tdCell}>{row.best ? `${usWord} ${getDisplayName(row.best.hero)}` : <span style={{ color: T.yellow }}>{t.flLowSample}</span>}</td>
                                     <td style={tdCell}>{row.best ? pct(row.best.win) : '—'}</td>
                                     <td style={{ ...tdCell, color: T.sub }}>{row.best ? row.best.sample : '—'}</td>
                                 </tr>
@@ -1359,7 +1361,7 @@ export function UltimateCounterSection({ recsNow, t, GREEN, RED, perspective }) 
                                                             <React.Fragment key={e.key}>
                                                                 <tr className="flb-row" onClick={ev => { ev.stopPropagation(); toggleVod(id); }}
                                                                     style={{ borderBottom: `1px solid ${T.divider}`, opacity: e.ok ? 1 : 0.45, cursor: 'pointer' }}>
-                                                                    <td style={tdCell}>{usWord} {e.hero}{!e.ok && <span style={{ marginLeft: '6px', fontSize: '10px', color: T.yellow }}>{t.flLowSample}</span>}</td>
+                                                                    <td style={tdCell}>{usWord} {getDisplayName(e.hero)}{!e.ok && <span style={{ marginLeft: '6px', fontSize: '10px', color: T.yellow }}>{t.flLowSample}</span>}</td>
                                                                     <td style={{ ...tdCell, color: T.sub }}>{e.sample}</td>
                                                                     <td style={tdCell}>{pct(e.rate)}</td>
                                                                     <td style={tdCell}>{pct(e.win)}</td>
@@ -1587,7 +1589,7 @@ export function ScopeSidebar({ sc, t, hideMap = false, hideMinSample = false, op
                     <div style={sideLabel}>{t.flSideMap}</div>
                     <select value={draft.map} onChange={e => setD({ map: e.target.value })} style={sideSelect}>
                         <option value="All">{t.ffAllMaps}</option>
-                        {mapList.map(mp => <option key={mp} value={mp}>{mp}</option>)}
+                        {mapList.map(mp => <option key={mp} value={mp}>{getMapDisplayName(mp)}</option>)}
                     </select>
                 </div>
             )}

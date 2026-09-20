@@ -4,6 +4,7 @@
 // 서브탭: [상황] [콤보·시퀀스] (B 패턴 분석은 추후 이 줄에 추가 예정).
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
+import { getDisplayName } from './gameData';
 import { useLanguage } from "./LanguageContext";
 import {
     T, pct, tpl, isKnown, buildUltStats, flipRecord,
@@ -104,7 +105,7 @@ function UltSeqLine({ r, t }) {
                     }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.side === 'us' ? CHIP_BLUE : CHIP_RED, flexShrink: 0 }} />
                         <span style={{ color: T.sub }}>{u.side === 'us' ? t.flPatUs : t.flPatOpp}</span>
-                        <span style={{ color: T.text, fontWeight: 600 }}>{u.hero || '?'}</span>
+                        <span style={{ color: T.text, fontWeight: 600 }}>{u.hero ? getDisplayName(u.hero) : '?'}</span>
                     </span>
                 </React.Fragment>
             ))}
@@ -262,9 +263,9 @@ function UltimatePatternSection({ recsNow, recsPast, compareOn, minSample, t, GR
                 <React.Fragment key={i}>
                     {i > 0 && <span style={{ color: T.faint, fontSize: '10px' }}>→</span>}
                     {sl.side === 'us'
-                        ? <span style={{ color: CHIP_BLUE, fontWeight: 600 }}>{sl.hero}</span>
+                        ? <span style={{ color: CHIP_BLUE, fontWeight: 600 }}>{getDisplayName(sl.hero)}</span>
                         : <span style={{ color: CHIP_RED }}>
-                            {t.flPatOpp}({sl.top.map(([h, n]) => `${h} ${n}`).join('/')}{sl.other > 0 ? `/${tpl(t.flPatOppOther, { n: sl.other })}` : ''})
+                            {t.flPatOpp}({sl.top.map(([h, n]) => `${getDisplayName(h)} ${n}`).join('/')}{sl.other > 0 ? `/${tpl(t.flPatOppOther, { n: sl.other })}` : ''})
                         </span>}
                 </React.Fragment>
             ))}
@@ -583,7 +584,7 @@ function UltimateInitiationSection({ recsNow, recsPast, compareOn, minSample, t,
                             <React.Fragment key={row.hero}>
                                 <tr className="flb-row" onClick={() => toggle(row.hero)}
                                     style={{ borderBottom: `1px solid ${T.divider}`, opacity: row.ok ? 1 : 0.45, cursor: 'pointer' }}>
-                                    <td style={tdCell}>{sideWord} {row.hero}</td>
+                                    <td style={tdCell}>{sideWord} {getDisplayName(row.hero)}</td>
                                     <td style={{ ...tdCell, color: T.sub }}>{row.sample}</td>
                                     <td style={tdCell}>{pct(row.share)}</td>
                                     <td style={tdCell}>{pct(row.win)}</td>
@@ -643,7 +644,7 @@ function UltimateInitiationSection({ recsNow, recsPast, compareOn, minSample, t,
                     <tbody>
                         {row.responses.map(e => (
                             <tr key={e.key} style={{ opacity: e.ok ? 1 : 0.45 }}>
-                                <td style={miniTd}>{usWord} {e.hero}{!e.ok && <span style={{ marginLeft: '6px', fontSize: '10px', color: T.yellow }}>{t.flLowSample}</span>}</td>
+                                <td style={miniTd}>{usWord} {getDisplayName(e.hero)}{!e.ok && <span style={{ marginLeft: '6px', fontSize: '10px', color: T.yellow }}>{t.flLowSample}</span>}</td>
                                 <td style={{ ...miniTd, color: T.sub }}>{e.sample}</td>
                                 <td style={miniTd}>{pct(e.win)}</td>
                                 <td style={{ ...miniTd, color: T.sub }}>{reactText(e.avgReact)}</td>
