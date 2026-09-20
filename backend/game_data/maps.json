@@ -8,6 +8,7 @@
       "id": "nepal",
       "ko": "네팔",
       "en": "Nepal",
+      "zh": "尼泊尔",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -35,6 +36,7 @@
       "id": "lijiang",
       "ko": "리장 타워",
       "en": "Lijiang Tower",
+      "zh": "漓江塔",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -60,6 +62,7 @@
       "id": "busan",
       "ko": "부산",
       "en": "Busan",
+      "zh": "釜山",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -85,6 +88,7 @@
       "id": "oasis",
       "ko": "오아시스",
       "en": "Oasis",
+      "zh": "绿洲城",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -110,6 +114,7 @@
       "id": "ilios",
       "ko": "일리오스",
       "en": "Ilios",
+      "zh": "伊利奥斯",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -135,10 +140,13 @@
       "id": "antarctic",
       "ko": "남극 반도",
       "en": "Antarctic Peninsula",
+      "zh": "南极半岛",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
-      "aliases": [],
+      "aliases": [
+        "남극반도"
+      ],
       "controlKeyword": true,
       "mapTypeData": {
         "남극 반도": "쟁탈",
@@ -160,6 +168,7 @@
       "id": "samoa",
       "ko": "사모아",
       "en": "Samoa",
+      "zh": "萨摩亚",
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
@@ -187,6 +196,7 @@
       "id": "dorado",
       "ko": "도라도",
       "en": "Dorado",
+      "zh": "多拉多",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -209,6 +219,7 @@
       "id": "rialto",
       "ko": "리알토",
       "en": "Rialto",
+      "zh": "里阿尔托",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -231,6 +242,7 @@
       "id": "circuit",
       "ko": "서킷 로얄",
       "en": "Circuit Royal",
+      "zh": "皇家赛道",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -253,6 +265,7 @@
       "id": "junkertown",
       "ko": "쓰레기촌",
       "en": "Junkertown",
+      "zh": "渣客镇",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -275,6 +288,7 @@
       "id": "route66",
       "ko": "66번 국도",
       "en": "Route 66",
+      "zh": "66号公路",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -299,11 +313,13 @@
       "id": "gibraltar",
       "ko": "감시 기지: 지브롤터",
       "en": "Watchpoint: Gibraltar",
+      "zh": "观测站：直布罗陀",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
       "aliases": [
-        "지브롤터"
+        "지브롤터",
+        "감시기지 지브롤터"
       ],
       "controlKeyword": false,
       "mapTypeData": {
@@ -324,6 +340,7 @@
       "id": "shambali",
       "ko": "샴발리 수도원",
       "en": "Shambali Monastery",
+      "zh": "香巴里寺院",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -346,6 +363,7 @@
       "id": "havana",
       "ko": "하바나",
       "en": "Havana",
+      "zh": "哈瓦那",
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
@@ -368,6 +386,7 @@
       "id": "numbani",
       "ko": "눔바니",
       "en": "Numbani",
+      "zh": "努巴尼",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -390,6 +409,7 @@
       "id": "midtown",
       "ko": "미드타운",
       "en": "Midtown",
+      "zh": "中城",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -412,6 +432,7 @@
       "id": "blizzardworld",
       "ko": "블리자드 월드",
       "en": "Blizzard World",
+      "zh": "暴雪世界",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -434,6 +455,7 @@
       "id": "eichenwalde",
       "ko": "아이헨발데",
       "en": "Eichenwalde",
+      "zh": "艾兴瓦尔德",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -458,6 +480,7 @@
       "id": "kingsrow",
       "ko": "왕의 길",
       "en": "King's Row",
+      "zh": "国王大道",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -480,6 +503,7 @@
       "id": "paraiso",
       "ko": "파라이소",
       "en": "Paraíso",
+      "zh": "帕拉伊苏",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -505,6 +529,7 @@
       "id": "hollywood",
       "ko": "할리우드",
       "en": "Hollywood",
+      "zh": "好莱坞",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
@@ -530,7 +555,9 @@
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
-      "aliases": [],
+      "aliases": [
+        "네온 교차로"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "네온교차로": "혼합"
@@ -548,6 +575,7 @@
       "id": "newqueenstreet",
       "ko": "뉴 퀸 스트리트",
       "en": "New Queen Street",
+      "zh": "新皇后街",
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
@@ -570,6 +598,7 @@
       "id": "colosseo",
       "ko": "콜로세오",
       "en": "Colosseo",
+      "zh": "斗兽场",
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
@@ -592,6 +621,7 @@
       "id": "esperanca",
       "ko": "이스페란사",
       "en": "Esperança",
+      "zh": "埃斯佩兰萨",
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
@@ -619,6 +649,7 @@
       "id": "lunasafi",
       "ko": "룬아사피",
       "en": "Runasapi",
+      "zh": "鲁纳萨皮",
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
@@ -644,6 +675,7 @@
       "id": "newjunkcity",
       "ko": "뉴 정크 시티",
       "en": "New Junk City",
+      "zh": "新渣客城",
       "type": "flashpoint",
       "typeLabelKo": "플래시포인트",
       "modeLabelKo": "플래시포인트",
@@ -666,6 +698,7 @@
       "id": "suravasa",
       "ko": "수라바사",
       "en": "Suravasa",
+      "zh": "苏拉瓦萨",
       "type": "flashpoint",
       "typeLabelKo": "플래시포인트",
       "modeLabelKo": "플래시포인트",
@@ -706,12 +739,14 @@
         "name": "아틀리스",
         "type": "Flashpoint",
         "order": 29
-      }
+      },
+      "zh": "阿特利斯"
     },
     {
       "id": "hanaoka",
       "ko": "하나오카",
       "en": "Hanaoka",
+      "zh": "花冈",
       "type": "clash",
       "typeLabelKo": "격돌",
       "modeLabelKo": "격돌",
@@ -729,6 +764,7 @@
       "id": "throneofanubis",
       "ko": "아누비스의 왕좌",
       "en": "Throne of Anubis",
+      "zh": "阿努比斯王座",
       "type": "clash",
       "typeLabelKo": "격돌",
       "modeLabelKo": "격돌",
@@ -750,5 +786,31 @@
     "Flashpoint": "플래시포인트",
     "Escort": "호위",
     "Clash": "격돌"
+  },
+  "modeLabels": {
+    "쟁탈": {
+      "en": "Control",
+      "zh": "占领要点"
+    },
+    "화물": {
+      "en": "Escort",
+      "zh": "运载目标"
+    },
+    "혼합": {
+      "en": "Hybrid",
+      "zh": "混合"
+    },
+    "밀기": {
+      "en": "Push",
+      "zh": "推进"
+    },
+    "플래시포인트": {
+      "en": "Flashpoint",
+      "zh": "闪点行动"
+    },
+    "격돌": {
+      "en": "Clash",
+      "zh": "冲突"
+    }
   }
 }

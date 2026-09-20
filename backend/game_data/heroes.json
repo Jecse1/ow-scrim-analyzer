@@ -9,6 +9,7 @@
       "logName": "D.Va",
       "en": "D.Va",
       "ko": "D.Va",
+      "zh": "D.Va",
       "displayKo": "디바",
       "role": "tank",
       "image": "dva",
@@ -19,6 +20,16 @@
         "Ability 1": "부스터",
         "Ability 2": "마이크로 미사일",
         "Ultimate": "자폭"
+      },
+      "skillsEn": {
+        "Ability 1": "Boosters",
+        "Ability 2": "Micro Missiles",
+        "Ultimate": "Self-Destruct"
+      },
+      "skillsZh": {
+        "Ability 1": "推进器",
+        "Ability 2": "微型飞弹",
+        "Ultimate": "自毁"
       },
       "koreanHeroMap": {
         "디바": "D.Va"
@@ -39,6 +50,7 @@
       "logName": "둠피스트",
       "en": "Doomfist",
       "ko": "둠피스트",
+      "zh": "末日铁拳",
       "role": "tank",
       "image": "둠피스트",
       "aliases": [],
@@ -46,6 +58,16 @@
         "Ability 1": "지진 강타",
         "Ability 2": "파워 블락",
         "Ultimate": "파멸의 일격"
+      },
+      "skillsEn": {
+        "Ability 1": "Seismic Slam",
+        "Ability 2": "Power Block",
+        "Ultimate": "Meteor Strike"
+      },
+      "skillsZh": {
+        "Ability 1": "裂地重拳",
+        "Ability 2": "能量格挡",
+        "Ultimate": "毁天灭地"
       },
       "koreanHeroMap": {
         "둠피스트": "Doomfist"
@@ -66,6 +88,7 @@
       "logName": "정커퀸",
       "en": "Junker Queen",
       "ko": "정커퀸",
+      "zh": "渣客女王",
       "role": "tank",
       "image": "정커퀸",
       "aliases": [],
@@ -73,6 +96,11 @@
         "Ability 1": "지휘의 외침",
         "Ability 2": "육식 도살",
         "Ultimate": "광란"
+      },
+      "skillsEn": {
+        "Ability 1": "Commanding Shout",
+        "Ability 2": "Carnage",
+        "Ultimate": "Rampage"
       },
       "koreanHeroMap": {
         "정커퀸": "Junker Queen"
@@ -86,6 +114,11 @@
         "name": "정커퀸",
         "role": "Tank",
         "order": 11
+      },
+      "skillsZh": {
+        "Ability 1": "号令呐喊",
+        "Ability 2": "杀戮",
+        "Ultimate": "横冲直撞"
       }
     },
     {
@@ -93,6 +126,7 @@
       "logName": "마우가",
       "en": "Mauga",
       "ko": "마우가",
+      "zh": "毛加",
       "role": "tank",
       "image": "마우가",
       "aliases": [],
@@ -100,6 +134,11 @@
         "Ability 1": "돌파",
         "Ability 2": "터질 듯한 심장",
         "Ultimate": "케이지 혈투"
+      },
+      "skillsEn": {
+        "Ability 1": "Overrun",
+        "Ability 2": "Cardiac Overdrive",
+        "Ultimate": "Cage Fight"
       },
       "koreanHeroMap": {
         "마우가": "Mauga"
@@ -113,6 +152,11 @@
         "name": "마우가",
         "role": "Tank",
         "order": 6
+      },
+      "skillsZh": {
+        "Ability 1": "蛮力冲撞",
+        "Ability 2": "强心过载",
+        "Ultimate": "牢笼对决"
       }
     },
     {
@@ -120,6 +164,7 @@
       "logName": "오리사",
       "en": "Orisa",
       "ko": "오리사",
+      "zh": "奥丽莎",
       "role": "tank",
       "image": "오리사",
       "aliases": [],
@@ -127,6 +172,16 @@
         "Ability 1": "방어 강화",
         "Ability 2": "투창",
         "Ultimate": "대지의 창"
+      },
+      "skillsEn": {
+        "Ability 1": "Fortify",
+        "Ability 2": "Energy Javelin",
+        "Ultimate": "Terra Surge"
+      },
+      "skillsZh": {
+        "Ability 1": "强化防御",
+        "Ability 2": "能量标枪",
+        "Ultimate": "大地涌动"
       },
       "koreanHeroMap": {
         "오리사": "Orisa"
@@ -147,6 +202,7 @@
       "logName": "라마트라",
       "en": "Ramattra",
       "ko": "라마트라",
+      "zh": "拉玛刹",
       "role": "tank",
       "image": "라마트라",
       "aliases": [],
@@ -154,6 +210,16 @@
         "Ability 1": "네메시스 형태",
         "Ability 2": "탐식의 소용돌이",
         "Ultimate": "절멸"
+      },
+      "skillsEn": {
+        "Ability 1": "Nemesis Form",
+        "Ability 2": "Ravenous Vortex",
+        "Ultimate": "Annihilation"
+      },
+      "skillsZh": {
+        "Ultimate": "湮灭",
+        "Ability 1": "灾祸形态",
+        "Ability 2": "吞噬旋涡"
       },
       "koreanHeroMap": {
         "라마트라": "Ramattra"
@@ -174,6 +240,7 @@
       "logName": "라인하르트",
       "en": "Reinhardt",
       "ko": "라인하르트",
+      "zh": "莱因哈特",
       "role": "tank",
       "image": "라인하르트",
       "aliases": [],
@@ -181,6 +248,16 @@
         "Ability 1": "돌진",
         "Ability 2": "화염 강타",
         "Ultimate": "대지분쇄"
+      },
+      "skillsEn": {
+        "Ability 1": "Charge",
+        "Ability 2": "Fire Strike",
+        "Ultimate": "Earthshatter"
+      },
+      "skillsZh": {
+        "Ability 1": "冲锋",
+        "Ability 2": "烈焰打击",
+        "Ultimate": "裂地猛击"
       },
       "koreanHeroMap": {
         "라인하르트": "Reinhardt"
@@ -201,6 +278,7 @@
       "logName": "로드호그",
       "en": "Roadhog",
       "ko": "로드호그",
+      "zh": "路霸",
       "role": "tank",
       "image": "로드호그",
       "aliases": [],
@@ -208,6 +286,16 @@
         "Ability 1": "갈고리 사슬",
         "Ability 2": "숨 돌리기",
         "Ultimate": "돼재앙"
+      },
+      "skillsEn": {
+        "Ability 1": "Chain Hook",
+        "Ability 2": "Take a Breather",
+        "Ultimate": "Whole Hog"
+      },
+      "skillsZh": {
+        "Ability 1": "链钩",
+        "Ability 2": "呼吸器",
+        "Ultimate": "鸡飞狗跳"
       },
       "koreanHeroMap": {
         "로드호그": "Roadhog"
@@ -228,6 +316,7 @@
       "logName": "시그마",
       "en": "Sigma",
       "ko": "시그마",
+      "zh": "西格玛",
       "role": "tank",
       "image": "시그마",
       "aliases": [],
@@ -235,6 +324,16 @@
         "Ability 1": "키네틱 손아귀",
         "Ability 2": "강착",
         "Ultimate": "중력 붕괴"
+      },
+      "skillsEn": {
+        "Ability 1": "Kinetic Grasp",
+        "Ability 2": "Accretion",
+        "Ultimate": "Gravitic Flux"
+      },
+      "skillsZh": {
+        "Ability 1": "动能撷取",
+        "Ability 2": "吸积",
+        "Ultimate": "引力乱流"
       },
       "koreanHeroMap": {
         "시그마": "Sigma"
@@ -255,6 +354,7 @@
       "logName": "윈스턴",
       "en": "Winston",
       "ko": "윈스턴",
+      "zh": "温斯顿",
       "role": "tank",
       "image": "윈스턴",
       "aliases": [],
@@ -262,6 +362,16 @@
         "Ability 1": "점프 팩",
         "Ability 2": "방벽 생성기",
         "Ultimate": "원시의 분노"
+      },
+      "skillsEn": {
+        "Ability 1": "Jump Pack",
+        "Ability 2": "Barrier Projector",
+        "Ultimate": "Primal Rage"
+      },
+      "skillsZh": {
+        "Ability 1": "喷射背包",
+        "Ability 2": "屏障发生器",
+        "Ultimate": "原始暴怒"
       },
       "koreanHeroMap": {
         "윈스턴": "Winston"
@@ -282,6 +392,7 @@
       "logName": "레킹볼",
       "en": "Wrecking Ball",
       "ko": "레킹볼",
+      "zh": "破坏球",
       "role": "tank",
       "image": "레킹볼",
       "aliases": [],
@@ -289,6 +400,11 @@
         "Ability 1": "구르기",
         "Ability 2": "적응형 보호막",
         "Ultimate": "지뢰밭"
+      },
+      "skillsEn": {
+        "Ability 1": "Roll",
+        "Ability 2": "Adaptive Shield",
+        "Ultimate": "Minefield"
       },
       "koreanHeroMap": {
         "레킹볼": "Wrecking Ball"
@@ -302,6 +418,11 @@
         "name": "레킹볼",
         "role": "Tank",
         "order": 4
+      },
+      "skillsZh": {
+        "Ability 1": "滚球模式",
+        "Ability 2": "自适应护盾",
+        "Ultimate": "地雷禁区"
       }
     },
     {
@@ -309,6 +430,7 @@
       "logName": "자리야",
       "en": "Zarya",
       "ko": "자리야",
+      "zh": "查莉娅",
       "role": "tank",
       "image": "자리야",
       "aliases": [],
@@ -316,6 +438,16 @@
         "Ability 1": "입자 방벽",
         "Ability 2": "방벽 씌우기",
         "Ultimate": "중력자탄"
+      },
+      "skillsEn": {
+        "Ability 1": "Particle Barrier",
+        "Ability 2": "Projected Barrier",
+        "Ultimate": "Graviton Surge"
+      },
+      "skillsZh": {
+        "Ability 1": "粒子屏障",
+        "Ability 2": "投射屏障",
+        "Ultimate": "重力喷涌"
       },
       "koreanHeroMap": {
         "자리야": "Zarya"
@@ -336,6 +468,7 @@
       "logName": "해저드",
       "en": "Hazard",
       "ko": "해저드",
+      "zh": "骇灾",
       "role": "tank",
       "image": "해저드",
       "aliases": [],
@@ -343,6 +476,11 @@
         "Ability 1": "가시",
         "Ability 2": "매복",
         "Ultimate": "폭우"
+      },
+      "skillsEn": {
+        "Ability 1": "Spike Guard",
+        "Ability 2": "Violent Leap",
+        "Ultimate": "Downpour"
       },
       "koreanHeroMap": {
         "해저드": "Hazard"
@@ -420,6 +558,7 @@
       "logName": "애쉬",
       "en": "Ashe",
       "ko": "애쉬",
+      "zh": "艾什",
       "role": "damage",
       "image": "애쉬",
       "aliases": [],
@@ -427,6 +566,11 @@
         "Ability 1": "충격 샷건",
         "Ability 2": "다이너마이트",
         "Ultimate": "B.O.B"
+      },
+      "skillsEn": {
+        "Ability 1": "Coach Gun",
+        "Ability 2": "Dynamite",
+        "Ultimate": "B.O.B."
       },
       "koreanHeroMap": {
         "애쉬": "Ashe"
@@ -440,6 +584,11 @@
         "name": "애쉬",
         "role": "Damage",
         "order": 24
+      },
+      "skillsZh": {
+        "Ability 1": "短管猎枪",
+        "Ability 2": "炸药",
+        "Ultimate": "鲍勃"
       }
     },
     {
@@ -447,6 +596,7 @@
       "logName": "바스티온",
       "en": "Bastion",
       "ko": "바스티온",
+      "zh": "堡垒",
       "role": "damage",
       "image": "바스티온",
       "aliases": [],
@@ -454,6 +604,11 @@
         "Ability 1": "설정: 강습",
         "Ability 2": "A-36 전술 수류탄",
         "Ultimate": "설정: 포격"
+      },
+      "skillsEn": {
+        "Ability 1": "Configuration: Assault",
+        "Ability 2": "A-36 Tactical Grenade",
+        "Ultimate": "Configuration: Artillery"
       },
       "koreanHeroMap": {
         "바스티온": "Bastion"
@@ -467,6 +622,11 @@
         "name": "바스티온",
         "role": "Damage",
         "order": 18
+      },
+      "skillsZh": {
+        "Ability 1": "强袭模式",
+        "Ability 2": "A-36战术手雷",
+        "Ultimate": "火炮模式"
       }
     },
     {
@@ -474,6 +634,7 @@
       "logName": "캐서디",
       "en": "Cassidy",
       "ko": "캐서디",
+      "zh": "卡西迪",
       "role": "damage",
       "image": "캐서디",
       "aliases": [],
@@ -481,6 +642,11 @@
         "Ability 1": "구르기",
         "Ability 2": "자석 수류탄",
         "Ultimate": "황야의 무법자"
+      },
+      "skillsEn": {
+        "Ability 1": "Combat Roll",
+        "Ability 2": "Magnetic Grenade",
+        "Ultimate": "Deadeye"
       },
       "koreanHeroMap": {
         "캐서디": "Cassidy"
@@ -494,6 +660,11 @@
         "name": "캐서디",
         "role": "Damage",
         "order": 28
+      },
+      "skillsZh": {
+        "Ability 1": "战术翻滚",
+        "Ability 2": "磁性手雷",
+        "Ultimate": "神射手"
       }
     },
     {
@@ -501,6 +672,7 @@
       "logName": "에코",
       "en": "Echo",
       "ko": "에코",
+      "zh": "回声",
       "role": "damage",
       "image": "에코",
       "aliases": [],
@@ -508,6 +680,16 @@
         "Ability 1": "비행",
         "Ability 2": "광선 집중",
         "Ultimate": "복제"
+      },
+      "skillsEn": {
+        "Ability 1": "Flight",
+        "Ability 2": "Focusing Beam",
+        "Ultimate": "Duplicate"
+      },
+      "skillsZh": {
+        "Ability 1": "飞行",
+        "Ability 2": "聚焦光线",
+        "Ultimate": "复制"
       },
       "koreanHeroMap": {
         "에코": "Echo"
@@ -528,6 +710,7 @@
       "logName": "겐지",
       "en": "Genji",
       "ko": "겐지",
+      "zh": "源氏",
       "role": "damage",
       "image": "겐지",
       "aliases": [],
@@ -535,6 +718,16 @@
         "Ability 1": "질풍참",
         "Ability 2": "튕겨내기",
         "Ultimate": "용검"
+      },
+      "skillsEn": {
+        "Ability 1": "Swift Strike",
+        "Ability 2": "Deflect",
+        "Ultimate": "Dragonblade"
+      },
+      "skillsZh": {
+        "Ability 1": "迅影突袭",
+        "Ultimate": "龙刃",
+        "Ability 2": "闪"
       },
       "koreanHeroMap": {
         "겐지": "Genji"
@@ -555,6 +748,7 @@
       "logName": "한조",
       "en": "Hanzo",
       "ko": "한조",
+      "zh": "半藏",
       "role": "damage",
       "image": "한조",
       "aliases": [],
@@ -562,6 +756,16 @@
         "Ability 1": "폭풍 화살",
         "Ability 2": "음파 화살",
         "Ultimate": "용의 일격"
+      },
+      "skillsEn": {
+        "Ability 1": "Storm Arrows",
+        "Ability 2": "Sonic Arrow",
+        "Ultimate": "Dragonstrike"
+      },
+      "skillsZh": {
+        "Ultimate": "巨龙之魂",
+        "Ability 1": "岚",
+        "Ability 2": "音"
       },
       "koreanHeroMap": {
         "한조": "Hanzo"
@@ -582,6 +786,7 @@
       "logName": "정크랫",
       "en": "Junkrat",
       "ko": "정크랫",
+      "zh": "狂鼠",
       "role": "damage",
       "image": "정크랫",
       "aliases": [],
@@ -589,6 +794,16 @@
         "Ability 1": "충격 지뢰",
         "Ability 2": "강철 덫",
         "Ultimate": "죽이는 타이어"
+      },
+      "skillsEn": {
+        "Ability 1": "Concussion Mine",
+        "Ability 2": "Steel Trap",
+        "Ultimate": "RIP-Tire"
+      },
+      "skillsZh": {
+        "Ability 1": "震荡地雷",
+        "Ability 2": "钢铁陷阱",
+        "Ultimate": "炸弹轮胎"
       },
       "koreanHeroMap": {
         "정크랫": "Junkrat"
@@ -609,6 +824,7 @@
       "logName": "메이",
       "en": "Mei",
       "ko": "메이",
+      "zh": "美",
       "role": "damage",
       "image": "메이",
       "aliases": [],
@@ -616,6 +832,16 @@
         "Ability 1": "급속 빙결",
         "Ability 2": "빙벽",
         "Ultimate": "눈보라"
+      },
+      "skillsEn": {
+        "Ability 1": "Cryo-Freeze",
+        "Ability 2": "Ice Wall",
+        "Ultimate": "Blizzard"
+      },
+      "skillsZh": {
+        "Ability 1": "极寒冷冻",
+        "Ability 2": "冰墙",
+        "Ultimate": "暴雪"
       },
       "koreanHeroMap": {
         "메이": "Mei"
@@ -636,6 +862,7 @@
       "logName": "파라",
       "en": "Pharah",
       "ko": "파라",
+      "zh": "法老之鹰",
       "role": "damage",
       "image": "파라",
       "aliases": [],
@@ -643,6 +870,16 @@
         "Ability 1": "점프 추진기",
         "Ability 2": "충격탄",
         "Ultimate": "포화"
+      },
+      "skillsEn": {
+        "Ability 1": "Jump Jet",
+        "Ability 2": "Concussive Blast",
+        "Ultimate": "Barrage"
+      },
+      "skillsZh": {
+        "Ultimate": "火箭弹幕",
+        "Ability 1": "起跳喷射",
+        "Ability 2": "震荡冲击"
       },
       "koreanHeroMap": {
         "파라": "Pharah"
@@ -663,6 +900,7 @@
       "logName": "리퍼",
       "en": "Reaper",
       "ko": "리퍼",
+      "zh": "死神",
       "role": "damage",
       "image": "리퍼",
       "aliases": [],
@@ -670,6 +908,16 @@
         "Ability 1": "망령화",
         "Ability 2": "그림자 밟기",
         "Ultimate": "죽음의 꽃"
+      },
+      "skillsEn": {
+        "Ability 1": "Wraith Form",
+        "Ability 2": "Shadow Step",
+        "Ultimate": "Death Blossom"
+      },
+      "skillsZh": {
+        "Ability 1": "幽灵形态",
+        "Ability 2": "暗影步",
+        "Ultimate": "死亡绽放"
       },
       "koreanHeroMap": {
         "리퍼": "Reaper"
@@ -690,6 +938,7 @@
       "logName": "소전",
       "en": "Sojourn",
       "ko": "소전",
+      "zh": "索杰恩",
       "role": "damage",
       "image": "소전",
       "aliases": [],
@@ -697,6 +946,16 @@
         "Ability 1": "파워 슬라이드",
         "Ability 2": "분열 사격",
         "Ultimate": "오버클럭"
+      },
+      "skillsEn": {
+        "Ability 1": "Power Slide",
+        "Ability 2": "Disruptor Shot",
+        "Ultimate": "Overclock"
+      },
+      "skillsZh": {
+        "Ultimate": "超频",
+        "Ability 1": "强力滑铲",
+        "Ability 2": "干扰射击"
       },
       "koreanHeroMap": {
         "소전": "Sojourn"
@@ -717,6 +976,7 @@
       "logName": "솔저: 76",
       "en": "Soldier: 76",
       "ko": "솔저: 76",
+      "zh": "士兵：76",
       "role": "damage",
       "image": "soldier76",
       "aliases": [
@@ -727,6 +987,16 @@
         "Ability 1": "질주",
         "Ability 2": "생체장",
         "Ultimate": "전술 조준경"
+      },
+      "skillsEn": {
+        "Ability 1": "Sprint",
+        "Ability 2": "Biotic Field",
+        "Ultimate": "Tactical Visor"
+      },
+      "skillsZh": {
+        "Ability 1": "疾跑",
+        "Ability 2": "生物力场",
+        "Ultimate": "战术目镜"
       },
       "koreanHeroMap": {
         "솔저: 76": "Soldier: 76",
@@ -750,6 +1020,7 @@
       "logName": "솜브라",
       "en": "Sombra",
       "ko": "솜브라",
+      "zh": "黑影",
       "role": "damage",
       "image": "솜브라",
       "aliases": [],
@@ -757,6 +1028,16 @@
         "Ability 1": "은신",
         "Ability 2": "바이러스",
         "Ultimate": "EMP"
+      },
+      "skillsEn": {
+        "Ability 1": "Stealth",
+        "Ability 2": "Virus",
+        "Ultimate": "EMP"
+      },
+      "skillsZh": {
+        "Ability 1": "潜行",
+        "Ability 2": "病毒",
+        "Ultimate": "电磁脉冲"
       },
       "koreanHeroMap": {
         "솜브라": "Sombra"
@@ -777,6 +1058,7 @@
       "logName": "시메트라",
       "en": "Symmetra",
       "ko": "시메트라",
+      "zh": "秩序之光",
       "role": "damage",
       "image": "시메트라",
       "aliases": [],
@@ -784,6 +1066,16 @@
         "Ability 1": "감시 포탑",
         "Ability 2": "순간이동기",
         "Ultimate": "광자 방벽"
+      },
+      "skillsEn": {
+        "Ability 1": "Sentry Turret",
+        "Ability 2": "Teleporter",
+        "Ultimate": "Photon Barrier"
+      },
+      "skillsZh": {
+        "Ability 1": "哨戒炮",
+        "Ability 2": "传送面板",
+        "Ultimate": "光子屏障"
       },
       "koreanHeroMap": {
         "시메트라": "Symmetra"
@@ -804,6 +1096,7 @@
       "logName": "토르비욘",
       "en": "Torbjorn",
       "ko": "토르비욘",
+      "zh": "托比昂",
       "role": "damage",
       "image": "토르비욘",
       "aliases": [
@@ -813,6 +1106,16 @@
         "Ability 1": "포탑 설치",
         "Ability 2": "과부하",
         "Ultimate": "초고열 용광로"
+      },
+      "skillsEn": {
+        "Ability 1": "Deploy Turret",
+        "Ability 2": "Overload",
+        "Ultimate": "Molten Core"
+      },
+      "skillsZh": {
+        "Ability 1": "部署炮台",
+        "Ability 2": "过载",
+        "Ultimate": "熔火核心"
       },
       "koreanHeroMap": {
         "토르비욘": "Torbjorn"
@@ -834,6 +1137,7 @@
       "logName": "트레이서",
       "en": "Tracer",
       "ko": "트레이서",
+      "zh": "猎空",
       "role": "damage",
       "image": "트레이서",
       "aliases": [],
@@ -841,6 +1145,16 @@
         "Ability 1": "점멸",
         "Ability 2": "시간 역행",
         "Ultimate": "펄스 폭탄"
+      },
+      "skillsEn": {
+        "Ability 1": "Blink",
+        "Ability 2": "Recall",
+        "Ultimate": "Pulse Bomb"
+      },
+      "skillsZh": {
+        "Ability 1": "闪现",
+        "Ability 2": "闪回",
+        "Ultimate": "脉冲炸弹"
       },
       "koreanHeroMap": {
         "트레이서": "Tracer"
@@ -861,6 +1175,7 @@
       "logName": "벤처",
       "en": "Venture",
       "ko": "벤처",
+      "zh": "探奇",
       "role": "damage",
       "image": "벤처",
       "aliases": [],
@@ -868,6 +1183,11 @@
         "Ability 1": "잠복",
         "Ability 2": "드릴 돌진",
         "Ultimate": "지각 충격"
+      },
+      "skillsEn": {
+        "Ability 1": "Burrow",
+        "Ability 2": "Drill Dash",
+        "Ultimate": "Tectonic Shock"
       },
       "koreanHeroMap": {
         "벤처": "Venture"
@@ -881,6 +1201,11 @@
         "name": "벤처",
         "role": "Damage",
         "order": 19
+      },
+      "skillsZh": {
+        "Ability 1": "遁地",
+        "Ability 2": "钻头冲刺",
+        "Ultimate": "地震冲击"
       }
     },
     {
@@ -888,6 +1213,7 @@
       "logName": "위도우메이커",
       "en": "Widowmaker",
       "ko": "위도우메이커",
+      "zh": "黑百合",
       "role": "damage",
       "image": "위도우메이커",
       "aliases": [],
@@ -895,6 +1221,16 @@
         "Ability 1": "갈고리 발사",
         "Ability 2": "맹독 지뢰",
         "Ultimate": "적외선 투시"
+      },
+      "skillsEn": {
+        "Ability 1": "Grappling Hook",
+        "Ability 2": "Venom Mine",
+        "Ultimate": "Infra-Sight"
+      },
+      "skillsZh": {
+        "Ability 1": "钩爪",
+        "Ability 2": "剧毒诡雷",
+        "Ultimate": "红外视野"
       },
       "koreanHeroMap": {
         "위도우메이커": "Widowmaker"
@@ -985,6 +1321,7 @@
       "logName": "아나",
       "en": "Ana",
       "ko": "아나",
+      "zh": "安娜",
       "role": "support",
       "image": "아나",
       "aliases": [],
@@ -992,6 +1329,16 @@
         "Ability 1": "수면총",
         "Ability 2": "생체 수류탄",
         "Ultimate": "나노 강화제"
+      },
+      "skillsEn": {
+        "Ability 1": "Sleep Dart",
+        "Ability 2": "Biotic Grenade",
+        "Ultimate": "Nano Boost"
+      },
+      "skillsZh": {
+        "Ability 1": "麻醉镖",
+        "Ability 2": "生物手雷",
+        "Ultimate": "纳米激素"
       },
       "koreanHeroMap": {
         "아나": "Ana"
@@ -1012,6 +1359,7 @@
       "logName": "바티스트",
       "en": "Baptiste",
       "ko": "바티스트",
+      "zh": "巴蒂斯特",
       "role": "support",
       "image": "바티스트",
       "aliases": [],
@@ -1019,6 +1367,16 @@
         "Ability 1": "치유 파동",
         "Ability 2": "불사 장치",
         "Ultimate": "증폭 매트릭스"
+      },
+      "skillsEn": {
+        "Ability 1": "Regenerative Burst",
+        "Ability 2": "Immortality Field",
+        "Ultimate": "Amplification Matrix"
+      },
+      "skillsZh": {
+        "Ability 2": "不朽力场",
+        "Ultimate": "增幅矩阵",
+        "Ability 1": "维生迸发"
       },
       "koreanHeroMap": {
         "바티스트": "Baptiste"
@@ -1039,6 +1397,7 @@
       "logName": "브리기테",
       "en": "Brigitte",
       "ko": "브리기테",
+      "zh": "布丽吉塔",
       "role": "support",
       "image": "브리기테",
       "aliases": [],
@@ -1046,6 +1405,16 @@
         "Ability 1": "방패 밀쳐내기",
         "Ability 2": "도리깨 투척",
         "Ultimate": "집결"
+      },
+      "skillsEn": {
+        "Ability 1": "Shield Bash",
+        "Ability 2": "Whip Shot",
+        "Ultimate": "Rally"
+      },
+      "skillsZh": {
+        "Ability 1": "盾击",
+        "Ultimate": "集结",
+        "Ability 2": "流星飞锤"
       },
       "koreanHeroMap": {
         "브리기테": "Brigitte"
@@ -1066,6 +1435,7 @@
       "logName": "일리아리",
       "en": "Illari",
       "ko": "일리아리",
+      "zh": "伊拉锐",
       "role": "support",
       "image": "일리아리",
       "aliases": [],
@@ -1073,6 +1443,11 @@
         "Ability 1": "분출",
         "Ability 2": "치유의 태양석",
         "Ultimate": "태양 작렬"
+      },
+      "skillsEn": {
+        "Ability 1": "Outburst",
+        "Ability 2": "Healing Pylon",
+        "Ultimate": "Captive Sun"
       },
       "koreanHeroMap": {
         "일리아리": "Illari"
@@ -1093,6 +1468,7 @@
       "logName": "주노",
       "en": "Juno",
       "ko": "주노",
+      "zh": "朱诺",
       "role": "support",
       "image": "주노",
       "aliases": [],
@@ -1100,6 +1476,11 @@
         "Ability 1": "글라이드 부스트",
         "Ability 2": "하이퍼 링",
         "Ultimate": "궤도 광선"
+      },
+      "skillsEn": {
+        "Ability 1": "Glide Boost",
+        "Ability 2": "Hyper Ring",
+        "Ultimate": "Orbital Ray"
       },
       "koreanHeroMap": {
         "주노": "Juno"
@@ -1120,6 +1501,7 @@
       "logName": "키리코",
       "en": "Kiriko",
       "ko": "키리코",
+      "zh": "雾子",
       "role": "support",
       "image": "키리코",
       "aliases": [],
@@ -1127,6 +1509,11 @@
         "Ability 1": "순보",
         "Ability 2": "정화의 방울",
         "Ultimate": "여우길"
+      },
+      "skillsEn": {
+        "Ability 1": "Swift Step",
+        "Ability 2": "Protection Suzu",
+        "Ultimate": "Kitsune Rush"
       },
       "koreanHeroMap": {
         "키리코": "Kiriko"
@@ -1140,6 +1527,9 @@
         "name": "키리코",
         "role": "Support",
         "order": 49
+      },
+      "skillsZh": {
+        "Ability 1": "瞬步"
       }
     },
     {
@@ -1147,6 +1537,7 @@
       "logName": "라이프위버",
       "en": "Lifeweaver",
       "ko": "라이프위버",
+      "zh": "生命之梭",
       "role": "support",
       "image": "라이프위버",
       "aliases": [],
@@ -1154,6 +1545,16 @@
         "Ability 1": "연꽃 단상",
         "Ability 2": "구원의 손길",
         "Ultimate": "생명의 나무"
+      },
+      "skillsEn": {
+        "Ability 1": "Petal Platform",
+        "Ability 2": "Life Grip",
+        "Ultimate": "Tree of Life"
+      },
+      "skillsZh": {
+        "Ability 1": "花瓣平台",
+        "Ability 2": "生命之握",
+        "Ultimate": "生命之树"
       },
       "koreanHeroMap": {
         "라이프위버": "Lifeweaver"
@@ -1174,6 +1575,7 @@
       "logName": "루시우",
       "en": "Lucio",
       "ko": "루시우",
+      "zh": "卢西奥",
       "role": "support",
       "image": "루시우",
       "aliases": [
@@ -1183,6 +1585,15 @@
         "Ability 1": "분위기 전환",
         "Ability 2": "볼륨을 높여라",
         "Ultimate": "소리 방벽"
+      },
+      "skillsEn": {
+        "Ability 1": "Crossfade",
+        "Ability 2": "Amp It Up",
+        "Ultimate": "Sound Barrier"
+      },
+      "skillsZh": {
+        "Ultimate": "音障",
+        "Ability 2": "提高音量"
       },
       "koreanHeroMap": {
         "루시우": "Lucio"
@@ -1203,6 +1614,7 @@
       "logName": "메르시",
       "en": "Mercy",
       "ko": "메르시",
+      "zh": "天使",
       "role": "support",
       "image": "메르시",
       "aliases": [],
@@ -1210,6 +1622,16 @@
         "Ability 1": "수호천사",
         "Ability 2": "부활",
         "Ultimate": "발키리"
+      },
+      "skillsEn": {
+        "Ability 1": "Guardian Angel",
+        "Ability 2": "Resurrect",
+        "Ultimate": "Valkyrie"
+      },
+      "skillsZh": {
+        "Ability 1": "守护天使",
+        "Ability 2": "重生",
+        "Ultimate": "女武神"
       },
       "koreanHeroMap": {
         "메르시": "Mercy"
@@ -1230,6 +1652,7 @@
       "logName": "모이라",
       "en": "Moira",
       "ko": "모이라",
+      "zh": "莫伊拉",
       "role": "support",
       "image": "모이라",
       "aliases": [],
@@ -1237,6 +1660,16 @@
         "Ability 1": "소멸",
         "Ability 2": "생체 구슬",
         "Ultimate": "융화"
+      },
+      "skillsEn": {
+        "Ability 1": "Fade",
+        "Ability 2": "Biotic Orb",
+        "Ultimate": "Coalescence"
+      },
+      "skillsZh": {
+        "Ability 1": "消散",
+        "Ability 2": "生化球",
+        "Ultimate": "聚合射线"
       },
       "koreanHeroMap": {
         "모이라": "Moira"
@@ -1257,6 +1690,7 @@
       "logName": "젠야타",
       "en": "Zenyatta",
       "ko": "젠야타",
+      "zh": "禅雅塔",
       "role": "support",
       "image": "젠야타",
       "aliases": [],
@@ -1264,6 +1698,16 @@
         "Ability 1": "조화의 구슬",
         "Ability 2": "부조화의 구슬",
         "Ultimate": "초월"
+      },
+      "skillsEn": {
+        "Ability 1": "Orb of Harmony",
+        "Ability 2": "Orb of Discord",
+        "Ultimate": "Transcendence"
+      },
+      "skillsZh": {
+        "Ability 1": "和谐之球",
+        "Ability 2": "不和谐之球",
+        "Ultimate": "超脱"
       },
       "koreanHeroMap": {
         "젠야타": "Zenyatta"
@@ -1365,6 +1809,7 @@
       "logName": "프레야",
       "en": "Freja",
       "ko": "프레야",
+      "zh": "芙蕾雅",
       "role": "damage",
       "image": "프레야",
       "aliases": [],
@@ -1411,6 +1856,7 @@
       "logName": "우양",
       "en": "Wuyang",
       "ko": "우양",
+      "zh": "无漾",
       "role": "support",
       "image": "우양",
       "aliases": [],

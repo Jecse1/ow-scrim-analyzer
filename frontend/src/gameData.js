@@ -67,11 +67,22 @@ export const SUPPORT_HEROES = HEROES.filter((h) => h.role === 'support').flatMap
 //   규칙: getHeroByName(name)?.displayKo || ?.ko || name(폴백).
 //   · displayKo 는 ko 가 영문 그대로인 경우만 지정(D.Va→'디바', D.Mon→'디몬'). 그 외 생략→ko.
 //   STEP2/3A 의 HERO_ALIAS_MAP/getDisplayHeroName(별칭맵) 을 대체·제거함.
-export const getDisplayName = (name) => {
+// [i18n zh] 모듈 수준 현재 표시 언어. LanguageProvider 가 언어 전환 시 setDisplayLanguage 로
+//   갱신한다(언어 변경은 컨텍스트 재렌더를 유발하므로 소비 컴포넌트는 자동 반영).
+//   lang 인자를 명시한 호출은 그 값이 우선. 기본 'ko' → 기존 동작 보존.
+let _displayLang = 'ko';
+export const setDisplayLanguage = (lang) => { _displayLang = lang === 'en' || lang === 'zh' ? lang : 'ko'; };
+
+// 표시 언어 선택. 폴백 규칙: 요청 언어 값 → en → ko.
+//   ko 는 기존 동작(displayKo || ko) 그대로 보존한다(기존 호출처 무변경).
+export const getDisplayName = (name, lang = _displayLang) => {
   if (!name) return '';
   const h = getHeroByName(name);
-  if (h) return h.displayKo || h.ko || String(name).trim();
-  return String(name).trim();
+  if (!h) return String(name).trim();
+  const koName = h.displayKo || h.ko || String(name).trim();
+  if (lang === 'zh') return h.zh || h.en || koName;
+  if (lang === 'en') return h.en || koName;
+  return koName;
 };
 
 // ── 스킬명 맵(정본 파생) ─────────────────────────────────────────────────────
@@ -84,11 +95,49 @@ for (const h of HEROES) {
 }
 
 // 정본 스킬명 조회 헬퍼(단축키 접미사 없는 원값). 미지정 시 입력 어빌리티 그대로.
-export const getSkillName = (heroName, abilityRaw) => {
+// [i18n zh] lang 별 스킬명: skillsZh → skillsEn → skills(ko) 키 단위 폴백.
+export const getSkillName = (heroName, abilityRaw, lang = _displayLang) => {
+  const key = String(abilityRaw ?? '').trim();
+  const h = getHeroByName(heroName);
+  if (h) {
+    const chain = lang === 'zh' ? [h.skillsZh, h.skillsEn, h.skills]
+      : lang === 'en' ? [h.skillsEn, h.skills]
+      : [h.skills];
+    for (const m of chain) if (m && m[key]) return m[key];
+    return key;
+  }
   const display = getDisplayName(heroName);
   const m = HERO_SKILL_MAP[display] || HERO_SKILL_MAP[String(heroName ?? '').trim()];
-  const key = String(abilityRaw ?? '').trim();
   return (m && m[key]) || key;
+};
+
+// ── 맵/모드 표시명 ───────────────────────────────────────────────────────────
+// DB 에는 한국어 맵명·모드명(정본)이 저장된다. 어떤 표기(ko/en/aliases)든 엔트리로
+// 해석 후 lang 값 → en → ko 폴백으로 표시명을 돌려준다. 미지 맵은 원문 유지.
+const _mapLookup = new Map();
+for (const m of MAPS) {
+  const forms = [m.ko, m.en, ...(m.aliases || [])];
+  for (const f of forms) if (f && !_mapLookup.has(f)) _mapLookup.set(f, m);
+}
+export const getMapDisplayName = (name, lang = _displayLang) => {
+  const raw = String(name ?? '').trim();
+  if (!raw) return '';
+  const m = _mapLookup.get(raw);
+  if (!m) return raw;
+  if (lang === 'zh') return m.zh || m.en || m.ko || raw;
+  if (lang === 'en') return m.en || m.ko || raw;
+  return m.ko || raw;
+};
+
+// 모드 라벨(쟁탈/화물/…)의 언어별 표시. maps.json modeLabels 파생, 동일 폴백.
+const MODE_LABELS = mapsDoc.modeLabels || {};
+export const getModeLabel = (koMode, lang = _displayLang) => {
+  const raw = String(koMode ?? '').trim();
+  if (!raw || lang === 'ko') return raw;
+  const e = MODE_LABELS[raw];
+  if (!e) return raw;
+  if (lang === 'zh') return e.zh || e.en || raw;
+  return e.en || raw;
 };
 
 // ── 이미지 리졸버(STEP 3: SSOT image 필드 기반 단일 리졸버) ───────────────────

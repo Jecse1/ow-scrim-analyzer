@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
+import { getMapDisplayName } from './gameData';
 import { Swords, Youtube, Map as MapIcon, Users, Clock } from 'lucide-react';
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
@@ -151,7 +152,7 @@ export default function FirstFightStats() {
                                             <tr key={`${it.match_id}-${it.round_number ?? 'm'}-${idx}`} style={{ background: rowBg, borderBottom: `1px solid ${theme.border}40` }}>
                                                 <td style={{ padding: cellPad, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <MapIcon size={16} color={ACCENT} style={{ flexShrink: 0 }} /> {it.map_name}
+                                                        <MapIcon size={16} color={ACCENT} style={{ flexShrink: 0 }} /> {getMapDisplayName(it.map_name)}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: cellPad, textAlign: 'center', color: theme.textSub }}>

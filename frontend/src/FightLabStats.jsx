@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
+import { getMapDisplayName } from './gameData';
 import { ChevronDown, ChevronRight, Youtube, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
@@ -608,7 +609,7 @@ export function VodList({ items, shown, onMore, t, perspective, GREEN, RED }) {
                 return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0', fontSize: '12px', borderBottom: `1px solid ${T.divider}`, whiteSpace: 'nowrap', flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
                         <span style={{ color: T.sub }}>{r.session_date} · vs {opp}</span>
-                        <span style={{ color: T.text }}>{r.map_name}</span>
+                        <span style={{ color: T.text }}>{getMapDisplayName(r.map_name)}</span>
                         <span style={{ color: T.sub }}>{r.round_number != null ? `R${r.round_number}` : '-'}</span>
                         <span style={{ color: won ? GREEN : RED, fontWeight: 600 }}>{won ? t.osWinBadge : t.osLossBadge}</span>
                         {it.react != null && <span style={{ color: T.sub }}>{t.flVodReact} {it.react.toFixed(1)}s</span>}

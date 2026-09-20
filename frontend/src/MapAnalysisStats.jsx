@@ -5,6 +5,7 @@
 //         FightLabStats에서 재사용하되 상태는 이 탭에서 독립. 맵 필터는 무의미하므로 hideMap.
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
+import { getMapDisplayName, getModeLabel } from './gameData';
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile } from "./utils/responsive";
 import {
@@ -333,7 +334,7 @@ export default function MapAnalysisStats({ onGoSession }) {
                                 <React.Fragment key={r.key}>
                                     <tr className="flb-row" onClick={() => setExpandedType(open ? null : r.key)}
                                         style={{ borderBottom: `1px solid ${T.divider}`, cursor: 'pointer' }}>
-                                        <td style={{ ...td, color: T.text, fontWeight: 600 }}>{open ? '▾ ' : '▸ '}{r.key}</td>
+                                        <td style={{ ...td, color: T.text, fontWeight: 600 }}>{open ? '▾ ' : '▸ '}{getModeLabel(r.key)}</td>
                                         <td style={td}>{tpl(t.maCellPlayTpl, { p: pct0(r.playRate), n: r.matches.length })}</td>
                                         <td style={td} title={isPushRow ? t.maPushTip : undefined}>
                                             {r.ms.win == null ? '-' : tpl(t.maCellWinTpl, { p: pct0(r.ms.win), w: r.ms.wins })}
@@ -391,8 +392,8 @@ export default function MapAnalysisStats({ onGoSession }) {
                                 <React.Fragment key={r.key}>
                                     <tr className="flb-row" onClick={() => setExpandedMap(open ? null : r.key)}
                                         style={{ borderBottom: `1px solid ${T.divider}`, cursor: 'pointer' }}>
-                                        <td style={{ ...td, color: T.text, fontWeight: 600 }}>{open ? '▾ ' : '▸ '}{r.key}</td>
-                                        <td style={{ ...td, color: T.sub }}>{r.mapType}</td>
+                                        <td style={{ ...td, color: T.text, fontWeight: 600 }}>{open ? '▾ ' : '▸ '}{getMapDisplayName(r.key)}</td>
+                                        <td style={{ ...td, color: T.sub }}>{getModeLabel(r.mapType)}</td>
                                         <td style={td}>{tpl(t.maCellPlayTpl, { p: pct0(r.playRate), n: r.matches.length })}</td>
                                         <td title={(r.mapType === '밀기' || r.mapType === 'Push') ? t.maPushTip : undefined}
                                             style={{ ...td, color: dirColor(r.ms.win), fontWeight: 600 }}>
@@ -527,8 +528,8 @@ export default function MapAnalysisStats({ onGoSession }) {
                         <tbody>
                             {weekDetail.rows.map(r => (
                                 <tr key={r.key}>
-                                    <td style={{ ...td, padding: '4px 22px 4px 0', color: T.text, fontWeight: 600 }}>{r.key}</td>
-                                    <td style={{ ...td, padding: '4px 22px 4px 0', color: T.sub }}>{r.mapType}</td>
+                                    <td style={{ ...td, padding: '4px 22px 4px 0', color: T.text, fontWeight: 600 }}>{getMapDisplayName(r.key)}</td>
+                                    <td style={{ ...td, padding: '4px 22px 4px 0', color: T.sub }}>{getModeLabel(r.mapType)}</td>
                                     <td style={{ ...td, padding: '4px 22px 4px 0' }}>{r.picks}</td>
                                     <td style={{ ...td, padding: '4px 22px 4px 0', color: dirColor(r.ms.win) }}>
                                         {r.ms.win == null ? '-' : `${pct0(r.ms.win)}`}<span style={{ color: T.faint }}> ({r.ms.wins}/{r.ms.denom})</span>

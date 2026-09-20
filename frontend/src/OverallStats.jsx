@@ -9,7 +9,7 @@ import { tpl } from "./FightLabStats";
 import { computeFights } from './utils/fightAnalysis';
 import { buildMapSummary } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
-import { getHeroImageSrc, getHeroByName, getDisplayName } from './gameData';
+import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName } from './gameData';
 import { BASE_TEAM } from './config';
 
 const API_BASE = import.meta.env.PROD ? "" : "";
@@ -516,7 +516,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
     })).sort((a, b) => b.games - a.games);
 
     const mapStatsArr = Object.entries(mapMap).map(([name, data]) => ({
-        name, games: data.games,
+        name: getMapDisplayName(name), games: data.games,
         winRate: data.games > 0 ? Math.round((data.wins / data.games) * 100) : 0
     })).sort((a, b) => b.games - a.games);
 

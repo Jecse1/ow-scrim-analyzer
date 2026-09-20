@@ -9,7 +9,7 @@ import {
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
-import { getDisplayName, HERO_SKILL_MAP, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES } from "./gameData";
+import { getDisplayName, HERO_SKILL_MAP, getSkillName, getMapDisplayName, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES } from "./gameData";
 import NoVideoModal from "./NoVideoModal";
 import { computeFights } from './utils/fightAnalysis';
 import WinnerOverrideControl from "./WinnerOverrideControl";
@@ -63,27 +63,28 @@ const getRoleIconSrc = (roleLabel) => {
     return null;
 };
 
-const getAbilityName = (heroName, abilityRaw) => {
-    if (!abilityRaw) return "기본 발사";
+// [i18n zh] 슬롯 라벨(기본/보조/근접/기술1·2/궁극기)의 언어별 표기.
+//   스킬 고유명은 getSkillName(언어 인지, skillsZh→skillsEn→skills 폴백)으로 조회.
+const ABILITY_SLOT_LABELS = {
+    ko: { primary: '기본 발사', secondary: '보조 발사', melee: '근접 공격', a1: '기술 1', a2: '기술 2', ult: '궁극기' },
+    en: { primary: 'Primary Fire', secondary: 'Secondary Fire', melee: 'Melee', a1: 'Ability 1', a2: 'Ability 2', ult: 'Ultimate' },
+    zh: { primary: '普通攻击', secondary: '辅助攻击', melee: '近战攻击', a1: '技能 1', a2: '技能 2', ult: '大招' },
+};
+const getAbilityName = (heroName, abilityRaw, lang = 'ko') => {
+    const L = ABILITY_SLOT_LABELS[lang] || ABILITY_SLOT_LABELS.ko;
+    if (!abilityRaw) return L.primary;
     const cleanAbility = String(abilityRaw).trim();
-    if (cleanAbility === '0' || cleanAbility === 'null') return '기본 발사';
-    if (cleanAbility.toLowerCase().includes('primary')) return '기본 발사';
-    if (cleanAbility.toLowerCase().includes('secondary')) return '보조 발사';
-    if (cleanAbility.toLowerCase().includes('melee')) return '근접 공격';
-    
-    const displayHero = getDisplayName(heroName);
-    let skillName = cleanAbility;
-    
-    if (HERO_SKILL_MAP[displayHero] && HERO_SKILL_MAP[displayHero][cleanAbility]) {
-        skillName = HERO_SKILL_MAP[displayHero][cleanAbility];
-    } else if (HERO_SKILL_MAP[heroName] && HERO_SKILL_MAP[heroName][cleanAbility]) {
-        skillName = HERO_SKILL_MAP[heroName][cleanAbility];
-    }
-    
-    if (cleanAbility === 'Ability 1') return skillName === 'Ability 1' ? '기술 1 (Shift)' : `${skillName} (Shift)`;
-    if (cleanAbility === 'Ability 2') return skillName === 'Ability 2' ? '기술 2 (E)' : `${skillName} (E)`;
-    if (cleanAbility === 'Ultimate') return skillName === 'Ultimate' ? '궁극기 (Q)' : `${skillName} (Q)`;
-    
+    if (cleanAbility === '0' || cleanAbility === 'null') return L.primary;
+    if (cleanAbility.toLowerCase().includes('primary')) return L.primary;
+    if (cleanAbility.toLowerCase().includes('secondary')) return L.secondary;
+    if (cleanAbility.toLowerCase().includes('melee')) return L.melee;
+
+    const skillName = getSkillName(heroName, cleanAbility, lang);
+
+    if (cleanAbility === 'Ability 1') return skillName === 'Ability 1' ? `${L.a1} (Shift)` : `${skillName} (Shift)`;
+    if (cleanAbility === 'Ability 2') return skillName === 'Ability 2' ? `${L.a2} (E)` : `${skillName} (E)`;
+    if (cleanAbility === 'Ultimate') return skillName === 'Ultimate' ? `${L.ult} (Q)` : `${skillName} (Q)`;
+
     return skillName;
 };
 
@@ -172,7 +173,7 @@ const AverageSurvivorsChart = ({ fights, team1Name, team2Name, theme, t }) => {
 // =================================================================================
 const StatsView = ({ activeRoundTab, setActiveRoundTab, displayStats, rounds, t1Name, t2Name }) => {
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const SafeMatchTable = ({ stats }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'default', direction: 'asc' });
@@ -322,7 +323,7 @@ const StatsView = ({ activeRoundTab, setActiveRoundTab, displayStats, rounds, t1
 // =================================================================================
 const KillLogView = ({ fights, activeRoundTab, t1Name, t2Name }) => {
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60);
@@ -418,7 +419,7 @@ const KillLogView = ({ fights, activeRoundTab, t1Name, t2Name }) => {
                                 <VictimDisplay heroName={ev.target_hero} heroImage={ev.target_hero_img} playerName={ev.target_name} teamColor={victimTeamColor} />
                             </td>
                             <td style={{ padding: '16px 32px', color: theme.textSub, fontSize: '14px', textAlign: 'right', width: '120px' }}>
-                                {getAbilityName(ev.player_hero, ev.ability)}
+                                {getAbilityName(ev.player_hero, ev.ability, language)}
                             </td>
                           </tr>
                       );
@@ -439,7 +440,7 @@ const KillLogView = ({ fights, activeRoundTab, t1Name, t2Name }) => {
 // =================================================================================
 const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => { 
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const team1Name = t1Name;
   const team2Name = t2Name;
@@ -555,7 +556,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                   if (pMapT1Deaths.has(victimName)) pMapT1Deaths.get(victimName).count++;
                   else pMapT1Deaths.set(victimName, { name: victimName, hero: ev.target_hero, count: 1 });
                   
-                  const skillName = getAbilityName(ev.player_hero, ev.ability);
+                  const skillName = getAbilityName(ev.player_hero, ev.ability, language);
                   const causeKey = `${ev.player_hero}|${normalizeName(ev.player_name)}|${skillName}`;
                   t1CausesMap.set(causeKey, (t1CausesMap.get(causeKey) || 0) + 1);
               }
@@ -569,7 +570,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                   if (pMapT2Deaths.has(victimName)) pMapT2Deaths.get(victimName).count++;
                   else pMapT2Deaths.set(victimName, { name: victimName, hero: ev.target_hero, count: 1 });
                   
-                  const skillName = getAbilityName(ev.player_hero, ev.ability);
+                  const skillName = getAbilityName(ev.player_hero, ev.ability, language);
                   const causeKey = `${ev.player_hero}|${normalizeName(ev.player_name)}|${skillName}`;
                   t2CausesMap.set(causeKey, (t2CausesMap.get(causeKey) || 0) + 1);
               }
@@ -1143,7 +1144,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
 // =================================================================================
 const EventsView = ({ matchData, t1Name, t2Name }) => {
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [noVideoModal, setNoVideoModal] = useState(false);
   const videoExists = hasVideo(matchData?.video_url);
 
@@ -1338,7 +1339,7 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
 // =================================================================================
 const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [noVideoModal, setNoVideoModal] = useState(false);
   const videoExists = hasVideo(matchData?.video_url);
 
@@ -1424,7 +1425,7 @@ const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
 // =================================================================================
 const PlayerStatsView = ({ matchData, t1Name, t2Name }) => {
     const { theme } = useTheme();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     const [selP1, setSelP1] = useState(normalizeName(matchData?.stats?.filter(p => checkIsTeam1(p.team_name, t1Name))[0]?.player_name));
     const [selP2, setSelP2] = useState(normalizeName(matchData?.stats?.filter(p => checkIsTeam2(p.team_name, t2Name))[0]?.player_name));
@@ -1593,7 +1594,7 @@ const PlayerStatsView = ({ matchData, t1Name, t2Name }) => {
 // =================================================================================
 const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => { 
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [activeMainTab, setActiveMainTab] = useState('stats'); 
   const [activeRoundTab, setActiveRoundTab] = useState('overview'); 
@@ -1648,7 +1649,7 @@ const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => {
     <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto', color: theme.text, boxSizing: 'border-box' }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: theme.textSub, cursor: 'pointer', marginBottom: '24px', fontWeight:'600' }}><ChevronLeft size={16} /> {t.msBackToOverview}</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '36px', fontWeight: '900', margin: 0, letterSpacing:'-0.5px' }}>{fetchedMatchData.map_name}</h1>
+        <h1 style={{ fontSize: '36px', fontWeight: '900', margin: 0, letterSpacing:'-0.5px' }}>{getMapDisplayName(fetchedMatchData.map_name)}</h1>
         <WinnerOverrideControl match={fetchedMatchData} onChanged={refetchMatch} />
       </div>
 

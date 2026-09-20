@@ -36,6 +36,7 @@ const sessionRecord = (s) => {
 const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const DOW_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DOW_ZH = ['日', '一', '二', '三', '四', '五', '六'];
 
 const ScrimSessions = ({ onSelectScrim }) => {
   const { theme } = useTheme();
@@ -158,11 +159,15 @@ const ScrimSessions = ({ onSelectScrim }) => {
   });
   const goThisMonth = () => { const d = new Date(); setCal({ y: d.getFullYear(), m: d.getMonth() }); };
 
-  const monthTitle = language === 'ko' ? `${cal.y}년 ${cal.m + 1}월` : `${MONTH_EN[cal.m]} ${cal.y}`;
+  const monthTitle = language === 'ko' ? `${cal.y}년 ${cal.m + 1}월`
+    : language === 'zh' ? `${cal.y}年${cal.m + 1}月`
+    : `${MONTH_EN[cal.m]} ${cal.y}`;
   const monthSummary = language === 'ko'
     ? `${cal.m + 1}월: ${monthStats.n}세션 · 상대 ${monthStats.teams}팀 · ${monthStats.won}승 ${monthStats.lost}패 ${monthStats.drew}무`
+    : language === 'zh'
+    ? `${cal.m + 1}月: ${monthStats.n}场次 · 对手${monthStats.teams}队 · ${monthStats.won}胜 ${monthStats.lost}负 ${monthStats.drew}平`
     : `${MONTH_EN[cal.m]}: ${monthStats.n} sessions · ${monthStats.teams} teams · ${monthStats.won}W ${monthStats.lost}L ${monthStats.drew}D`;
-  const DOW = language === 'ko' ? DOW_KO : DOW_EN;
+  const DOW = language === 'ko' ? DOW_KO : language === 'zh' ? DOW_ZH : DOW_EN;
 
   // 승/패/무 칩 색 — 은은한 톤(다크·라이트 모두 가독). 원색 금지.
   const outcomeChip = (outcome) => {
@@ -341,7 +346,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
               onClick={goThisMonth}
               style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textSub, height: '36px', padding: '0 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0, marginLeft: isMobile ? 'auto' : 0 }}
             >
-              {language === 'ko' ? '오늘' : 'Today'}
+              {language === 'ko' ? '오늘' : language === 'zh' ? '今天' : 'Today'}
             </button>
           </div>
 
@@ -409,7 +414,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                         <div
                           key={s.id}
                           className="ssc-chip"
-                          title={`${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : 'W '}${rec.l}${language === 'ko' ? '패' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : ` ${rec.d}D`) : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
+                          title={`${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : language === 'zh' ? '胜 ' : 'W '}${rec.l}${language === 'ko' ? '패' : language === 'zh' ? '负' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : language === 'zh' ? ` ${rec.d}平` : ` ${rec.d}D`) : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
                           onClick={(e) => { e.stopPropagation(); onSelectScrim(s.id); }}
                           style={{
                             background: col.bg, color: col.fg, border: `1px solid ${col.bd}`, borderRadius: '6px',

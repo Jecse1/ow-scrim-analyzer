@@ -5,6 +5,7 @@ import { invalidateApiCache } from "./utils/apiCache";
 import { ChevronLeft, BarChart3, Trash2 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
+import { getMapDisplayName } from "./gameData";
 import WinnerOverrideControl from "./WinnerOverrideControl";
 
 const API_BASE = import.meta.env.PROD ? "" : "";
@@ -230,7 +231,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                     />
                   )}
                   <div>
-                    <div style={{ fontWeight: 900, marginBottom: 6 }}>#{m.match_index} · {m.map_name}</div>
+                    <div style={{ fontWeight: 900, marginBottom: 6 }}>#{m.match_index} · {getMapDisplayName(m.map_name)}</div>
                     <div style={{ color: theme.textSub, fontSize: 13, marginBottom: 6 }}>{t.sdResult}: {m.result || t.sdUnknown}</div>
                     {!isSelectMode && <WinnerOverrideControl match={m} onChanged={() => fetchScrim()} />}
                   </div>

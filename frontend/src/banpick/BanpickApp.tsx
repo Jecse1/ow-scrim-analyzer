@@ -3,7 +3,7 @@ import "./banpick.css";
 import { useBanpickWS } from "./useBanpickWS";
 import { useLanguage } from "../LanguageContext";
 import { useTheme } from "../ThemeContext";
-import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName } from "../gameData";
+import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName, getDisplayName, getMapDisplayName } from "../gameData";
 
 // ── 멀티플레이어(1v1 실시간 대전) 스텁 — 이번 통합 단계는 SOLO 전용 ──
 // 원본은 Firebase(Firestore 실시간 룸 + 익명 auth)로 코치 대전을 구현하지만,
@@ -22,7 +22,7 @@ type Team = "A" | "B";
 type MapType = "Control" | "Escort" | "Hybrid" | "Push" | "Flashpoint";
 type Role = "Tank" | "Damage" | "Support";
 type Phase = "MAP_PICK" | "BAN_ORDER" | "HERO_BAN" | "HERO_PICK";
-type Lang = "ko" | "en";
+type Lang = "ko" | "en" | "zh";
 type Side = "ATTACK" | "DEFENSE"; // 선공/선수비 타입
 type PartMode = "SOLO" | "COACH_1V1";
 type MyRole = "HOST" | Team | "OBS";
@@ -71,10 +71,12 @@ function canControlBanTurn(partMode: PartMode, myRole: MyRole, turnTeam: Team): 
 const ROLE_LABELS: Record<Lang, Record<Role, string>> = {
   ko: { Tank: "탱커", Damage: "딜러", Support: "힐러" },
   en: { Tank: "Tank", Damage: "Damage", Support: "Support" },
+  zh: { Tank: "重装", Damage: "输出", Support: "支援" },
 };
 const MAP_LABELS: Record<Lang, Record<MapType, string>> = {
   ko: { Control: "쟁탈", Escort: "호위", Hybrid: "혼합", Push: "밀기", Flashpoint: "플래시포인트" },
   en: { Control: "Control", Escort: "Escort", Hybrid: "Hybrid", Push: "Push", Flashpoint: "Flashpoint" },
+  zh: { Control: "占领要点", Escort: "运载目标", Hybrid: "混合", Push: "推进", Flashpoint: "闪点行动" },
 };
 const SLOT_ROLES: Role[] = ["Tank", "Damage", "Damage", "Support", "Support"];
 
@@ -214,6 +216,74 @@ const STR = {
     openLogs: "Logs",
     seriesEnd: "Series Finished",
     endBtn: "End",
+  },
+  zh: {
+    title: "OW2 BAN Simulator",
+    startSettings: "初始设置",
+    teamAName: "队伍 A 名称",
+    teamBName: "队伍 B 名称",
+    participation: "模式",
+    solo: "solo",
+    oneVone: "1vs1",
+    scrim: "训练赛模式",
+    format: "赛制",
+    modeRange: "模拟范围",
+    mode1: "模式1：英雄禁用",
+    mode2: "模式2：地图 + 英雄禁用",
+    mode3: "模式3：地图 + 英雄禁用 + 英雄选取",
+    firstPicker: "第1局地图/禁用选择权",
+    random: "随机",
+    start: "开始",
+    mapPick: "地图选择",
+    banOrder: "决定先/后禁",
+    heroBan: "英雄禁用",
+    heroPick: "英雄选取（重装-输出-输出-支援-支援）",
+    mapRight: "地图选择权",
+    pickFirst: "先禁",
+    pickSecond: "后禁",
+    timeLeft: "剩余时间",
+    play: "开始",
+    pause: "暂停",
+    confirmMap: "确定地图",
+    chooserRight: "先/后禁选择权",
+    confirm: "确定",
+    curTurn: "当前回合",
+    banned: "已禁用",
+    confirmBan: "确定禁用",
+    slot: "位置",
+    ready: "Ready",
+    lockPickTeam: (name: string) => `${name} 选取锁定`,
+    pickLockShort: "锁定选取",
+    setWinner: "选择本局获胜队伍",
+    close: "关闭",
+    showSummary: "比赛摘要",
+    showLog: "查看日志",
+    toastMap: "地图已确定",
+    toastBan: "禁用已确定",
+    summary: "摘要",
+    noneYet: "尚无已完成的局。",
+    setN: (i: number) => `第 ${i} 局`,
+    map: "地图",
+    mapPickerLabel: "地图选择方",
+    firstBan: "先禁",
+    secondBan: "后禁",
+    none: "无",
+    inProgress: "进行中",
+    phase: "阶段",
+    selectedMap: "已选地图",
+    nextFirstBan: "下局先禁",
+    log: "日志",
+    noLog: "暂无日志。",
+    light: "☀️ 浅色模式",
+    dark: "🌙 深色模式",
+    koBtn: "한국어",
+    enBtn: "English",
+    teamNameRequired: "请输入队伍名称。",
+    scoreDone: " · 比赛结束",
+    openSummary: "摘要",
+    openLogs: "日志",
+    seriesEnd: "比赛已结束",
+    endBtn: "结束",
   },
 } as const;
 
@@ -905,7 +975,7 @@ const PickColumn = React.memo(function PickColumn({
         {SLOT_ROLES.map((sr, i) => {
           const hid = pickSlots[team][i];
           const active = activeSlot[team] === i && !pickLockedTeam[team];
-          const heroName = hid ? heroById(hid)?.name ?? hid : roleLabel(sr);
+          const heroName = hid ? getDisplayName(heroById(hid)?.name ?? hid) : roleLabel(sr);
           const clickable = canClickSlot(team);
           return (
             <button
@@ -970,10 +1040,10 @@ export default function BanpickApp() {
   const [lang, setLang] = useState<Lang>("ko");
   // ② 언어를 분석기 전역(LanguageContext)에 연결 — 자체 토글 제거, 전역과 동기화.
   const { language: appLang } = useLanguage();
-  useEffect(() => { if (appLang === "ko" || appLang === "en") setLang(appLang); }, [appLang]);
+  useEffect(() => { if (appLang === "ko" || appLang === "en" || appLang === "zh") setLang(appLang); }, [appLang]);
   const t: I18n = useMemo(() => STR[lang], [lang]);
   const roleLabel = (r: Role) => ROLE_LABELS[lang][r];
-  const mapTypeLabel = (mt: string) => (mt === "All" ? (lang === "ko" ? "전체" : "All") : MAP_LABELS[lang][mt as MapType]);
+  const mapTypeLabel = (mt: string) => (mt === "All" ? (lang === "ko" ? "전체" : lang === "zh" ? "全部" : "All") : MAP_LABELS[lang][mt as MapType]);
 
   /* === Setup === */
   const [teamName, setTeamName] = useState<Record<Team, string>>({ A: "Team A", B: "Team B" });
@@ -1858,7 +1928,7 @@ export default function BanpickApp() {
                   return (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
                       <span className="opacity-70">{t.selectedMap}:</span>
-                      <b className="truncate max-w-[160px]">{m.name}</b>
+                      <b className="truncate max-w-[160px]">{getMapDisplayName(m.name)}</b>
                       <MapTypeBadge type={m.type} lang={lang} />
                     </span>
                   );
@@ -1874,7 +1944,7 @@ export default function BanpickApp() {
                           <span className="relative inline-block w-5 h-5 rounded overflow-hidden align-middle bg-neutral-100">
                             <HeroThumb id={hid} />
                           </span>
-                          <span>{heroById(hid)?.name ?? hid}</span>
+                          <span>{getDisplayName(heroById(hid)?.name ?? hid)}</span>
                         </span>
                       ))
                     )}
@@ -1922,7 +1992,7 @@ export default function BanpickApp() {
                         {/* #6 이름은 이미지 바로 아래 한 줄 + 최소 패딩 */}
                         <div className="px-2 py-1 text-[12px] font-medium flex items-center gap-1 overflow-hidden">
                           <MapTypeBadge type={m.type} lang={lang} className="shrink-0" />
-                          <span className="truncate leading-tight">{m.name}</span>
+                          <span className="truncate leading-tight">{getMapDisplayName(m.name)}</span>
                         </div>
                       </button>
                     ))}
@@ -2655,7 +2725,7 @@ const PickCenter = React.memo(function PickCenter({ lang, t, filterRole, teamNam
             </div>
             <div className={["px-3 py-1 font-medium flex items-center gap-2 overflow-hidden", nameClass].join(" ")}>
               <RoleBadge role={h.role} lang={lang} className="shrink-0" />
-              <span className="truncate leading-tight">{h.name}</span>
+              <span className="truncate leading-tight">{getDisplayName(h.name)}</span>
             </div>
           </div>
         );

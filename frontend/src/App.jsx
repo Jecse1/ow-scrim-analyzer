@@ -52,7 +52,7 @@ class ErrorBoundary extends React.Component {
 
 function MainApp() {
   const { theme, toggleTheme, isDarkMode } = useTheme();
-  const { t, toggleLanguage, language } = useLanguage();
+  const { t, setLanguage, language } = useLanguage();
 
   const [currentView, setCurrentView] = useState("home");
   const [activeScrimId, setActiveScrimId] = useState(null);
@@ -524,7 +524,20 @@ function MainApp() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={toggleLanguage} style={{ background: theme.surfaceHighlight, border: "none", padding: "8px 12px", cursor: "pointer", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px", color: theme.text, fontSize: "13px", fontWeight: "bold" }}><Globe size={18} /> {language.toUpperCase()}</button>
+          {/* [i18n zh] 언어 선택 드롭다운(KO/EN/中文). 3언어부터는 토글 대신 select. */}
+          <div style={{ background: theme.surfaceHighlight, padding: "8px 12px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px", color: theme.text }}>
+            <Globe size={18} />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              aria-label="Language"
+              style={{ background: "transparent", border: "none", outline: "none", cursor: "pointer", color: theme.text, fontSize: "13px", fontWeight: "bold", appearance: "auto" }}
+            >
+              <option value="ko">KO</option>
+              <option value="en">EN</option>
+              <option value="zh">中文</option>
+            </select>
+          </div>
           <button onClick={toggleTheme} style={{ background: theme.surfaceHighlight, border: "none", padding: "8px", cursor: "pointer", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{isDarkMode ? <Moon size={20} color={theme.textSub} /> : <Sun size={20} color="#f59e0b" />}</button>
           {/* 모바일: 햄버거 토글 (☰ ↔ ✕) */}
           {isMobile && (
