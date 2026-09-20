@@ -531,11 +531,13 @@ function MainApp() {
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
               aria-label="Language"
-              style={{ background: "transparent", border: "none", outline: "none", cursor: "pointer", color: theme.text, fontSize: "13px", fontWeight: "bold", appearance: "auto" }}
+              // 네이티브 <option> 팝업이 페이지 글자색만 상속하고 배경은 브라우저 기본(라이트)을 써서
+              // 다크 테마에서 흰 배경+흰 글씨가 되는 문제 방지: colorScheme + option 배경/글자색 명시
+              style={{ background: "transparent", border: "none", outline: "none", cursor: "pointer", color: theme.text, fontSize: "13px", fontWeight: "bold", appearance: "auto", colorScheme: isDarkMode ? "dark" : "light" }}
             >
-              <option value="ko">KO</option>
-              <option value="en">EN</option>
-              <option value="zh">中文</option>
+              <option value="ko" style={{ background: theme.surfaceHighlight, color: theme.text }}>KO</option>
+              <option value="en" style={{ background: theme.surfaceHighlight, color: theme.text }}>EN</option>
+              <option value="zh" style={{ background: theme.surfaceHighlight, color: theme.text }}>中文</option>
             </select>
           </div>
           <button onClick={toggleTheme} style={{ background: theme.surfaceHighlight, border: "none", padding: "8px", cursor: "pointer", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{isDarkMode ? <Moon size={20} color={theme.textSub} /> : <Sun size={20} color="#f59e0b" />}</button>
