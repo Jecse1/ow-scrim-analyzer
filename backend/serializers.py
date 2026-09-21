@@ -5,7 +5,8 @@ main.py 에서 이동. main.py 는 하위호환을 위해 이 이름들을 re-ex
 의존: config.NUMERIC_FIELDS, services.fight_analysis(compute_fights/format_fights_for_api/compute_fight_metrics).
 DB 모델은 문자열 애노테이션("DBEvent" 등)이라 런타임 import 불필요.
 """
-from config import NUMERIC_FIELDS
+from config import NUMERIC_FIELDS, ROUND_TRANSITION_DRIFT_SEC, effective_video_delta
+from parsers.log_parser import resolve_map_type
 from services.fight_analysis import (
     compute_fights,
     format_fights_for_api,
@@ -62,11 +63,15 @@ def _db_player_stat_to_dict(ps: "DBPlayerStat") -> dict:
     }
 
 
-def _db_round_to_dict(r: "DBRound", t1_name: str = "", t2_name: str = "") -> dict:
+def _db_round_to_dict(r: "DBRound", t1_name: str = "", t2_name: str = "", map_type: str = "") -> dict:
     events = [_db_event_to_dict(ev) for ev in (r.events or [])]
     round_fights = format_fights_for_api(compute_fights(events, t1_name, t2_name), t1_name, t2_name)
+    stored_delta = getattr(r, "video_delta_sec", None)
     return {
         "round_number": r.round_number,
+        # 라운드별 VOD 보정: 직접 입력값(null=자동)과 실제 적용값
+        "video_delta_sec": stored_delta,
+        "effective_delta": effective_video_delta(stored_delta, map_type, r.round_number),
         "winner": r.winner or "",
         "duration_sec": r.duration_sec or 0,
         "final_blows_t1": r.final_blows_t1 or 0,
@@ -156,7 +161,10 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
     }
     if full:
         t1, t2 = m.team1_name, m.team2_name
-        base["rounds"] = [_db_round_to_dict(r, t1, t2) for r in (m.rounds or [])]
+        _mt = resolve_map_type(m.map_name)
+        # 수정 폼의 "전환당 보정 초" 기본값 표시용(모드 기본 drift)
+        base["round_transition_drift_sec"] = ROUND_TRANSITION_DRIFT_SEC.get(_mt, 0)
+        base["rounds"] = [_db_round_to_dict(r, t1, t2, _mt) for r in (m.rounds or [])]
         base["stats"] = _aggregate_match_stats(m)
         # Compute duration from rounds (DB column may be 0 due to import bug)
         round_dur = sum(r.duration_sec or 0 for r in (m.rounds or []))

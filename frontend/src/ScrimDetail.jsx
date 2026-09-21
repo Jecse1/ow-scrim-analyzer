@@ -40,6 +40,60 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
   // 매치 인라인 편집 상태: {id, map_name, video_url, offsetStr, startStr, endStr, winner, score_t1, score_t2, match_index}
   const [editMatch, setEditMatch] = useState(null);
   const [busy, setBusy] = useState(false);
+  // 라운드별 VOD 보정 편집 상태(로그 매치 전용) — 편집 폼 열릴 때 /api/matches/{id}에서 로드
+  // { matchId, drift, videoOffset, gameSetupSec, pauses, perTransStr,
+  //   rows: [{round_number, valueStr(''=자동), auto, ref:{desc,ts}|null, refStr}] } | { matchId, error }
+  const [deltaInfo, setDeltaInfo] = useState(null);
+
+  useEffect(() => {
+    if (!editMatch?.id || editMatch.source === "manual") { setDeltaInfo(null); return; }
+    let alive = true;
+    setDeltaInfo(null);
+    axios.get(`${API_BASE}/api/matches/${editMatch.id}`).then(res => {
+      if (!alive) return;
+      const md = res.data || {};
+      const drift = md.round_transition_drift_sec || 0;
+      const rows = (md.rounds || []).map(r => {
+        const evs = r.events || [];
+        const refEv = evs.find(e => e.event_type === "kill") || evs.find(e => e.event_type === "ultimate_start") || null;
+        return {
+          round_number: r.round_number,
+          valueStr: r.video_delta_sec == null ? "" : String(r.video_delta_sec),
+          auto: drift * (r.round_number - 1),
+          ref: refEv ? {
+            desc: refEv.event_type === "kill"
+              ? `${refEv.player_name} ➜ ${refEv.target_name}`
+              : `${refEv.player_name} (ult)`,
+            ts: refEv.timestamp,
+          } : null,
+          refStr: "",
+        };
+      });
+      setDeltaInfo({
+        matchId: editMatch.id, drift, rows, perTransStr: String(drift),
+        videoOffset: md.video_offset || 0, gameSetupSec: md.game_setup_sec, pauses: md.pauses || [],
+      });
+    }).catch(() => { if (alive) setDeltaInfo({ matchId: editMatch.id, error: true }); });
+    return () => { alive = false; };
+  }, [editMatch?.id, editMatch?.source]);
+
+  const updDeltaRow = (rn, patch) => setDeltaInfo(di => ({
+    ...di, rows: di.rows.map(row => row.round_number === rn ? { ...row, ...patch } : row),
+  }));
+
+  // 기준 장면 역산: delta = 입력 영상 시각 − (offset + (ts − gss)) − (입력 시각 이전 pause 합)
+  const calcDeltaFromRef = (row) => {
+    const videoSec = mmssToSec(row.refStr);
+    if (videoSec == null || !row.ref) return;
+    const di = deltaInfo;
+    const base = di.gameSetupSec != null
+      ? di.videoOffset + (row.ref.ts - di.gameSetupSec)
+      : di.videoOffset + row.ref.ts;
+    const pauseBefore = (di.pauses || [])
+      .filter(p => p.start_sec <= videoSec)
+      .reduce((a, p) => a + (p.end_sec - p.start_sec), 0);
+    updDeltaRow(row.round_number, { valueStr: String(Math.round(videoSec - base - pauseBefore)) });
+  };
 
   const saveSession = async () => {
     setBusy(true);
@@ -75,6 +129,13 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
         const ve = mmssToSec(em.endStr); if (ve != null) body.videoEndSec = ve;
       } else {
         const off = mmssToSec(em.offsetStr); if (off != null) body.video_offset = off;
+        // 라운드별 VOD 보정 — 빈 입력('') = null(자동으로 되돌림)
+        if (deltaInfo && deltaInfo.matchId === em.id && !deltaInfo.error) {
+          body.roundsDelta = deltaInfo.rows.map(r => ({
+            round_number: r.round_number,
+            video_delta_sec: r.valueStr.trim() === "" ? null : (Number(r.valueStr) || 0),
+          }));
+        }
       }
       await axios.patch(`${API_BASE}/api/matches/${em.id}`, body);
       invalidateApiCache();
@@ -453,8 +514,53 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                           <input style={{ ...inp, width: 80 }} value={em.endStr} placeholder="MM:SS" onChange={e => upd("endStr", e.target.value)} /></div>
                       </>
                     ) : (
+                      <>
                       <div><span style={lbl}>{t.sdVodOffset}</span>
                         <input style={{ ...inp, width: 80 }} value={em.offsetStr} placeholder="MM:SS" onChange={e => upd("offsetStr", e.target.value)} /></div>
+                      {/* 라운드별 VOD 보정 — 라운드 종료 연출 타이머 정지 보정 */}
+                      <div style={{ flexBasis: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>{t.sdRoundDelta}</div>
+                        {deltaInfo?.error && <div style={{ fontSize: 12, color: theme.danger }}>{t.sdDeltaLoadFail}</div>}
+                        {!deltaInfo && <div style={{ fontSize: 12, color: theme.textSub }}>{t.loading}</div>}
+                        {deltaInfo && !deltaInfo.error && (
+                          <>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                              <span style={{ fontSize: 11, color: theme.textSub, fontWeight: 700 }}>{t.sdDeltaPerTrans}</span>
+                              <input style={{ ...inp, width: 55 }} type="number" value={deltaInfo.perTransStr}
+                                onChange={e => setDeltaInfo({ ...deltaInfo, perTransStr: e.target.value })} />
+                              <button type="button" onClick={() => {
+                                const n = Number(deltaInfo.perTransStr) || 0;
+                                setDeltaInfo(di => ({ ...di, rows: di.rows.map(r => ({ ...r, valueStr: String(n * (r.round_number - 1)) })) }));
+                              }}
+                                style={{ background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, color: theme.text, padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{t.sdDeltaApply}</button>
+                              <span style={{ fontSize: 11, color: theme.textSub }}>({t.sdDeltaEmptyAuto})</span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {deltaInfo.rows.map(row => (
+                                <div key={row.round_number} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 800, width: 32 }}>R{row.round_number}</span>
+                                  <input style={{ ...inp, width: 60 }} value={row.valueStr}
+                                    placeholder={t.sdDeltaAutoFmt.replace("{n}", row.auto)}
+                                    onChange={e => updDeltaRow(row.round_number, { valueStr: e.target.value })} />
+                                  <span style={{ fontSize: 11, color: theme.textSub }}>{t.sdDeltaSecUnit}</span>
+                                  {row.ref ? (
+                                    <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }} title={t.sdDeltaCalcHint}>
+                                      <span style={{ fontSize: 11, color: theme.textSub }}>{t.sdDeltaRefScene}: {row.ref.desc}</span>
+                                      <input style={{ ...inp, width: 70 }} value={row.refStr} placeholder="MM:SS"
+                                        onChange={e => updDeltaRow(row.round_number, { refStr: e.target.value })} />
+                                      <button type="button" onClick={() => calcDeltaFromRef(row)}
+                                        style={{ background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, color: theme.text, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700 }}>{t.sdDeltaCalc}</button>
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: 11, color: theme.textSub }}>{t.sdDeltaNoRef}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      </>
                     )}
                     <div style={{ display: "flex", gap: 8 }}>
                       <button disabled={busy} onClick={saveMatch}

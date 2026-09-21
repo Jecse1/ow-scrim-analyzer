@@ -21,7 +21,7 @@ except Exception as _e:
 from config import (
     BASE_TEAM,
     MIN_SAMPLE_FOR_PERCENTILE_FIGHTS, MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
-    PERCENTILE_MIN_POOL, TRADE_WINDOW_SEC,
+    PERCENTILE_MIN_POOL, TRADE_WINDOW_SEC, effective_video_delta,
 )
 from cache import _response_cache_get, _response_cache_store
 from parsers.log_parser import resolve_map_type, is_match_level_map
@@ -78,6 +78,10 @@ def _db_match_to_dict_events_only(m: "DBMatch") -> dict:
         "rounds": [
             {
                 "round_number": r.round_number,
+                # 라운드별 VOD 보정(모먼트 링크용): 직접 입력값(null=자동)과 실제 적용값
+                "video_delta_sec": getattr(r, "video_delta_sec", None),
+                "effective_delta": effective_video_delta(
+                    getattr(r, "video_delta_sec", None), resolve_map_type(m.map_name), r.round_number),
                 # 라운드별 선수 스탯 — 전체 통계 탭이 matches/{id} 대신 이 응답을 쓰기 위해 필요.
                 # (player_stats는 위 stats 집계용으로 이미 로드되어 있어 추가 DB 비용 없음)
                 "stats": [_db_player_stat_to_dict(ps) for ps in (r.player_stats or [])],
@@ -169,7 +173,8 @@ def _round_start_sec(r: "DBRound", m: "DBMatch") -> float:
 
 
 def _first_fight_item(m: "DBMatch", s: "DBSession", map_type: str,
-                      round_number, fight: dict, round_start_sec: float) -> dict:
+                      round_number, fight: dict, round_start_sec: float,
+                      effective_delta: int = 0) -> dict:
     """첫 한타 1건을 평탄한 응답 항목으로 직렬화."""
     return {
         "session_id": s.id,
@@ -181,6 +186,8 @@ def _first_fight_item(m: "DBMatch", s: "DBSession", map_type: str,
         "team1_name": m.team1_name,
         "team2_name": m.team2_name,
         "round_number": round_number,
+        # 라운드 전환 연출 타이머 정지 보정(초) — 프론트 buildVideoLink에서 t에 가산
+        "effective_delta": effective_delta,
         "start_timestamp": fight.get("start_timestamp"),
         "start_game_timestamp": fight.get("start_game_timestamp"),
         "round_start_sec": round_start_sec,  # real 좌표 라운드 시작 (영상 점프 기준점)
@@ -232,14 +239,18 @@ async def get_first_fights():
                         fight = _first_fight_from_events(all_events, t1, t2)
                         if fight and rounds:
                             rs = _round_start_sec(rounds[0], m)  # 첫 라운드 시작 기준
-                            items.append(_first_fight_item(m, s, map_type, None, fight, rs))
+                            fd = effective_video_delta(
+                                getattr(rounds[0], "video_delta_sec", None), map_type, rounds[0].round_number)
+                            items.append(_first_fight_item(m, s, map_type, None, fight, rs, fd))
                     else:
                         # 라운드마다 첫 한타 1개씩
                         for r in rounds:
                             fight = _first_fight_from_events(r.events or [], t1, t2)
                             if fight:
                                 rs = _round_start_sec(r, m)
-                                items.append(_first_fight_item(m, s, map_type, r.round_number, fight, rs))
+                                fd = effective_video_delta(
+                                    getattr(r, "video_delta_sec", None), map_type, r.round_number)
+                                items.append(_first_fight_item(m, s, map_type, r.round_number, fight, rs, fd))
             return items
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
@@ -306,8 +317,11 @@ async def get_fight_records(base_team: str = BASE_TEAM):
                         continue  # 수기 매치 — 한타 레코드 없음
                     for r in (m.rounds or []):
                         ev_dicts = [_db_event_to_dict(ev) for ev in (r.events or [])]
+                        r_delta = effective_video_delta(
+                            getattr(r, "video_delta_sec", None), map_type, r.round_number)
                         for f in compute_fights(ev_dicts, t1, t2):
-                            records.append(_fight_to_record(f, our_side, t1, t2, s, m, map_type, r.round_number))
+                            records.append(_fight_to_record(f, our_side, t1, t2, s, m, map_type,
+                                                            r.round_number, effective_delta=r_delta))
 
             total = len(records)
             unknown = sum(1 for rec in records if rec["fight_winner"] == "unknown")

@@ -66,6 +66,12 @@ class SessionPatchInput(BaseModel):
         allow_population_by_field_name = True
         extra = "ignore"
 
+class RoundDeltaInput(BaseModel):
+    # 라운드별 VOD 보정 초. video_delta_sec=None → 자동(모드 기본값 × (round_number−1))으로 되돌림.
+    round_number: int
+    video_delta_sec: Optional[int] = None
+
+
 class MatchPatchInput(BaseModel):
     # 매치 정보 수정(PATCH /api/matches/{id}). 모두 선택 — 준 필드만 반영.
     # winner/score_t1/score_t2 직접 수정은 source='manual' 매치만 허용(로그 매치는 winner-override 사용).
@@ -78,6 +84,8 @@ class MatchPatchInput(BaseModel):
     video_start_sec: Optional[int] = Field(default=None, alias="videoStartSec")
     video_end_sec: Optional[int] = Field(default=None, alias="videoEndSec")
     match_index: Optional[int] = None
+    # 라운드별 VOD 보정(로그 매치 전용). 준 라운드만 반영, null = 자동으로 되돌림.
+    rounds_delta: Optional[List[RoundDeltaInput]] = Field(default=None, alias="roundsDelta")
 
     class Config:
         populate_by_name = True

@@ -582,7 +582,7 @@ export const VOD_PAGE = 20;
 const vodLinkOf = (r) => {
     if (!hasVideo(r.video_url)) return null;
     const match = { video_offset: r.video_offset, game_setup_sec: r.game_setup_sec, pauses: r.pauses || [] };
-    return buildVideoLink(r.video_url, Math.max(0, Number(r.start_timestamp) || 0), match);
+    return buildVideoLink(r.video_url, Math.max(0, Number(r.start_timestamp) || 0), match, undefined, r.effective_delta || 0);
 };
 
 // 표시 전용 반응시간 — 집계(collectFollowups)와 동일 규칙(선택 궁 첫 사용 이후 응수 창 내 최소 간격)

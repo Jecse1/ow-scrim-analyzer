@@ -1166,14 +1166,22 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
     return setupEvent ? setupEvent.timestamp : 0;
   }, [matchData]);
 
-  const getYouTubeLink = (eventTimestamp) => {
-      return buildVideoLink(matchData.video_url, eventTimestamp, matchData);
+  // 라운드별 VOD 보정값(라운드 전환 연출 타이머 정지) — 이벤트가 속한 라운드의 effective_delta
+  const deltaByRound = useMemo(() => {
+    const map = {};
+    (matchData?.rounds || []).forEach(r => { map[r.round_number] = r.effective_delta || 0; });
+    return map;
+  }, [matchData]);
+
+  const getYouTubeLink = (eventTimestamp, vodRound) => {
+      return buildVideoLink(matchData.video_url, eventTimestamp, matchData, undefined, deltaByRound[vodRound] || 0);
   };
 
   const processedEvents = useMemo(() => {
     if (!matchData) return { general: [], ultimates: [] };
-    
-    const allEvents = (matchData.rounds || []).flatMap(r => r.events || []).sort((a, b) => a.timestamp - b.timestamp);
+
+    // vodRound = 이벤트가 속한 라운드 번호(VOD 보정용 태깅 — round_start/end의 round_number와 동일 값)
+    const allEvents = (matchData.rounds || []).flatMap(r => (r.events || []).map(e => ({ ...e, vodRound: r.round_number }))).sort((a, b) => a.timestamp - b.timestamp);
     
     const finalGeneral = [];
     const killsBuffer = []; 
@@ -1301,8 +1309,8 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
                         label={ev.label} 
                         desc={ev.desc} 
                         color={ev.color} 
-                        hero={ev.hero} 
-                        url={getYouTubeLink(ev.realTimestamp)}
+                        hero={ev.hero}
+                        url={getYouTubeLink(ev.realTimestamp, ev.vodRound)}
                     />
                 )) : <div style={{padding:'20px', textAlign:'center', color: theme.textSub}}>{t.noEvents}</div>}
             </div>
@@ -1320,8 +1328,8 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
                         displayTime={ev.displayTime}
                         desc={ev.desc} 
                         color={resolveTeamColor(ev.player_team, t1Name, t2Name)} 
-                        hero={ev.player_hero} 
-                        url={getYouTubeLink(ev.realTimestamp)}
+                        hero={ev.player_hero}
+                        url={getYouTubeLink(ev.realTimestamp, ev.vodRound)}
                     />
                 )) : <div style={{padding:'20px', textAlign:'center', color: theme.textSub}}>{t.noUlts}</div>}
             </div>
@@ -1362,7 +1370,10 @@ const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
 
   const openVod = (f) => {
     if (!videoExists) { setNoVideoModal(true); return; }
-    const url = buildVideoLink(matchData.video_url, Math.max(0, f.startTime), matchData);
+    // 한타 첫 이벤트의 라운드(vodRound 태깅)로 라운드별 VOD 보정값 적용
+    const vodRound = f.events?.[0]?.vodRound;
+    const delta = (matchData.rounds || []).find(r => r.round_number === vodRound)?.effective_delta || 0;
+    const url = buildVideoLink(matchData.video_url, Math.max(0, f.startTime), matchData, undefined, delta);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -1632,7 +1643,9 @@ const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => {
 
     const displayStats = activeRoundTab === 'overview' ? (fetchedMatchData.stats || []) : (rounds.find(r => r.round_number.toString() === activeRoundTab)?.stats || []);
     
-    const targetEvents = activeRoundTab === 'overview' ? rounds.flatMap(r => r.events || []) : (rounds.find(r => r.round_number.toString() === activeRoundTab)?.events || []);
+    // vodRound 태깅 — 궁 타임라인 뷰의 라운드별 VOD 보정용(집계·정렬 무변경)
+    const tagEvents = (r) => (r.events || []).map(e => ({ ...e, vodRound: r.round_number }));
+    const targetEvents = activeRoundTab === 'overview' ? rounds.flatMap(tagEvents) : (() => { const r = rounds.find(r => r.round_number.toString() === activeRoundTab); return r ? tagEvents(r) : []; })();
     
     const fights = computeFights(targetEvents, t1Name, t2Name);
 

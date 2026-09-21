@@ -145,7 +145,7 @@ def _fightlab_side(team_name: str, t1: str, t2: str) -> int:
 
 def _fight_to_record(f: dict, our_side: int, t1: str, t2: str,
                      s: "DBSession", m: "DBMatch", map_type: str,
-                     round_number=None) -> dict:
+                     round_number=None, effective_delta: int = 0) -> dict:
     """compute_fights 내부 dict 1개 → /api/fight-records 응답 항목 1개."""
     enemy_side = 2 if our_side == 1 else 1
     our_team = t1 if our_side == 1 else t2
@@ -251,6 +251,8 @@ def _fight_to_record(f: dict, our_side: int, t1: str, t2: str,
         "start_timestamp": f.get("startTime", 0),
         # VOD 점프용 필드(추가만 — first-fights의 _first_fight_item과 동일 소스/형식)
         "round_number": round_number,
+        # 라운드 전환 연출 타이머 정지 보정(초) — 프론트 buildVideoLink에서 t에 가산
+        "effective_delta": effective_delta,
         "video_url": m.video_url or "",
         "video_offset": m.video_offset or 0,
         "game_setup_sec": m.game_setup_sec,

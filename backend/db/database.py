@@ -21,6 +21,8 @@ _COLUMN_PATCHES = [
     ("matches", "source", "ALTER TABLE matches ADD COLUMN source VARCHAR NOT NULL DEFAULT 'log'"),
     ("matches", "video_start_sec", "ALTER TABLE matches ADD COLUMN video_start_sec INTEGER"),
     ("matches", "video_end_sec", "ALTER TABLE matches ADD COLUMN video_end_sec INTEGER"),
+    # alembic 리비전(e5f6a7b8c9d0)과 동일 정의 — 라운드별 VOD 보정값
+    ("rounds", "video_delta_sec", "ALTER TABLE rounds ADD COLUMN video_delta_sec INTEGER"),
 ]
 
 

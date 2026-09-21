@@ -147,7 +147,7 @@ export default function FirstFightStats() {
                                         const match = { video_url: videoUrl, video_offset: it.video_offset, game_setup_sec: it.game_setup_sec, pauses: it.pauses || [] };
                                         // 첫한타 시작 시점으로 점프 (stored 좌표 — 파서 -2초 리드 포함)
                                         const jumpTs = Math.max(0, Number(it.start_timestamp) || 0);
-                                        const link = hasVideo(videoUrl) ? buildVideoLink(videoUrl, jumpTs, match) : null;
+                                        const link = hasVideo(videoUrl) ? buildVideoLink(videoUrl, jumpTs, match, undefined, it.effective_delta || 0) : null;
                                         return (
                                             <tr key={`${it.match_id}-${it.round_number ?? 'm'}-${idx}`} style={{ background: rowBg, borderBottom: `1px solid ${theme.border}40` }}>
                                                 <td style={{ padding: cellPad, fontWeight: 'bold', whiteSpace: 'nowrap' }}>

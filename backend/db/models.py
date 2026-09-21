@@ -93,6 +93,8 @@ class Round(Base):
     duration_sec = Column(Float, default=0)
     final_blows_t1 = Column(Integer, default=0)
     final_blows_t2 = Column(Integer, default=0)
+    # 라운드별 VOD 보정 초(직접 입력). NULL = 자동(모드 기본값 × (round_number−1)) — config.effective_video_delta
+    video_delta_sec = Column(Integer, nullable=True)
 
     match = relationship("Match", back_populates="rounds")
     player_stats = relationship("PlayerStat", back_populates="round", cascade="all, delete-orphan")

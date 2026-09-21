@@ -48,9 +48,9 @@ const pct0 = (v) => (v == null ? '-' : `${Math.round(v * 100)}%`);
 
 // [STEP3] 이미지 리졸버는 gameData.getHeroImageSrc(SSOT image 필드 기반)로 통합·임포트.
 
-const getYouTubeLink = (videoUrl, offset, timestamp, pauses = [], gameSetupSec = null) => {
+const getYouTubeLink = (videoUrl, offset, timestamp, pauses = [], gameSetupSec = null, deltaSec = 0) => {
     const matchLike = { video_url: videoUrl, video_offset: offset, game_setup_sec: gameSetupSec, pauses };
-    return buildVideoLink(videoUrl, timestamp, matchLike) || "#";
+    return buildVideoLink(videoUrl, timestamp, matchLike, undefined, deltaSec) || "#";
 };
 
 // 요약 탭 — "요즘 우리 어떤가"에 답하는 첫 화면.
@@ -591,6 +591,8 @@ export default function OverallStats({ onBack, onGoSessions }) {
                         desc: ev.desc || deathDesc || (ev.event_type === 'kill' ? `${ev.player_name} ${t.osKill} ➜ ${ev.target_name}` : `${ev.player_name} ${t.ults}`),
                         hero: ev.player_hero || ev.hero,
                         timestamp: ev.timestamp,
+                        roundNumber: r.round_number,
+                        effectiveDelta: r.effective_delta || 0, // 라운드별 VOD 보정(라운드 전환 연출 타이머 정지)
                         videoUrl: m.video_url, videoOffset: m.video_offset, gameSetupSec: m.game_setup_sec, pauses: m.pauses,
                         type: ev.event_type,
                         player_team: ev.player_team,
@@ -748,7 +750,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                         <>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
                             {filteredData.moments.slice(0, shown).map((moment, idx) => (
-                                <a key={idx} href={getYouTubeLink(moment.videoUrl, moment.videoOffset, moment.timestamp, moment.pauses, moment.gameSetupSec)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'transform 0.2s, border-color 0.2s' }} onMouseOver={e => { e.currentTarget.style.borderColor = theme.borderHighlight; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                <a key={idx} href={getYouTubeLink(moment.videoUrl, moment.videoOffset, moment.timestamp, moment.pauses, moment.gameSetupSec, moment.effectiveDelta)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'transform 0.2s, border-color 0.2s' }} onMouseOver={e => { e.currentTarget.style.borderColor = theme.borderHighlight; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)'; }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ fontSize: '12px', color: theme.textSub, display:'flex', alignItems:'center', gap:'4px' }}><MapIcon size={12}/> {moment.matchName}</div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

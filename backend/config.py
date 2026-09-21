@@ -59,6 +59,29 @@ _MATCH_LEVEL_MAP_TYPES = {"밀기", "Push", "플래시포인트", "Flashpoint"}
 # 첫 킬 후 이 시간(초) 내 반대편 킬 발생 = "트레이드됨"
 TRADE_WINDOW_SEC = 5
 
+# 라운드 종료 연출("N라운드 종료" 점수 화면) 동안 경기 타이머([hh:mm:ss])가 멈춰
+# 영상 시간과 어긋난다 → 라운드 전환 1회당 이만큼(초) VOD 링크를 뒤로 민다.
+# 밀기/플래시포인트는 그 연출이 없어 0. resolve_map_type 값(ko/en 병기) 기준, 미등록 모드는 0.
+ROUND_TRANSITION_DRIFT_SEC = {
+    "쟁탈": 4, "Control": 4,
+    "화물": 4, "호위": 4, "Escort": 4,
+    "혼합": 4, "Hybrid": 4,
+    "격돌": 4, "Clash": 4,
+    "밀기": 0, "Push": 0,
+    "플래시포인트": 0, "Flashpoint": 0,
+}
+
+
+def effective_video_delta(stored_delta, map_type: str, round_number) -> int:
+    """라운드의 VOD 보정 초. 직접 입력값(rounds.video_delta_sec) 우선, NULL이면
+    모드 기본값 × (round_number − 1) 자동. 라운드 불명(None)은 0."""
+    if stored_delta is not None:
+        return int(stored_delta)
+    if not round_number:
+        return 0
+    drift = ROUND_TRANSITION_DRIFT_SEC.get((map_type or "").strip(), 0)
+    return drift * (int(round_number) - 1)
+
 # 영웅 → 역할. 프론트 App.jsx heroRole과 동일 분류 + 신영웅.
 # (신영웅 역할 근거: player_stats 집계 — 도미나 blocked/10≈24.8k→탱커, 미즈키 heal/10≈10k·
 #  제트팩 캣 heal/10≈7.8k→지원, 벤데타/시온/안란/엠레/시에라/벤처/프레야 heal·blocked≈0→딜러)

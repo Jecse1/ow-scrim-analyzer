@@ -396,6 +396,8 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     duration_sec=rnd.get("duration_sec", 0),
                     final_blows_t1=rnd.get("final_blows_t1", 0),
                     final_blows_t2=rnd.get("final_blows_t2", 0),
+                    # 로그 교체 = 새 라운드 구성 → VOD 보정은 자동(NULL)으로 초기화
+                    video_delta_sec=rnd.get("video_delta_sec"),
                 )
                 db.add(db_round)
                 await db.flush()
@@ -538,6 +540,13 @@ async def rebuild_database():
                             _gss = max(0, _real_ts)
                             break
                     target_match["game_setup_sec"] = _gss
+                    # 라운드별 VOD 보정 복원 — meta.json의 rounds_delta(수기 입력 스냅샷)를
+                    # 재계산된 rounds에 round_number 기준으로 다시 얹는다.
+                    _rd = {d.get("round_number"): d.get("video_delta_sec")
+                           for d in (target_match.get("rounds_delta") or [])}
+                    for _rnd in target_match.get("rounds", []):
+                        if _rnd.get("round_number") in _rd:
+                            _rnd["video_delta_sec"] = _rd[_rnd.get("round_number")]
             new_scrims.append(scrim_obj)
         except Exception as e:
             parse_errors.append(f"{os.path.basename(meta_path)}: {e}")
@@ -614,6 +623,7 @@ async def rebuild_database():
                             duration_sec=rnd.get("duration_sec", 0),
                             final_blows_t1=rnd.get("final_blows_t1", 0),
                             final_blows_t2=rnd.get("final_blows_t2", 0),
+                            video_delta_sec=rnd.get("video_delta_sec"),
                         )
                         db.add(db_round)
                         await db.flush()
@@ -911,6 +921,24 @@ async def patch_match(match_id: str, body: MatchPatchInput):
                 m.video_start_sec = max(0, int(body.video_start_sec)); meta_fields["video_start_sec"] = m.video_start_sec
             if body.video_end_sec is not None:
                 m.video_end_sec = max(0, int(body.video_end_sec)); meta_fields["video_end_sec"] = m.video_end_sec
+
+            # 라운드별 VOD 보정 — 로그 매치 전용. null = 자동(모드 기본값)으로 되돌림.
+            if body.rounds_delta is not None:
+                if is_manual:
+                    raise HTTPException(status_code=422, detail="수기 매치에는 라운드별 VOD 보정이 없습니다")
+                r_rows = (await db.execute(
+                    select(DBRound).where(DBRound.match_id == match_id))).scalars().all()
+                by_num = {r.round_number: r for r in r_rows}
+                for rd in body.rounds_delta:
+                    r_row = by_num.get(rd.round_number)
+                    if not r_row:
+                        raise HTTPException(status_code=422, detail=f"round {rd.round_number} not found")
+                    r_row.video_delta_sec = None if rd.video_delta_sec is None else int(rd.video_delta_sec)
+                # meta.json 동기화(rebuild 복원용): 매치 전체 라운드의 저장값 스냅샷
+                meta_fields["rounds_delta"] = [
+                    {"round_number": r.round_number, "video_delta_sec": r.video_delta_sec}
+                    for r in sorted(r_rows, key=lambda x: x.round_number)
+                ]
 
             swapped = None
             if body.match_index is not None and int(body.match_index) != m.match_index:
