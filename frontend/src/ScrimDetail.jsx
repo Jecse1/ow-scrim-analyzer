@@ -145,6 +145,11 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
         }
       }
       await axios.patch(`${API_BASE}/api/matches/${em.id}`, body);
+      // 승패 보정(로그 매치) — 원본 winner 무변경, 기존 winner-override 엔드포인트 재사용(meta 동기화 포함)
+      if (em.source !== "manual" && em.winnerOverride !== em.origWinnerOverride) {
+        await axios.patch(`${API_BASE}/api/matches/${em.id}/winner-override`,
+          { winnerOverride: em.winnerOverride || null });
+      }
       invalidateApiCache();
       setEditMatch(null);
       await fetchScrim();
@@ -470,6 +475,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                           offsetStr: secToMmss(m.video_offset), startStr: secToMmss(m.video_start_sec), endStr: secToMmss(m.video_end_sec),
                           pauseRows: (m.pauses || []).map(p => ({ startStr: secToMmss(p.start_sec), endStr: secToMmss(p.end_sec) })),
                           winner: m.source === "manual" ? (m.winner_override || m.winner || "") : "",
+                          winnerOverride: m.winner_override || "", origWinnerOverride: m.winner_override || "",
                           score_t1: m.score_t1, score_t2: m.score_t2, match_index: m.match_index,
                           team1_name: m.team1_name, team2_name: m.team2_name,
                         });
@@ -525,6 +531,15 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       <>
                       <div><span style={lbl}>{t.sdVodOffset}</span>
                         <input style={{ ...inp, width: 80 }} value={em.offsetStr} placeholder="MM:SS" onChange={e => upd("offsetStr", e.target.value)} /></div>
+                      {/* 승패 보정 — 자동 판정(null)/팀 승/무승부(Draw). 원본 winner 무변경 */}
+                      <div><span style={lbl}>{t.woLabel}</span>
+                        <select style={{ ...inp, cursor: "pointer" }} value={em.winnerOverride}
+                          onChange={e => upd("winnerOverride", e.target.value)}>
+                          <option value="">{t.woAuto}</option>
+                          <option value={em.team1_name}>{em.team1_name} {t.woWinSuffix}</option>
+                          <option value={em.team2_name}>{em.team2_name} {t.woWinSuffix}</option>
+                          <option value="Draw">{t.woDraw}</option>
+                        </select></div>
                       {/* 퍼즈 구간 편집 — 등록 모달과 같은 MM:SS 형식, 전체 치환 저장 */}
                       <div style={{ flexBasis: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>

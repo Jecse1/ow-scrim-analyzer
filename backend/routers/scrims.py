@@ -772,10 +772,11 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
             m = result.scalars().first()
             if not m:
                 raise HTTPException(status_code=404, detail="Match not found")
-            if wo is not None and wo not in (m.team1_name, m.team2_name):
+            # "Draw" = 무승부로 수기 판정(오판정 승자를 무승부로 교정하는 용도)
+            if wo is not None and wo not in (m.team1_name, m.team2_name, "Draw"):
                 raise HTTPException(
                     status_code=422,
-                    detail=f"winner_override must be one of ['{m.team1_name}', '{m.team2_name}'] or null",
+                    detail=f"winner_override must be one of ['{m.team1_name}', '{m.team2_name}', 'Draw'] or null",
                 )
             m.winner_override = wo  # 원본 winner 무변경
             scrim_id = m.session_id

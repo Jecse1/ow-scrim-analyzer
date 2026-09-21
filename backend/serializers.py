@@ -143,7 +143,8 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
         "score_t2": m.score_t2 or 0,
         # result도 유효 승자 기준: 보정이 있으면 "{팀} 승 (a : b)" (calculate_pure_stats와 동일 형식).
         # 스코어는 원본 그대로 유지(밀기 미기록이면 0 : 0) — DB의 result 원본 문자열은 무변경.
-        "result": (f"{m.winner_override} 승 ({m.score_t1 or 0} : {m.score_t2 or 0})"
+        "result": ((f"무승부 ({m.score_t1 or 0} : {m.score_t2 or 0})" if m.winner_override == "Draw"
+                    else f"{m.winner_override} 승 ({m.score_t1 or 0} : {m.score_t2 or 0})")
                    if m.winner_override else (m.result or "")),
         "video_url": m.video_url or "",
         "video_offset": m.video_offset or 0,

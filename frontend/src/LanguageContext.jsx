@@ -373,6 +373,8 @@ export const translations = {
     // 승패 보정 (밀기맵) — 스크림 생성 모달 전용
     woLabel: "승패 보정",
     woNone: "미보정",
+    woAuto: "자동 판정",
+    woDraw: "무승부",
     woWinSuffix: "승",
     woHint: "밀기맵은 로그에 스코어가 없어 자동 판정이 무승부로 저장됩니다. 실제 승리 팀을 선택하면 맵 분석·통계에 반영됩니다(원본 기록은 유지).",
     // 사후 승패 보정 배지·인라인 편집(매치 상세·세션 매치 목록)
@@ -750,6 +752,8 @@ export const translations = {
     // Result correction (Push maps) — scrim creation modal only
     woLabel: "Result correction",
     woNone: "Not corrected",
+    woAuto: "Auto (parsed)",
+    woDraw: "Draw",
     woWinSuffix: "win",
     woHint: "Push maps carry no score in the log, so the automatic result is stored as a draw. Pick the actual winner to reflect it in Map Analysis and stats (the original record is preserved).",
     // Post-hoc result correction badge & inline edit (match detail · session match list)
@@ -1127,6 +1131,8 @@ export const translations = {
     // 胜负修正（推进图）— 仅训练赛创建弹窗
     woLabel: "胜负修正",
     woNone: "未修正",
+    woAuto: "自动判定",
+    woDraw: "平局",
     woWinSuffix: "胜",
     woHint: "推进图日志中没有比分，自动判定会存为平局。选择实际获胜队伍后将反映到地图分析与统计（原始记录保留）。",
     // 事后胜负修正徽章·内联编辑（对局详情·场次对局列表）

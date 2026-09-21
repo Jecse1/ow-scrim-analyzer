@@ -309,8 +309,9 @@ async def get_fight_records(base_team: str = BASE_TEAM):
                         "opponent": t2 if our_side == 1 else t1,
                         "our_score": (m.score_t1 if our_side == 1 else m.score_t2) or 0,
                         "enemy_score": (m.score_t2 if our_side == 1 else m.score_t1) or 0,
+                        # "Draw"(원본 무승부·수기 무승부 보정 공통)는 무승부 — _fight_to_record와 동일 규칙
                         "match_result": ("win" if eff_winner == base_team
-                                          else ("draw" if not eff_winner else "loss")),
+                                          else ("draw" if (not eff_winner or eff_winner == "Draw") else "loss")),
                         "source": (getattr(m, 'source', None) or 'log'),
                     })
                     if (getattr(m, 'source', None) or 'log') != 'log':
