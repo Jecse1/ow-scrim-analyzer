@@ -9,6 +9,7 @@ import {
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
+import { useVod } from "./VodPlayerContext";
 import { getDisplayName, HERO_SKILL_MAP, getSkillName, getMapDisplayName, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES, MAPS, getModeLabel } from "./gameData";
 import NoVideoModal from "./NoVideoModal";
 import { computeFights } from './utils/fightAnalysis';
@@ -1145,6 +1146,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
 const EventsView = ({ matchData, t1Name, t2Name }) => {
   const { theme } = useTheme();
   const { t, language } = useLanguage();
+  const { openVod: openVodPlayer } = useVod();
   const [noVideoModal, setNoVideoModal] = useState(false);
   const videoExists = hasVideo(matchData?.video_url);
 
@@ -1257,7 +1259,7 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
   const EventItem = ({ time, displayTime, label, desc, color, hero, url }) => {
     const handleClick = () => {
       if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        openVodPlayer(url, desc || label || '');
       } else {
         setNoVideoModal(true);
       }
@@ -1348,6 +1350,7 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
 const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
   const { theme } = useTheme();
   const { t, language } = useLanguage();
+  const { openVod: openVodPlayer } = useVod();
   const [noVideoModal, setNoVideoModal] = useState(false);
   const videoExists = hasVideo(matchData?.video_url);
 
@@ -1374,7 +1377,7 @@ const UltTimelineView = ({ fights, matchData, t1Name, t2Name }) => {
     const vodRound = f.events?.[0]?.vodRound;
     const delta = (matchData.rounds || []).find(r => r.round_number === vodRound)?.effective_delta || 0;
     const url = buildVideoLink(matchData.video_url, Math.max(0, f.startTime), matchData, undefined, delta);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openVodPlayer(url, `${getMapDisplayName(matchData.map_name)} · ${t.msUltTimeline || ''}`.trim());
   };
 
   return (

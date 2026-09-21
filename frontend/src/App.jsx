@@ -6,6 +6,7 @@ import {
 
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { LanguageProvider, useLanguage } from "./LanguageContext";
+import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
 import { APP_NAME } from "./config";
@@ -53,6 +54,7 @@ class ErrorBoundary extends React.Component {
 function MainApp() {
   const { theme, toggleTheme, isDarkMode } = useTheme();
   const { t, setLanguage, language } = useLanguage();
+  const { vodMode, setVodMode } = useVod();
 
   const [currentView, setCurrentView] = useState("home");
   const [activeScrimId, setActiveScrimId] = useState(null);
@@ -538,6 +540,18 @@ function MainApp() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {/* VOD 재생 방식 토글: 플레이어(앱 내 embed 모달) / 새 탭(기존 watch&t=) — localStorage 'vodMode' */}
+          {!isMobile && (
+            <div style={{ background: theme.surfaceHighlight, padding: "6px 10px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", fontWeight: "bold", color: theme.textSub }}>{t.vodModeLabel}:</span>
+              {[["player", t.vodModePlayer], ["tab", t.vodModeTab]].map(([val, label]) => (
+                <button key={val} onClick={() => setVodMode(val)}
+                  style={{ background: vodMode === val ? theme.text : "transparent", color: vodMode === val ? theme.bg : theme.textSub, border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "12px", fontWeight: "bold", cursor: "pointer" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* [i18n zh] 언어 선택 드롭다운(KO/EN/中文). 3언어부터는 토글 대신 select. */}
           <div style={{ background: theme.surfaceHighlight, padding: "8px 12px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px", color: theme.text }}>
             <Globe size={18} />
@@ -665,7 +679,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <MainApp />
+        <VodProvider>
+          <MainApp />
+        </VodProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

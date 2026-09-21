@@ -4,6 +4,7 @@ import { getMapDisplayName, getDisplayName } from './gameData';
 import { ChevronDown, ChevronRight, Youtube, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
+import { useVod, vodClickProps } from "./VodPlayerContext";
 import { useIsMobile } from "./utils/responsive";
 
 const API_BASE = "";
@@ -595,6 +596,7 @@ export const seqReactInFight = (r, sel, fol, windowSec = RESPONSE_WINDOW_SEC) =>
 
 // 펼침 목록: 최신 세션부터, VOD_PAGE개씩 '더 보기'. items = [{ r, react? }]
 export function VodList({ items, shown, onMore, t, perspective, GREEN, RED }) {
+    const { openVod } = useVod();
     const sorted = [...items].sort((a, b) =>
         String(b.r.session_date || '').localeCompare(String(a.r.session_date || '')) ||
         ((b.r.session_id || 0) - (a.r.session_id || 0)) ||
@@ -615,7 +617,8 @@ export function VodList({ items, shown, onMore, t, perspective, GREEN, RED }) {
                         <span style={{ color: won ? GREEN : RED, fontWeight: 600 }}>{won ? t.osWinBadge : t.osLossBadge}</span>
                         {it.react != null && <span style={{ color: T.sub }}>{t.flVodReact} {it.react.toFixed(1)}s</span>}
                         {link ? (
-                            <a href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                            <a href={link} target="_blank" rel="noopener noreferrer"
+                                onClick={e => { e.stopPropagation(); vodClickProps(openVod, link, `${getMapDisplayName(r.map_name)} · vs ${opp}`).onClick(e); }}
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '2px 9px', borderRadius: '6px', background: 'rgba(229,72,77,0.13)', color: T.applyRed, textDecoration: 'none', fontWeight: 600, fontSize: '11px' }}>
                                 <Youtube size={13} /> {t.ffWatch}
                             </a>

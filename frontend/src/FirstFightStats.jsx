@@ -5,6 +5,7 @@ import { Swords, Youtube, Map as MapIcon, Users, Clock } from 'lucide-react';
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
+import { useVod, vodClickProps } from "./VodPlayerContext";
 import { BASE_TEAM } from "./config";
 
 const API_BASE = "";
@@ -24,6 +25,7 @@ const fmtClock = (sec) => {
 export default function FirstFightStats() {
     const { theme } = useTheme();
     const { t } = useLanguage();
+    const { openVod } = useVod();
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -171,6 +173,7 @@ export default function FirstFightStats() {
                                                 <td style={{ padding: cellPad, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                     {link ? (
                                                         <a href={link} target="_blank" rel="noopener noreferrer"
+                                                            {...vodClickProps(openVod, link, `${getMapDisplayName(it.map_name)} · ${t.ffWatch}`)}
                                                             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '10px 14px' : '6px 12px', minHeight: isMobile ? '44px' : undefined, borderRadius: '8px', background: `${theme.danger}20`, color: theme.danger, textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' }}>
                                                             <Youtube size={16} /> {t.ffWatch}
                                                         </a>

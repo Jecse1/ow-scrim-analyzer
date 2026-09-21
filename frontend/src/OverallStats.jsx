@@ -9,6 +9,7 @@ import { tpl } from "./FightLabStats";
 import { computeFights } from './utils/fightAnalysis';
 import { buildMapSummary, manualToPseudoRecords } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
+import { useVod, vodClickProps } from './VodPlayerContext';
 import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName } from './gameData';
 import { BASE_TEAM } from './config';
 
@@ -140,6 +141,7 @@ function SummaryTab({ theme, t, tpl, pct0, summary, summaryTeam, stats, topHero,
 export default function OverallStats({ onBack, onGoSessions }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { openVod } = useVod();
   const isMobile = useIsMobile();
 
   const [loading, setLoading] = useState(true);
@@ -750,7 +752,8 @@ export default function OverallStats({ onBack, onGoSessions }) {
                         <>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
                             {filteredData.moments.slice(0, shown).map((moment, idx) => (
-                                <a key={idx} href={getYouTubeLink(moment.videoUrl, moment.videoOffset, moment.timestamp, moment.pauses, moment.gameSetupSec, moment.effectiveDelta)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'transform 0.2s, border-color 0.2s' }} onMouseOver={e => { e.currentTarget.style.borderColor = theme.borderHighlight; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                <a key={idx} href={getYouTubeLink(moment.videoUrl, moment.videoOffset, moment.timestamp, moment.pauses, moment.gameSetupSec, moment.effectiveDelta)} target="_blank" rel="noopener noreferrer"
+                                    {...vodClickProps(openVod, getYouTubeLink(moment.videoUrl, moment.videoOffset, moment.timestamp, moment.pauses, moment.gameSetupSec, moment.effectiveDelta), `${getMapDisplayName(moment.matchName)} · ${moment.desc}`)} style={{ textDecoration: 'none', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'transform 0.2s, border-color 0.2s' }} onMouseOver={e => { e.currentTarget.style.borderColor = theme.borderHighlight; e.currentTarget.style.transform = 'translateY(-2px)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)'; }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ fontSize: '12px', color: theme.textSub, display:'flex', alignItems:'center', gap:'4px' }}><MapIcon size={12}/> {moment.matchName}</div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
