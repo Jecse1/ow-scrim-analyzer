@@ -887,6 +887,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
         raise HTTPException(status_code=503, detail="Database not available")
 
     try:
+        from sqlalchemy import delete as sa_delete
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(DBMatch).where(DBMatch.id == match_id, DBMatch.deleted_at.is_(None))
@@ -921,6 +922,28 @@ async def patch_match(match_id: str, body: MatchPatchInput):
                 m.video_start_sec = max(0, int(body.video_start_sec)); meta_fields["video_start_sec"] = m.video_start_sec
             if body.video_end_sec is not None:
                 m.video_end_sec = max(0, int(body.video_end_sec)); meta_fields["video_end_sec"] = m.video_end_sec
+
+            # 퍼즈 구간 전체 치환 — 로그 매치 전용. 검증: 0 ≤ start < end, 구간 겹침 금지.
+            if body.pauses is not None:
+                if is_manual:
+                    raise HTTPException(status_code=422, detail="수기 매치에는 퍼즈 구간이 없습니다")
+                cleaned = []
+                for p in body.pauses:
+                    s_sec, e_sec = int(p.start_sec), int(p.end_sec)
+                    if s_sec < 0 or s_sec >= e_sec:
+                        raise HTTPException(status_code=422,
+                                            detail=f"invalid pause range: {s_sec}~{e_sec} (0 ≤ start < end)")
+                    cleaned.append({"start_sec": s_sec, "end_sec": e_sec, "duration": e_sec - s_sec})
+                cleaned.sort(key=lambda x: x["start_sec"])
+                for a, b in zip(cleaned, cleaned[1:]):
+                    if b["start_sec"] < a["end_sec"]:
+                        raise HTTPException(status_code=422,
+                                            detail=f"pause ranges overlap: {a['start_sec']}~{a['end_sec']} / {b['start_sec']}~{b['end_sec']}")
+                await db.execute(sa_delete(DBPause).where(DBPause.match_id == match_id))
+                for p in cleaned:
+                    db.add(DBPause(match_id=match_id, **p))
+                # meta.json 동기화 — rebuild가 m["pauses"]를 그대로 재삽입하므로 이 갱신만으로 복원됨
+                meta_fields["pauses"] = cleaned
 
             # 라운드별 VOD 보정 — 로그 매치 전용. null = 자동(모드 기본값)으로 되돌림.
             if body.rounds_delta is not None:

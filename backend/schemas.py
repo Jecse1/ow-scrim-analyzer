@@ -66,6 +66,12 @@ class SessionPatchInput(BaseModel):
         allow_population_by_field_name = True
         extra = "ignore"
 
+class PauseSecInput(BaseModel):
+    # 퍼즈 구간(영상 축, 초). 등록 모달의 PauseInput(문자열)과 달리 수정 폼은 초 단위로 보낸다.
+    start_sec: int
+    end_sec: int
+
+
 class RoundDeltaInput(BaseModel):
     # 라운드별 VOD 보정 초. video_delta_sec=None → 자동(모드 기본값 × (round_number−1))으로 되돌림.
     round_number: int
@@ -86,6 +92,8 @@ class MatchPatchInput(BaseModel):
     match_index: Optional[int] = None
     # 라운드별 VOD 보정(로그 매치 전용). 준 라운드만 반영, null = 자동으로 되돌림.
     rounds_delta: Optional[List[RoundDeltaInput]] = Field(default=None, alias="roundsDelta")
+    # 퍼즈 구간 전체 치환(로그 매치 전용). [] = 전부 삭제. None = 무변경.
+    pauses: Optional[List[PauseSecInput]] = None
 
     class Config:
         populate_by_name = True

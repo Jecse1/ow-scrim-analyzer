@@ -129,6 +129,13 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
         const ve = mmssToSec(em.endStr); if (ve != null) body.videoEndSec = ve;
       } else {
         const off = mmssToSec(em.offsetStr); if (off != null) body.video_offset = off;
+        // 퍼즈 구간 — 전체 치환. 클라 검증(형식·start<end·겹침) 후 초 단위로 전송.
+        const parsed = (em.pauseRows || []).map(p => ({ start_sec: mmssToSec(p.startStr), end_sec: mmssToSec(p.endStr) }));
+        const sorted = [...parsed].sort((a, b) => (a.start_sec ?? 0) - (b.start_sec ?? 0));
+        const bad = parsed.some(p => p.start_sec == null || p.end_sec == null || p.start_sec >= p.end_sec)
+          || sorted.some((p, i) => i > 0 && p.start_sec < sorted[i - 1].end_sec);
+        if (bad) { alert(t.sdPauseInvalidWarn); setBusy(false); return; }
+        body.pauses = parsed;
         // 라운드별 VOD 보정 — 빈 입력('') = null(자동으로 되돌림)
         if (deltaInfo && deltaInfo.matchId === em.id && !deltaInfo.error) {
           body.roundsDelta = deltaInfo.rows.map(r => ({
@@ -461,6 +468,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                         setEditMatch(editMatch?.id === m.id ? null : {
                           id: m.id, source: m.source, map_name: m.map_name, video_url: m.video_url || "",
                           offsetStr: secToMmss(m.video_offset), startStr: secToMmss(m.video_start_sec), endStr: secToMmss(m.video_end_sec),
+                          pauseRows: (m.pauses || []).map(p => ({ startStr: secToMmss(p.start_sec), endStr: secToMmss(p.end_sec) })),
                           winner: m.source === "manual" ? (m.winner_override || m.winner || "") : "",
                           score_t1: m.score_t1, score_t2: m.score_t2, match_index: m.match_index,
                           team1_name: m.team1_name, team2_name: m.team2_name,
@@ -517,6 +525,37 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       <>
                       <div><span style={lbl}>{t.sdVodOffset}</span>
                         <input style={{ ...inp, width: 80 }} value={em.offsetStr} placeholder="MM:SS" onChange={e => upd("offsetStr", e.target.value)} /></div>
+                      {/* 퍼즈 구간 편집 — 등록 모달과 같은 MM:SS 형식, 전체 치환 저장 */}
+                      <div style={{ flexBasis: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 800 }}>{t.sdPauses}</span>
+                          <button type="button" onClick={() => upd("pauseRows", [...(em.pauseRows || []), { startStr: "", endStr: "" }])}
+                            style={{ background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, color: theme.text, padding: "4px 10px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700 }}>{t.sdPauseAdd}</button>
+                        </div>
+                        {(em.pauseRows || []).length === 0 && (
+                          <div style={{ fontSize: 12, color: theme.textSub }}>{t.sdPauseNone}</div>
+                        )}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {(em.pauseRows || []).map((p, pi) => {
+                            const updRow = (k, v) => upd("pauseRows", em.pauseRows.map((row, i) => i === pi ? { ...row, [k]: v } : row));
+                            const s = mmssToSec(p.startStr), e2 = mmssToSec(p.endStr);
+                            const len = s != null && e2 != null && e2 > s ? e2 - s : null;
+                            return (
+                              <div key={pi} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                <span style={{ fontSize: 11, color: theme.textSub, fontWeight: 700 }}>{t.sdPauseStart}</span>
+                                <input style={{ ...inp, width: 70 }} value={p.startStr} placeholder="MM:SS" onChange={e => updRow("startStr", e.target.value)} />
+                                <span style={{ fontSize: 11, color: theme.textSub, fontWeight: 700 }}>{t.sdPauseEnd}</span>
+                                <input style={{ ...inp, width: 70 }} value={p.endStr} placeholder="MM:SS" onChange={e => updRow("endStr", e.target.value)} />
+                                <span style={{ fontSize: 11, color: theme.textSub }}>{t.sdPauseLen}: {len != null ? `${len}${t.sdDeltaSecUnit}` : "-"}</span>
+                                <button type="button" onClick={() => upd("pauseRows", em.pauseRows.filter((_, i) => i !== pi))}
+                                  style={{ background: "transparent", border: "none", color: theme.danger || "#ef4444", cursor: "pointer", padding: 2, display: "inline-flex" }}>
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                       {/* 라운드별 VOD 보정 — 라운드 종료 연출 타이머 정지 보정 */}
                       <div style={{ flexBasis: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
                         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>{t.sdRoundDelta}</div>
