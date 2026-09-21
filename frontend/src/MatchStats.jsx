@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
-import { Clock, ChevronLeft, Trophy, Zap, Crosshair, Sword, List, BarChart2, Skull, Activity, Target, PlayCircle, User, ChevronDown, AlertOctagon, RefreshCw } from 'lucide-react';
+import { Clock, ChevronLeft, Trophy, Zap, Crosshair, Sword, List, BarChart2, Skull, Activity, Target, PlayCircle, User, ChevronDown, AlertOctagon, RefreshCw, Upload, Youtube } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, AreaChart, Area, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine
@@ -9,7 +9,7 @@ import {
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
-import { getDisplayName, HERO_SKILL_MAP, getSkillName, getMapDisplayName, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES } from "./gameData";
+import { getDisplayName, HERO_SKILL_MAP, getSkillName, getMapDisplayName, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES, MAPS, getModeLabel } from "./gameData";
 import NoVideoModal from "./NoVideoModal";
 import { computeFights } from './utils/fightAnalysis';
 import WinnerOverrideControl from "./WinnerOverrideControl";
@@ -1640,6 +1640,76 @@ const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => {
   }, [fetchedMatchData, activeRoundTab]);
 
   if (loading || !dataSummary) return <div style={{ padding: '60px', color: theme.textSub, textAlign: 'center' }}>{t.loading}</div>;
+
+  // ── 수기(source='manual') 매치: 이벤트 기반 분석 없음 — 결과 카드 + 안내 + [로그 추가] ──
+  if (fetchedMatchData.source === 'manual') {
+    const md = fetchedMatchData;
+    const mapEntry = MAPS.find(x => x.ko === md.map_name || x.en === md.map_name || (x.aliases || []).includes(md.map_name));
+    const modeText = mapEntry ? getModeLabel(mapEntry.modeLabelKo) : '';
+    const effWinner = md.winner || '';
+    // 수기 매치 VOD: buildVideoLink(파서 좌표) 대신 t=video_start_sec 직접
+    const vodUrl = hasVideo(md.video_url) && md.video_start_sec != null
+      ? `${md.video_url.replace(/[?&]t=[^&]*/g, '')}${md.video_url.includes('?') ? '&' : '?'}t=${Math.max(0, Math.floor(md.video_start_sec))}`
+      : (hasVideo(md.video_url) ? md.video_url : null);
+    const uploadManualLog = async (file) => {
+      if (!file) return;
+      if (!window.confirm(t.sdReplaceWarn)) return;
+      try {
+        const fd = (extra = {}) => {
+          const f = new FormData();
+          f.append("scrim_id", md.session_id);
+          f.append("match_index", md.match_index);
+          f.append("file", file);
+          Object.entries(extra).forEach(([k, v]) => f.append(k, v));
+          return f;
+        };
+        let adopt = "parsed";
+        const dry = await axios.post(`/api/matches/upload`, fd({ dry_run: "1" }));
+        const diff = dry.data?.diff || {};
+        if (Object.keys(diff).length > 0) {
+          const lines = Object.entries(diff).map(([k, v]) => `- ${k}: ${v.manual} → ${v.parsed}`).join("\n");
+          adopt = window.confirm(`${t.sdDiffTitle}\n${lines}\n\n${t.sdDiffAdopt}`) ? "parsed" : "keep";
+        }
+        await axios.post(`/api/matches/upload`, fd({ adopt }));
+        alert(t.sdUploadDone);
+        refetchMatch();
+      } catch (err) {
+        alert(t.sdEditFail + (err.response?.data?.detail || err.message));
+      }
+    };
+    return (
+      <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto', color: theme.text }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: theme.textSub, cursor: 'pointer', marginBottom: '24px', fontWeight: '600' }}><ChevronLeft size={16} /> {t.msBackToOverview}</button>
+        <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', margin: 0 }}>{getMapDisplayName(md.map_name)}</h1>
+            {modeText && <span style={{ fontSize: '13px', color: theme.textSub, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '3px 10px' }}>{modeText}</span>}
+          </div>
+          <div style={{ fontSize: '40px', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
+            {md.team1_name} <span style={{ color: theme.textSub }}>{md.score_t1} : {md.score_t2}</span> {md.team2_name}
+          </div>
+          {effWinner && <div style={{ fontSize: '15px' }}>{t.smWinnerLabel}: <b>{effWinner}</b></div>}
+          {vodUrl && (
+            <a href={vodUrl} target="_blank" rel="noopener noreferrer"
+               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: theme.text, fontWeight: 700, textDecoration: 'none', border: `1px solid ${theme.borderHighlight}`, borderRadius: 10, padding: '10px 16px', width: 'fit-content' }}>
+              <Youtube size={16} color="#f87171" /> {t.msWatchVod}
+            </a>
+          )}
+          <div style={{ background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, borderRadius: 12, padding: '16px', color: theme.textSub, fontSize: 14 }}>
+            {t.msNoLogNotice}
+          </div>
+          <div>
+            <input type="file" accept=".txt" id="manual-log-add" style={{ display: 'none' }}
+                   onChange={e => { const f = e.target.files[0]; e.target.value = ""; uploadManualLog(f); }} />
+            <label htmlFor="manual-log-add"
+                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: theme.text, color: theme.bg, borderRadius: 10, padding: '12px 20px', cursor: 'pointer', fontWeight: 800 }}>
+              <Upload size={16} /> {t.sdAddLog}
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const btnStyle = (isActive) => ({ padding: '12px 24px', background: 'transparent', border: 'none', borderBottom: isActive ? `3px solid ${NEON_GREEN}` : '3px solid transparent', color: isActive ? theme.text : theme.textSub, fontWeight: isActive ? 800 : 600, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', transition:'all 0.2s' });
 

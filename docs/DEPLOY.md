@@ -180,6 +180,8 @@ cd frontend && npm ci && npm run build
 pm2 restart scrim-backend
 ```
 
+스키마가 바뀐 경우: 백엔드 재시작만으로 자동 보정된다(기동 시 누락 컬럼 ADD COLUMN, 로그 `[DB] schema check`). alembic으로 직접 적용할 때는 미스탬프 DB면 `alembic stamp <직전 리비전>` 후 `upgrade head`가 필요할 수 있다.
+
 백엔드 의존성이 바뀐 경우:
 
 ```bash

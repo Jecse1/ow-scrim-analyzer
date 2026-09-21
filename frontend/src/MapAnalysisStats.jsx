@@ -8,6 +8,7 @@ import { fetchCached } from './utils/apiCache';
 import { getMapDisplayName, getModeLabel } from './gameData';
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile } from "./utils/responsive";
+import { manualToPseudoRecords } from './utils/mapSummary';
 import {
     T, tpl, isKnown,
     useFightScope, FightScopeShell, SubTabPills, PerspectiveNotice, ExplainBox,
@@ -47,6 +48,7 @@ function collectMatches(recs) {
             map_name: r.map_name, map_type: r.map_type || 'Unknown', enemy_team: r.enemy_team,
             result: r.match_result ?? null,
             overridden: !!r.match_result_overridden, // 수기 승패 보정 여부(밀기 등)
+            source: r.match_source || 'log', // 'manual' = 로그 없는 수기 매치
             our_score: r.our_score ?? null, enemy_score: r.enemy_score ?? null,
         });
     });
@@ -63,6 +65,7 @@ function matchStat(matches) {
         draws: rec.length - wins - losses,
         win: rec.length > 0 ? wins / rec.length : null,
         oppWin: rec.length > 0 ? losses / rec.length : null,
+        manualCount: matches.filter(x => x.source === 'manual').length, // 표본 구분 표기용
     };
 }
 
@@ -177,7 +180,11 @@ export default function MapAnalysisStats({ onGoSession }) {
         return () => { alive = false; };
     }, []);
 
-    const records = data?.records || [];
+    // 수기 매치는 의사 레코드로 병합 — 매치 단위 승패에는 포함, 한타 지표(isKnown)에서는 자동 제외
+    const records = useMemo(
+        () => [...(data?.records || []), ...manualToPseudoRecords(data?.match_summaries)],
+        [data]
+    );
     const sc = useFightScope(records, t); // 상태는 이 탭 독립(훅 인스턴스 분리)
 
     const [expandedType, setExpandedType] = useState(null);     // ① 타입 행 클릭 → 맵별 드릴다운
@@ -305,7 +312,15 @@ export default function MapAnalysisStats({ onGoSession }) {
                                 <span style={{ fontSize: '12px', fontWeight: 400, color: T.sub }}> ({tpl(t.maWlDrawTpl, { w: overallMs.wins, l: overallMs.losses, d: overallMs.draws })})</span>
                             </span>
                         ),
-                        tpl(t.maCellPlayTpl, { p: '', n: overallMs.plays }).trim())}
+                        <span>
+                            {tpl(t.maCellPlayTpl, { p: '', n: overallMs.plays }).trim()}
+                            {/* 표본 구분: 승패 기록(수기 포함)과 로그 지표(한타 등)가 한 화면에 있어 표기 */}
+                            {overallMs.manualCount > 0 && (
+                                <span style={{ marginLeft: 6, color: T.faint }}>
+                                    · {tpl(t.maSrcSplitTpl, { n: overallMs.plays - overallMs.manualCount, m: overallMs.manualCount })}
+                                </span>
+                            )}
+                        </span>)}
                     {summaryCard(t.maSummaryBest,
                         best ? <span>{best.key} <span style={{ color: T.green }}>{pct0(best.ms.win)}</span></span> : <span style={{ color: T.faint, fontSize: '13px' }}>{t.maSummaryNone}</span>,
                         best ? tpl(t.maCellWinTpl, { p: pct0(best.ms.win), w: best.ms.wins }) : null)}

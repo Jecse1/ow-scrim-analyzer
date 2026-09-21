@@ -38,10 +38,16 @@ class Match(Base):
     score_t2 = Column(Integer, default=0)
     result = Column(String)
     # 밀기 등 스코어 이벤트가 없는 매치의 수기 승패 보정(팀명 저장). NULL = 미보정.
-    # 원본 winner 컬럼은 어떤 경로에서도 수정하지 않는다 — 원본/보정 구분 보존.
+    # 원본 winner 컬럼 불변 규칙은 source='log'에 한정 — 로그 파싱 원본 보존 취지.
+    # source='manual' 매치는 원본이 사용자 입력이므로 winner/score를 컬럼에 직접 저장·수정한다.
     winner_override = Column(String, nullable=True)
+    # 'log' = 로그 파싱 매치(기존 전부), 'manual' = 로그 없는 수기 등록 매치(rounds/events/player_stats 없음)
+    source = Column(String, nullable=False, server_default="log")
     video_url = Column(String)
     video_offset = Column(Integer, default=0)
+    # 수기 매치 전용 VOD 구간(초). 로그 매치는 기존 video_offset 방식 그대로.
+    video_start_sec = Column(Integer, nullable=True)
+    video_end_sec = Column(Integer, nullable=True)
     game_setup_sec = Column(Integer, nullable=True)
     duration_sec = Column(Float, default=0)
     total_final_blows_t1 = Column(Integer, default=0)

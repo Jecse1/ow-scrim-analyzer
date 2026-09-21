@@ -123,6 +123,7 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
     dur = m.duration_sec or 0
     base = {
         "id": m.id,
+        "session_id": m.session_id,  # 매치 상세 화면에서 로그 업로드(scrim_id 필요) 용
         "match_index": m.match_index,
         "map_name": m.map_name,
         "team1_name": m.team1_name,
@@ -141,6 +142,10 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
                    if m.winner_override else (m.result or "")),
         "video_url": m.video_url or "",
         "video_offset": m.video_offset or 0,
+        # 'manual' = 로그 없는 수기 매치(rounds/events 없음, 로그 표본 지표에서 제외)
+        "source": getattr(m, "source", None) or "log",
+        "video_start_sec": getattr(m, "video_start_sec", None),
+        "video_end_sec": getattr(m, "video_end_sec", None),
         "game_setup_sec": m.game_setup_sec,  # None = 기존 매치 (옛날 방식)
         "duration_sec": dur,
         "total_final_blows_t1": m.total_final_blows_t1 or 0,

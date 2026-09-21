@@ -23,6 +23,13 @@ class MatchSegment(BaseModel):
     pauses: List[PauseInput] = []
     # 밀기맵 수기 승패 보정(팀명, team1Name/team2Name 중 하나). 빈값/None = 미보정.
     winner_override: Optional[str] = Field(default=None, alias="winnerOverride")
+    # 수기(로그 없는) 매치: source='manual' + winner/score/VOD 구간 직접 입력. 기본 'log' = 기존 동작.
+    source: str = Field(default="log")
+    winner: Optional[str] = None
+    score_t1: Optional[int] = None
+    score_t2: Optional[int] = None
+    video_start_sec: Optional[int] = Field(default=None, alias="videoStartSec")
+    video_end_sec: Optional[int] = Field(default=None, alias="videoEndSec")
 
     class Config:
         populate_by_name = True
@@ -44,6 +51,38 @@ class ScrimManualInput(BaseModel):
 
 class BatchDeleteRequest(BaseModel):
     ids: List[str]
+
+class SessionPatchInput(BaseModel):
+    # 세션 정보 수정(PATCH /api/sessions/{id}). 모두 선택 — 준 필드만 반영.
+    scrim_name: Optional[str] = Field(default=None, alias="scrimName")
+    date: Optional[str] = None
+    # 팀명 정정: old_team → new_team. BASE_TEAM(기준 팀)은 서버에서 변경 거부.
+    # 해당 세션의 matches(team1/team2/winner/winner_override)·player_stats·events 팀 컬럼 일괄 치환(트랜잭션).
+    team_rename_from: Optional[str] = Field(default=None, alias="teamRenameFrom")
+    team_rename_to: Optional[str] = Field(default=None, alias="teamRenameTo")
+
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+        extra = "ignore"
+
+class MatchPatchInput(BaseModel):
+    # 매치 정보 수정(PATCH /api/matches/{id}). 모두 선택 — 준 필드만 반영.
+    # winner/score_t1/score_t2 직접 수정은 source='manual' 매치만 허용(로그 매치는 winner-override 사용).
+    map_name: Optional[str] = None
+    winner: Optional[str] = None
+    score_t1: Optional[int] = None
+    score_t2: Optional[int] = None
+    video_url: Optional[str] = None
+    video_offset: Optional[int] = None
+    video_start_sec: Optional[int] = Field(default=None, alias="videoStartSec")
+    video_end_sec: Optional[int] = Field(default=None, alias="videoEndSec")
+    match_index: Optional[int] = None
+
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+        extra = "ignore"
 
 class WinnerOverrideInput(BaseModel):
     # 사후 승패 보정(PATCH /api/matches/{id}/winner-override).

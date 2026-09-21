@@ -7,7 +7,7 @@ import { useLanguage } from "./LanguageContext";
 import { useIsMobile, ScrollX } from "./utils/responsive";
 import { tpl } from "./FightLabStats";
 import { computeFights } from './utils/fightAnalysis';
-import { buildMapSummary } from './utils/mapSummary';
+import { buildMapSummary, manualToPseudoRecords } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
 import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName } from './gameData';
 import { BASE_TEAM } from './config';
@@ -167,7 +167,8 @@ export default function OverallStats({ onBack, onGoSessions }) {
       : `${API_BASE}/api/fight-records?base_team=${encodeURIComponent(team)}`;
     try {
       const d = await fetchCached(url);
-      setFightRecords(d?.records || []);
+      // 수기 매치는 의사 레코드로 병합 — 맵 승률(매치 단위)에 포함, 한타 지표에서는 자동 제외
+      setFightRecords([...(d?.records || []), ...manualToPseudoRecords(d?.match_summaries)]);
     } catch (e) {
       console.error(e);
       setFightRecords([]);

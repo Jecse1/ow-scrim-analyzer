@@ -26,7 +26,12 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
       result: '',
       has_pause: false,
       pauses: [],
-      winner_override: ''
+      winner_override: '',
+      // 수기(로그 없는) 매치: source='manual' + winner/score 직접 입력
+      source: 'log',
+      winner: '',
+      score_t1: '',
+      score_t2: ''
     }],
     files: []
   });
@@ -36,7 +41,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
     date: new Date().toISOString().split('T')[0],
     startHour: '20',
     endHour: '22',
-    matches: [{ map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '' }],
+    matches: [{ map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '', source: 'log', winner: '', score_t1: '', score_t2: '' }],
     files: []
   });
 
@@ -150,7 +155,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   const addMatch = () => {
     setScrimData(prev => ({
       ...prev,
-      matches: [...prev.matches, { map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '' }],
+      matches: [...prev.matches, { map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '', source: 'log', winner: '', score_t1: '', score_t2: '' }],
       files: [...prev.files, null]
     }));
   };
@@ -241,6 +246,31 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                     )}
                   </div>
 
+                  {/* 매치 유형 — 로그 매치(기존) / 수기 매치(로그 없음, winner·score 직접 기록) */}
+                  <div style={{ background: theme.surfaceHighlight, padding: '16px', borderRadius: '12px', marginBottom: '20px', border: `1px solid ${theme.borderHighlight}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <label style={{ ...labelStyle, color: theme.text }}>{t.smSourceLabel}</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {[['log', t.smSourceLog], ['manual', t.smSourceManual]].map(([val, label]) => {
+                          const active = (match.source || 'log') === val;
+                          return (
+                            <button key={val} onClick={() => updateMatch(idx, 'source', val)}
+                              style={{ padding: '6px 16px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
+                                background: active ? theme.text : 'transparent', color: active ? theme.bg : theme.textSub,
+                                borderColor: active ? theme.text : theme.borderHighlight }}>
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {match.source === 'manual' && (
+                      <div style={{ fontSize: '12px', color: theme.textSub, marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <AlertCircle size={12} /> {t.smManualHint}
+                      </div>
+                    )}
+                  </div>
+
                   {/* 💡 맵 이름 및 팀 이름 입력 (SET별 적용) */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '20px' }}>
                       <div style={inputGroupStyle}>
@@ -266,17 +296,49 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
                       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Clock size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.matchStart} (MM:SS)</label>
+                              <label style={labelStyle}><Clock size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {match.source === 'manual' ? t.smVodStart : `${t.matchStart} (MM:SS)`}</label>
                               <input type="text" placeholder={t.smStartPlaceholder} value={match.start_time} onChange={e => updateMatch(idx, 'start_time', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
                           </div>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Clock size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.matchEnd} (MM:SS)</label>
+                              <label style={labelStyle}><Clock size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {match.source === 'manual' ? t.smVodEnd : `${t.matchEnd} (MM:SS)`}</label>
                               <input type="text" placeholder="10:00" value={match.end_time} onChange={e => updateMatch(idx, 'end_time', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
                           </div>
                       </div>
+
+                      {/* 수기 매치 전용 — 승리 팀·스코어 직접 입력(winner/score 컬럼 저장, 승패 보정 아님) */}
+                      {match.source === 'manual' && (
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+                          <div style={inputGroupStyle}>
+                            <label style={labelStyle}><Trophy size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smWinnerLabel}</label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {[['', t.woNone], [match.team1Name, match.team1Name], [match.team2Name, match.team2Name]].map(([val, label], wi) => {
+                                const active = (match.winner || '') === val;
+                                return (
+                                  <button key={wi} onClick={() => updateMatch(idx, 'winner', val)}
+                                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', flex: 1,
+                                      background: active ? (val === '' ? theme.surface : theme.warning) : 'transparent',
+                                      color: active ? (val === '' ? theme.text : '#000') : theme.textSub,
+                                      borderColor: active ? (val === '' ? theme.text : theme.warning) : theme.borderHighlight }}>
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div style={inputGroupStyle}>
+                            <label style={labelStyle}>{t.smScoreLabel}</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <input type="number" min="0" value={match.score_t1} onChange={e => updateMatch(idx, 'score_t1', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
+                              <span style={{ color: theme.textSub, fontWeight: 'bold' }}>:</span>
+                              <input type="number" min="0" value={match.score_t2} onChange={e => updateMatch(idx, 'score_t2', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                   </div>
 
-                  {/* 퍼즈 입력 섹션 */}
+                  {/* 퍼즈 입력 섹션 — 수기 매치는 로그 좌표 보정이 없으므로 숨김 */}
+                  {match.source !== 'manual' && (
                   <div style={{ background: theme.surfaceHighlight, padding: '16px', borderRadius: '12px', marginBottom: '20px', border: `1px solid ${theme.borderHighlight}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <label style={{ ...labelStyle, color: theme.text, display:'flex', alignItems:'center', gap:'8px' }}>
@@ -318,10 +380,13 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         </div>
                     )}
                   </div>
+                  )}
 
                   {/* 승패 보정 섹션 — 퍼즈 보정과 동일 자리·스타일, 맵 종류 무관 항상 노출.
                       밀기맵 등 로그에 스코어가 없어 자동 판정이 무승부로 저장되는 매치의 실제 승팀을
-                      등록자가 수동 선택(기본 미보정). 저장 시 winner_override로 전달, 원본 winner 무변경. */}
+                      등록자가 수동 선택(기본 미보정). 저장 시 winner_override로 전달, 원본 winner 무변경.
+                      수기 매치는 winner 직접 입력이 따로 있으므로 숨김. */}
+                  {match.source !== 'manual' && (
                   <div style={{ background: theme.surfaceHighlight, padding: '16px', borderRadius: '12px', marginBottom: '20px', border: `1px solid ${theme.borderHighlight}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <label style={{ ...labelStyle, color: theme.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -347,7 +412,9 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         <AlertCircle size={12} /> {t.woHint}
                       </div>
                   </div>
+                  )}
 
+                  {match.source !== 'manual' && (
                   <div>
                     <label style={{ ...labelStyle, display: 'block', marginBottom: '12px' }}>{t.logFile}</label>
                     <div style={{ position: 'relative' }}>
@@ -357,6 +424,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         </label>
                     </div>
                   </div>
+                  )}
                 </div>
               ))}
 

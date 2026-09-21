@@ -24,8 +24,8 @@ except Exception as _e:
     _DB_AVAILABLE = False
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
-from config import DATA_FILE, ROW_DATA_DIR, NUMERIC_FIELDS
-from schemas import ScrimManualInput, BatchDeleteRequest, WinnerOverrideInput
+from config import DATA_FILE, ROW_DATA_DIR, NUMERIC_FIELDS, BASE_TEAM
+from schemas import ScrimManualInput, BatchDeleteRequest, WinnerOverrideInput, SessionPatchInput, MatchPatchInput
 from cache import _invalidate_response_cache
 from serializers import _db_match_to_dict, _db_session_to_dict
 from parsers.log_parser import parse_overwatch_log, parse_log_timestamp, time_str_to_seconds
@@ -89,6 +89,41 @@ def _delete_match_file(scrim_id: str, match_index: int) -> list[str]:
         except Exception as e:
             warnings.append(f"파일 삭제 실패 ({path}): {e}")
     return warnings
+
+
+def _update_meta_json(scrim_id: str, mutate) -> bool:
+    """meta.json(rebuild 소스)을 잠금 하에 읽어 mutate(meta)->bool 적용 후 원자적으로 저장.
+    mutate가 False를 반환하면 저장하지 않는다. 파일 없으면 False."""
+    meta_path = f"{ROW_DATA_DIR}/{scrim_id}_meta.json"
+    if not os.path.exists(meta_path):
+        return False
+    with _json_lock:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        if not mutate(meta):
+            return False
+        dir_name = os.path.dirname(os.path.abspath(meta_path))
+        fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False, indent=4)
+            os.replace(tmp_path, meta_path)
+        except Exception:
+            try: os.unlink(tmp_path)
+            except Exception: pass
+            raise
+    return True
+
+
+def _update_match_fields_in_meta(scrim_id: str, match_id: str, fields: dict) -> bool:
+    """meta.json의 해당 매치에 fields를 병합(rebuild 복원 정합용)."""
+    def mutate(meta):
+        for m in meta.get("matches", []):
+            if m.get("id") == match_id:
+                m.update(fields)
+                return True
+        return False
+    return _update_meta_json(scrim_id, mutate)
 
 
 def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value) -> bool:
@@ -176,6 +211,13 @@ async def register_scrim_manual(request: Request):
         if wo not in (t1_name, t2_name):
             wo = ""
 
+        # 수기(로그 없는) 매치: source='manual' + winner/score 직접 저장(원본=사용자 입력).
+        src = "manual" if (match.source or "log") == "manual" else "log"
+        manual_winner = ""
+        if src == "manual":
+            mw = (match.winner or "").strip()
+            manual_winner = mw if mw in (t1_name, t2_name) else ""
+
         processed_matches.append({
             "id": str(uuid.uuid4()),
             "match_index": idx + 1,
@@ -184,8 +226,14 @@ async def register_scrim_manual(request: Request):
             "team2_name": t2_name,
             "result": match.result,
             "winner_override": wo,
+            "source": src,
+            "winner": manual_winner,
+            "score_t1": int(match.score_t1 or 0) if src == "manual" else 0,
+            "score_t2": int(match.score_t2 or 0) if src == "manual" else 0,
             "video_url": match.video_url or "",
             "video_offset": video_offset,
+            "video_start_sec": match.video_start_sec if src == "manual" else None,
+            "video_end_sec": match.video_end_sec if src == "manual" else None,
             "pauses": processed_pauses,
             "timeline": {"duration_sec": 0},
             "rounds": [], "stats": [],
@@ -225,8 +273,14 @@ async def register_scrim_manual(request: Request):
                     team2_name=m["team2_name"],
                     result=m["result"],
                     winner_override=m.get("winner_override") or None,
+                    source=m.get("source") or "log",
+                    winner=m.get("winner") or "",
+                    score_t1=m.get("score_t1") or 0,
+                    score_t2=m.get("score_t2") or 0,
                     video_url=m["video_url"],
                     video_offset=m["video_offset"],
+                    video_start_sec=m.get("video_start_sec"),
+                    video_end_sec=m.get("video_end_sec"),
                 ))
                 for p in m["pauses"]:
                     db.add(DBPause(
@@ -245,7 +299,12 @@ async def register_scrim_manual(request: Request):
 
 
 @router.post("/api/matches/upload")
-async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(...), file: UploadFile = File(...)):
+async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(...), file: UploadFile = File(...),
+                           dry_run: str = Form(None), adopt: str = Form(None)):
+    """로그 업로드/교체. dry_run='1' 이면 파싱만 하고 저장 없이 수기값과의 차이(diff)를 돌려준다.
+    adopt: 수기(source='manual') 매치에 로그를 붙일 때 차이 처리 방식 —
+      'parsed'(기본) = 맵·승자·스코어 전부 파싱값 채택,
+      'keep'   = 맵은 수기값 유지, 파싱 winner/score는 컬럼에 저장하고 수기 winner를 winner_override로 이동(원본 보존 규칙과 일관)."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -255,8 +314,10 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     except:
         log_text = content.decode("cp949", errors="ignore")
 
-    with open(f"{ROW_DATA_DIR}/{scrim_id}_{match_index}.txt", "w", encoding="utf-8") as f:
-        f.write(log_text)
+    is_dry = (dry_run or "").strip() in ("1", "true", "yes")
+    if not is_dry:
+        with open(f"{ROW_DATA_DIR}/{scrim_id}_{match_index}.txt", "w", encoding="utf-8") as f:
+            f.write(log_text)
 
     try:
         from sqlalchemy.orm import selectinload as _sil
@@ -278,6 +339,31 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
             target_match: dict = {}
             calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
+
+            # 수기 매치에 로그를 붙일 때: 수기값 vs 파싱값 차이(맵·승자·스코어)
+            prev_source = db_match.source or "log"
+            parsed_map = (parsed.get("map_name") or "").strip()
+            diff = {}
+            if prev_source == "manual":
+                if parsed_map and parsed_map != (db_match.map_name or ""):
+                    diff["map_name"] = {"manual": db_match.map_name or "", "parsed": parsed_map}
+                if (target_match.get("winner") or "") != (db_match.winner or ""):
+                    diff["winner"] = {"manual": db_match.winner or "", "parsed": target_match.get("winner") or ""}
+                if (target_match.get("score_t1", 0), target_match.get("score_t2", 0)) != (db_match.score_t1 or 0, db_match.score_t2 or 0):
+                    diff["score"] = {"manual": f"{db_match.score_t1 or 0}:{db_match.score_t2 or 0}",
+                                     "parsed": f"{target_match.get('score_t1', 0)}:{target_match.get('score_t2', 0)}"}
+            if is_dry:
+                # 파싱만 — DB·파일 무변경. 프론트가 diff를 보여주고 adopt를 정해 재호출한다.
+                return {"status": "dry_run", "source": prev_source, "diff": diff}
+
+            if prev_source == "manual" and (adopt or "parsed") == "keep":
+                # 수기값 유지: 맵은 수기값 그대로, 수기 winner는 winner_override로 이동(파싱 원본은 winner 컬럼에)
+                manual_winner = (db_match.winner or "").strip()
+                if manual_winner and manual_winner != (target_match.get("winner") or ""):
+                    db_match.winner_override = manual_winner
+            elif prev_source == "manual" and parsed_map:
+                db_match.map_name = parsed_map  # 파싱값 채택
+            db_match.source = "log"
 
             db_match.winner = target_match.get("winner", "")
             db_match.score_t1 = target_match.get("score_t1", 0)
@@ -354,8 +440,14 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     ))
             await db.commit()
             print(f"[DB] upload OK: match={match_id_val}")
+            # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
+            _update_match_fields_in_meta(scrim_id, match_id_val, {
+                "source": "log",
+                "map_name": db_match.map_name,
+                "winner_override": db_match.winner_override or "",
+            })
             _invalidate_response_cache()
-            return {"status": "success"}
+            return {"status": "success", "diff": diff}
     except HTTPException:
         raise
     except Exception as e:
@@ -494,8 +586,11 @@ async def rebuild_database():
                         score_t1=m.get("score_t1", 0),
                         score_t2=m.get("score_t2", 0),
                         result=m.get("result", ""),
+                        source=m.get("source") or "log",
                         video_url=m.get("video_url", ""),
                         video_offset=m.get("video_offset", 0),
+                        video_start_sec=m.get("video_start_sec"),
+                        video_end_sec=m.get("video_end_sec"),
                         game_setup_sec=m.get("game_setup_sec"),
                         duration_sec=m.get("timeline", {}).get("duration_sec", 0),
                         total_final_blows_t1=m.get("total_final_blows_t1", 0),
@@ -684,6 +779,167 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
     _update_match_wo_in_meta(scrim_id, match_id, wo)
     _invalidate_response_cache()
     return {"success": True, "match_id": match_id, "winner_override": wo or ""}
+
+
+# ── 세션 정보 수정 ─────────────────────────────────────────────
+@router.patch("/api/sessions/{scrim_id}")
+async def patch_session(scrim_id: str, body: SessionPatchInput):
+    """세션 이름·날짜·팀명 정정. 팀명은 등록 시 오타 교정 용도 —
+    BASE_TEAM(기준 팀)은 변경 거부, 상대팀명만 치환 가능.
+    치환 시 그 세션의 matches(team1/team2/winner/winner_override)·player_stats·events
+    팀 컬럼을 한 트랜잭션에서 일괄 갱신하고 meta.json도 동기화한다."""
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    rn_from = (body.team_rename_from or "").strip()
+    rn_to = (body.team_rename_to or "").strip()
+    if bool(rn_from) != bool(rn_to):
+        raise HTTPException(status_code=422, detail="teamRenameFrom/teamRenameTo must be given together")
+    if rn_from:
+        if rn_from == BASE_TEAM:
+            raise HTTPException(status_code=422, detail=f"기준 팀({BASE_TEAM})의 이름은 변경할 수 없습니다")
+        if rn_to == BASE_TEAM:
+            raise HTTPException(status_code=422, detail=f"상대팀명을 기준 팀({BASE_TEAM})으로 바꿀 수 없습니다")
+
+    try:
+        from sqlalchemy import update as sa_update
+        from sqlalchemy.orm import selectinload as _sil
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(DBSession).where(DBSession.id == scrim_id, DBSession.deleted_at.is_(None))
+                .options(_sil(DBSession.matches))
+            )
+            s = result.scalars().first()
+            if not s:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            if body.scrim_name is not None:
+                s.scrim_name = body.scrim_name.strip() or s.scrim_name
+            if body.date is not None and body.date.strip():
+                s.date = body.date.strip()
+
+            renamed_match_ids = []
+            if rn_from:
+                match_ids = [m.id for m in (s.matches or []) if m.deleted_at is None]
+                for m in (s.matches or []):
+                    if m.deleted_at is not None:
+                        continue
+                    hit = False
+                    if m.team1_name == rn_from: m.team1_name = rn_to; hit = True
+                    if m.team2_name == rn_from: m.team2_name = rn_to; hit = True
+                    if (m.winner or "") == rn_from: m.winner = rn_to; hit = True
+                    if (m.winner_override or "") == rn_from: m.winner_override = rn_to; hit = True
+                    if m.result and rn_from in m.result: m.result = m.result.replace(rn_from, rn_to); hit = True
+                    if hit: renamed_match_ids.append(m.id)
+                if match_ids:
+                    await db.execute(sa_update(DBPlayerStat)
+                                     .where(DBPlayerStat.match_id.in_(match_ids), DBPlayerStat.team_name == rn_from)
+                                     .values(team_name=rn_to))
+                    for col in (DBEvent.player_team, DBEvent.target_team, DBEvent.winner,
+                                DBEvent.capturing_team, DBEvent.team, DBEvent.attacker):
+                        await db.execute(sa_update(DBEvent)
+                                         .where(DBEvent.match_id.in_(match_ids), col == rn_from)
+                                         .values(**{col.key: rn_to}))
+            await db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+    # meta.json 동기화(rebuild 소스)
+    def mutate(meta):
+        changed = False
+        if body.scrim_name is not None and body.scrim_name.strip():
+            meta["scrim_name"] = body.scrim_name.strip(); changed = True
+        if body.date is not None and body.date.strip():
+            meta["date"] = body.date.strip(); changed = True
+        if rn_from:
+            for m in meta.get("matches", []):
+                for k in ("team1_name", "team2_name", "winner", "winner_override"):
+                    if m.get(k) == rn_from:
+                        m[k] = rn_to; changed = True
+                if m.get("result") and rn_from in m["result"]:
+                    m["result"] = m["result"].replace(rn_from, rn_to); changed = True
+        return changed
+    _update_meta_json(scrim_id, mutate)
+    _invalidate_response_cache()
+    return {"success": True, "scrim_id": scrim_id,
+            "renamed": {"from": rn_from, "to": rn_to} if rn_from else None}
+
+
+# ── 매치 정보 수정 ─────────────────────────────────────────────
+@router.patch("/api/matches/{match_id}")
+async def patch_match(match_id: str, body: MatchPatchInput):
+    """매치 정보 수정: 맵·VOD(URL/오프셋/구간)·순서(match_index)·(수기 매치 한정) winner/score.
+    로그 매치(source='log')의 승패 정정은 winner-override 엔드포인트 사용 — 원본 winner 불변 규칙 유지.
+    match_index 변경 시 같은 세션에서 그 순번을 쓰던 매치와 자리를 맞바꾼다."""
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(DBMatch).where(DBMatch.id == match_id, DBMatch.deleted_at.is_(None))
+            )
+            m = result.scalars().first()
+            if not m:
+                raise HTTPException(status_code=404, detail="Match not found")
+
+            is_manual = (m.source or "log") == "manual"
+            if (body.winner is not None or body.score_t1 is not None or body.score_t2 is not None) and not is_manual:
+                raise HTTPException(status_code=422,
+                                    detail="로그 매치의 승패·스코어는 직접 수정할 수 없습니다 — winner-override를 사용하세요")
+
+            meta_fields = {}
+            if body.map_name is not None and body.map_name.strip():
+                m.map_name = body.map_name.strip(); meta_fields["map_name"] = m.map_name
+            if body.winner is not None:
+                w = body.winner.strip()
+                if w and w not in (m.team1_name, m.team2_name):
+                    raise HTTPException(status_code=422,
+                                        detail=f"winner must be one of ['{m.team1_name}', '{m.team2_name}'] or ''")
+                m.winner = w; meta_fields["winner"] = w
+            if body.score_t1 is not None:
+                m.score_t1 = max(0, int(body.score_t1)); meta_fields["score_t1"] = m.score_t1
+            if body.score_t2 is not None:
+                m.score_t2 = max(0, int(body.score_t2)); meta_fields["score_t2"] = m.score_t2
+            if body.video_url is not None:
+                m.video_url = body.video_url.strip(); meta_fields["video_url"] = m.video_url
+            if body.video_offset is not None:
+                m.video_offset = max(0, int(body.video_offset)); meta_fields["video_offset"] = m.video_offset
+            if body.video_start_sec is not None:
+                m.video_start_sec = max(0, int(body.video_start_sec)); meta_fields["video_start_sec"] = m.video_start_sec
+            if body.video_end_sec is not None:
+                m.video_end_sec = max(0, int(body.video_end_sec)); meta_fields["video_end_sec"] = m.video_end_sec
+
+            swapped = None
+            if body.match_index is not None and int(body.match_index) != m.match_index:
+                new_idx = int(body.match_index)
+                other = (await db.execute(
+                    select(DBMatch).where(DBMatch.session_id == m.session_id,
+                                          DBMatch.match_index == new_idx,
+                                          DBMatch.deleted_at.is_(None)))).scalars().first()
+                old_idx = m.match_index
+                if other:
+                    other.match_index = old_idx
+                    swapped = other.id
+                m.match_index = new_idx
+                meta_fields["match_index"] = new_idx
+
+            scrim_id = m.session_id
+            await db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+    if meta_fields:
+        _update_match_fields_in_meta(scrim_id, match_id, meta_fields)
+    if swapped:
+        _update_match_fields_in_meta(scrim_id, swapped, {"match_index": old_idx})
+    _invalidate_response_cache()
+    return {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
+            "swapped_with": swapped}
 
 
 # ── 세션 단건 삭제 ─────────────────────────────────────────────

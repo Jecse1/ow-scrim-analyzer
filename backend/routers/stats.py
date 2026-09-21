@@ -127,7 +127,8 @@ async def get_scrims_full_events():
             )
             sessions = result.scalars().all()
             for s in sessions:
-                s.matches = [m for m in (s.matches or []) if m.deleted_at is None]
+                # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
+                s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
             payload = [_db_session_to_dict_events_only(s) for s in sessions]
             return _response_cache_store(cache_key, payload)
     except Exception as e:
@@ -220,6 +221,8 @@ async def get_first_fights():
                 for m in (s.matches or []):
                     if m.deleted_at is not None:
                         continue
+                    if (getattr(m, 'source', None) or 'log') != 'log':
+                        continue  # 수기 매치 — 이벤트 없음, 로그 표본 지표에서 제외
                     t1, t2 = m.team1_name, m.team2_name
                     map_type = resolve_map_type(m.map_name)
                     rounds = m.rounds or []
@@ -270,6 +273,7 @@ async def get_fight_records(base_team: str = BASE_TEAM):
             sessions = result.scalars().all()
 
             records: list = []
+            match_summaries: list = []  # 매치 단위 요약(수기 포함) — 맵별 승패·상대별 전적·표본 N/M 표기용
             skipped_matches = 0
             for s in sessions:
                 for m in (s.matches or []):
@@ -284,6 +288,22 @@ async def get_fight_records(base_team: str = BASE_TEAM):
                         skipped_matches += 1
                         continue
                     map_type = resolve_map_type(m.map_name)
+                    eff_winner = (m.winner_override or m.winner) or ""
+                    match_summaries.append({
+                        "match_id": m.id,
+                        "session_id": s.id,
+                        "session_date": s.date,
+                        "map_name": m.map_name,
+                        "map_type": map_type,
+                        "opponent": t2 if our_side == 1 else t1,
+                        "our_score": (m.score_t1 if our_side == 1 else m.score_t2) or 0,
+                        "enemy_score": (m.score_t2 if our_side == 1 else m.score_t1) or 0,
+                        "match_result": ("win" if eff_winner == base_team
+                                          else ("draw" if not eff_winner else "loss")),
+                        "source": (getattr(m, 'source', None) or 'log'),
+                    })
+                    if (getattr(m, 'source', None) or 'log') != 'log':
+                        continue  # 수기 매치 — 한타 레코드 없음
                     for r in (m.rounds or []):
                         ev_dicts = [_db_event_to_dict(ev) for ev in (r.events or [])]
                         for f in compute_fights(ev_dicts, t1, t2):
@@ -301,6 +321,7 @@ async def get_fight_records(base_team: str = BASE_TEAM):
                     "skipped_matches_without_base_team": skipped_matches,
                 },
                 "records": records,
+                "match_summaries": match_summaries,
             }
             return _response_cache_store(cache_key, payload)
     except Exception as e:
@@ -339,6 +360,10 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
                 .order_by(DBSession.date.desc(), DBSession.id.desc())
             )
             sessions = result.scalars().all()
+            for _s in sessions:
+                # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
+                _s.matches = [m for m in (_s.matches or [])
+                              if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
 
             items = compute_player_fight_stats(sessions, base_team)
 

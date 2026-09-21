@@ -84,3 +84,17 @@ export function buildMapSummary(records, rangeA, rangePrev) {
         best, worst, trend, prevFightWin, prevSample,
     };
 }
+
+// 수기(source='manual') 매치 요약 → 의사(pseudo) 한타 레코드.
+// fight_winner='nodata'라 한타 지표(isKnown)에서는 자동 제외되고,
+// collectMatches/matchStat(매치 단위 승패)에는 포함된다 — 승패 기록에 수기 매치 반영용.
+export function manualToPseudoRecords(summaries) {
+    return (summaries || []).filter(s => s.source === 'manual').map(s => ({
+        match_id: s.match_id, session_id: s.session_id, session_date: s.session_date,
+        map_name: s.map_name, map_type: s.map_type, enemy_team: s.opponent,
+        match_result: s.match_result, our_score: s.our_score, enemy_score: s.enemy_score,
+        match_source: 'manual',
+        fight_winner: 'nodata', ults: [], our_ult_count: 0, enemy_ult_count: 0,
+        first_kill: null, first_ult_side: null, first_kill_traded: false, first_death_traded: false,
+    }));
+}

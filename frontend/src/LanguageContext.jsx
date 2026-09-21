@@ -95,6 +95,14 @@ export const translations = {
     msMultiKill: "멀티킬", msTeamKill: "팀킬", msKillsUnit: "킬",
     // 세션 리스트·스크림 상세 (i18n)
     matchCount: "매치 {n}개", sdMatchList: "매치 목록", sdResult: "결과", sdAnalyze: "분석", sdUnknown: "알 수 없음",
+    sdEdit: "편집", sdEditSession: "세션 정보 수정", sdSave: "저장", sdCancel: "취소",
+    sdOppRename: "상대팀명 변경", sdOppRenameHint: "기준 팀({team})은 변경할 수 없습니다. 등록 시 오타 교정 용도.",
+    sdMatchEdit: "수정", sdOrder: "순서", sdVodOffset: "영상 오프셋 (MM:SS)",
+    sdAddLog: "로그 추가", sdReplaceLog: "로그 교체",
+    sdReplaceWarn: "이 매치의 기존 로그 데이터(라운드·이벤트·선수 통계)가 삭제되고 새 로그로 재파싱됩니다. 복구는 git 이전 커밋 또는 일일 백업으로만 가능합니다. 계속할까요?",
+    sdDiffTitle: "수기 입력값과 파싱 결과가 다릅니다:",
+    sdDiffAdopt: "[확인] = 파싱 결과 채택 · [취소] = 수기값 유지(승자는 승패 보정으로 이동)",
+    sdManualBadge: "수기", sdEditFail: "수정 실패: ", sdUploadDone: "로그가 반영되었습니다.",
     // Common (buttons / delete dialogs)
     delete: "삭제", reset: "초기화", cancelSelection: "선택 취소", selectAll: "전체 선택", deselectAll: "전체 해제",
     selectedCount: "선택됨", deleting: "삭제 중...", deleteSelected: "선택 삭제", deleteConfirmPre: "선택한 ",
@@ -107,6 +115,9 @@ export const translations = {
     smMatchPre: "", smMatchPost: "번 경기: ", smPauseSelectedWarn: "'퍼즈 있음'을 선택하셨습니다. 퍼즈 구간을 추가하거나 '아니오'를 선택해주세요.",
     smPauseTimeWarn: "퍼즈 시작/종료 시간을 모두 입력해주세요. (예: 10:00)", smYoutubeLink: "유튜브 영상 링크", smOptional: "(선택)",
     smTeam1Label: "1팀 이름 (왼쪽)", smTeam2Label: "2팀 이름 (오른쪽)", smStartPlaceholder: "예: 03:30 (전투 시작)",
+    smSourceLabel: "매치 유형", smSourceLog: "로그 매치", smSourceManual: "수기 매치 (로그 없음)",
+    smManualHint: "로그 없이 맵·승패·스코어만 기록합니다. 로그 표본 지표(한타·궁·선수 통계)에는 포함되지 않으며, 나중에 로그를 추가할 수 있습니다.",
+    smWinnerLabel: "승리 팀", smScoreLabel: "스코어 (1팀 : 2팀)", smVodStart: "영상 시작 (MM:SS)", smVodEnd: "영상 끝 (MM:SS, 선택)",
     // UltimateStats
     ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",
     // OverallStats
@@ -335,6 +346,7 @@ export const translations = {
     maWeekDetailTpl: "{label} 상세 ({range} · 총 {n}맵)",
     maColPicks: "픽 수",
     maWlDrawTpl: "{w}승 {l}패 {d}무",
+    maSrcSplitTpl: "로그 {n} · 수기 {m}", msNoLogNotice: "이 경기는 로그가 없습니다. 로그를 추가해 주세요.", msWatchVod: "VOD 보기",
     maPushTip: "미보정 밀기 매치는 무승부로 집계됩니다.",
     maCorrected: "보정",
     maWeeklyCellTipTpl: "{range} · {metric} {p} · {w}승 / 표본 {n}",
@@ -453,6 +465,14 @@ export const translations = {
     msMultiKill: "Multi Kill", msTeamKill: "Team Kill", msKillsUnit: " Kills",
     // Session list / scrim detail (i18n)
     matchCount: "{n} matches", sdMatchList: "Match List", sdResult: "Result", sdAnalyze: "Analyze", sdUnknown: "Unknown",
+    sdEdit: "Edit", sdEditSession: "Edit Session Info", sdSave: "Save", sdCancel: "Cancel",
+    sdOppRename: "Rename Opponent", sdOppRenameHint: "The base team ({team}) cannot be renamed. For fixing typos made at registration.",
+    sdMatchEdit: "Edit", sdOrder: "Order", sdVodOffset: "VOD offset (MM:SS)",
+    sdAddLog: "Add Log", sdReplaceLog: "Replace Log",
+    sdReplaceWarn: "This match's existing log data (rounds/events/player stats) will be deleted and re-parsed from the new log. Recovery is only possible via a previous git commit or daily backup. Continue?",
+    sdDiffTitle: "Manual values differ from parsed results:",
+    sdDiffAdopt: "[OK] = adopt parsed values · [Cancel] = keep manual values (winner moves to override)",
+    sdManualBadge: "Manual", sdEditFail: "Edit failed: ", sdUploadDone: "Log applied.",
     // Common (buttons / delete dialogs)
     delete: "Delete", reset: "Reset", cancelSelection: "Cancel", selectAll: "Select All", deselectAll: "Deselect All",
     selectedCount: "selected", deleting: "Deleting...", deleteSelected: "Delete Selected", deleteConfirmPre: "Delete ",
@@ -465,6 +485,9 @@ export const translations = {
     smMatchPre: "Match ", smMatchPost: ": ", smPauseSelectedWarn: "You selected 'Has Pause'. Add a pause range or select 'No'.",
     smPauseTimeWarn: "Enter both pause start/end times. (ex: 10:00)", smYoutubeLink: "YouTube Video Link", smOptional: "(Optional)",
     smTeam1Label: "Team 1 Name (Left)", smTeam2Label: "Team 2 Name (Right)", smStartPlaceholder: "ex: 03:30 (fight start)",
+    smSourceLabel: "Match Type", smSourceLog: "Log match", smSourceManual: "Manual match (no log)",
+    smManualHint: "Records map/result/score without a log. Excluded from log-based metrics (fights, ults, player stats); you can attach a log later.",
+    smWinnerLabel: "Winner", smScoreLabel: "Score (Team 1 : Team 2)", smVodStart: "VOD start (MM:SS)", smVodEnd: "VOD end (MM:SS, optional)",
     // UltimateStats
     ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",
     // OverallStats
@@ -693,6 +716,7 @@ export const translations = {
     maWeekDetailTpl: "{label} detail ({range} · {n} maps)",
     maColPicks: "Picks",
     maWlDrawTpl: "{w}W {l}L {d}D",
+    maSrcSplitTpl: "Log {n} · Manual {m}", msNoLogNotice: "This match has no log. Please add a log.", msWatchVod: "Watch VOD",
     maPushTip: "Uncorrected Push matches are counted as draws.",
     maCorrected: "corrected",
     maWeeklyCellTipTpl: "{range} · {metric} {p} · {w} wins / sample {n}",
@@ -811,6 +835,14 @@ export const translations = {
     msMultiKill: "多杀", msTeamKill: "团灭", msKillsUnit: "杀",
     // 场次列表·训练赛详情 (i18n)
     matchCount: "{n} 场对局", sdMatchList: "对局列表", sdResult: "结果", sdAnalyze: "分析", sdUnknown: "未知",
+    sdEdit: "编辑", sdEditSession: "编辑场次信息", sdSave: "保存", sdCancel: "取消",
+    sdOppRename: "修改对手队名", sdOppRenameHint: "基准队伍（{team}）不可修改。用于更正登记时的笔误。",
+    sdMatchEdit: "编辑", sdOrder: "顺序", sdVodOffset: "视频偏移 (MM:SS)",
+    sdAddLog: "补传日志", sdReplaceLog: "替换日志",
+    sdReplaceWarn: "该对局现有日志数据（回合/事件/选手数据）将被删除并按新日志重新解析。仅能通过之前的 git 提交或每日备份恢复。继续吗？",
+    sdDiffTitle: "手动输入与解析结果不一致：",
+    sdDiffAdopt: "[确定] = 采用解析结果 · [取消] = 保留手动值（胜者移入胜负修正）",
+    sdManualBadge: "手动", sdEditFail: "编辑失败：", sdUploadDone: "日志已应用。",
     // Common (buttons / delete dialogs)
     delete: "删除", reset: "重置", cancelSelection: "取消选择", selectAll: "全选", deselectAll: "全部取消",
     selectedCount: "已选", deleting: "删除中...", deleteSelected: "删除所选", deleteConfirmPre: "确定删除所选 ",
@@ -823,6 +855,9 @@ export const translations = {
     smMatchPre: "第 ", smMatchPost: " 场对局：", smPauseSelectedWarn: "已选择“有暂停”。请添加暂停区间或选择“否”。",
     smPauseTimeWarn: "请填写暂停开始/结束时间。（例：10:00）", smYoutubeLink: "YouTube 视频链接", smOptional: "（可选）",
     smTeam1Label: "1队名称（左）", smTeam2Label: "2队名称（右）", smStartPlaceholder: "例：03:30（战斗开始）",
+    smSourceLabel: "比赛类型", smSourceLog: "日志比赛", smSourceManual: "手动登记（无日志）",
+    smManualHint: "无日志，仅记录地图/胜负/比分。不计入日志样本指标（团战、大招、选手数据），之后可补传日志。",
+    smWinnerLabel: "获胜队伍", smScoreLabel: "比分（1队 : 2队）", smVodStart: "视频开始 (MM:SS)", smVodEnd: "视频结束 (MM:SS，可选)",
     // UltimateStats
     ultFivePlus: "5个以上", ultTotal: "总计", ultValue: "价值", ultLowSampleNote: "样本不足（少于5次）· 仅供参考",
     // OverallStats
@@ -1051,6 +1086,7 @@ export const translations = {
     maWeekDetailTpl: "{label} 详情（{range} · 共 {n} 图）",
     maColPicks: "选用数",
     maWlDrawTpl: "{w}胜 {l}负 {d}平",
+    maSrcSplitTpl: "日志 {n} · 手动 {m}", msNoLogNotice: "该对局没有日志，请补传日志。", msWatchVod: "观看 VOD",
     maPushTip: "未修正的推进对局按平局统计。",
     maCorrected: "已修正",
     maWeeklyCellTipTpl: "{range} · {metric} {p} · {w} 胜 / 样本 {n}",

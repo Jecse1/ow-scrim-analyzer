@@ -333,6 +333,13 @@ function MainApp() {
   const goToScrim = (scrimId) => { setActiveScrimId(scrimId); setCurrentView("scrim"); };
   const goToMatch = (matchId) => { setActiveMatchId(matchId); setCurrentView("match"); };
 
+  // "MM:SS" 또는 "HH:MM:SS" → 초. 빈값/파싱 불가 = null (수기 매치 VOD 구간용)
+  const mmssToSec = (s) => {
+    const parts = String(s || "").trim().split(":").map(Number);
+    if (parts.length < 2 || parts.some(isNaN)) return null;
+    return parts.reduce((acc, v) => acc * 60 + v, 0);
+  };
+
   const handleScrimSubmit = async (scrimData) => {
     setIsModalOpen(false);
     setUploading(true);
@@ -354,7 +361,14 @@ function MainApp() {
           hasPause: m.has_pause,
           pauses: m.pauses || [],
           // 승패 보정 — 등록자가 모달에서 수동 선택(맵 종류 무관). 미보정 = 빈값(서버에서 null 저장)
-          winnerOverride: m.winner_override || ""
+          winnerOverride: m.winner_override || "",
+          // 수기(로그 없는) 매치: winner/score 직접 저장 + VOD 구간은 t=초 직접(MM:SS → 초 변환)
+          source: m.source || "log",
+          winner: m.source === "manual" ? (m.winner || "") : "",
+          score_t1: m.source === "manual" ? (Number(m.score_t1) || 0) : 0,
+          score_t2: m.source === "manual" ? (Number(m.score_t2) || 0) : 0,
+          videoStartSec: m.source === "manual" ? mmssToSec(m.start_time) : null,
+          videoEndSec: m.source === "manual" ? mmssToSec(m.end_time) : null
         })),
         files: []
       };
