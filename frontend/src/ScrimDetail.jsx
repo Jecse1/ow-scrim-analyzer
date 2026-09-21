@@ -450,7 +450,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                     </div>
                     <div style={{ color: theme.textSub, fontSize: 13, marginBottom: 6 }}>
                       {t.sdResult}: {m.source === "manual"
-                        ? (m.winner ? `${m.winner} (${m.score_t1} : ${m.score_t2})` : `${m.score_t1} : ${m.score_t2}`)
+                        ? (m.result || `${m.score_t1} : ${m.score_t2}`)
                         : (m.result || t.sdUnknown)}
                     </div>
                     {!isSelectMode && m.source !== "manual" && <WinnerOverrideControl match={m} onChanged={() => fetchScrim()} />}
@@ -512,11 +512,12 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       <>
                         <div><span style={lbl}>{t.smWinnerLabel}</span>
                           <select style={{ ...inp, cursor: "pointer" }} value={em.winner} onChange={e => upd("winner", e.target.value)}>
-                            <option value="">{t.woNone}</option>
+                            <option value="">{t.smWinnerUndecided}</option>
                             <option value={em.team1_name}>{em.team1_name}</option>
                             <option value={em.team2_name}>{em.team2_name}</option>
+                            <option value="Draw">{t.woDraw}</option>
                           </select></div>
-                        <div><span style={lbl}>{t.smScoreLabel}</span>
+                        <div><span style={lbl} title={t.smWinnerAutoHint}>{t.smScoreLabel} · {t.smWinnerAutoHint}</span>
                           <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                             <input style={{ ...inp, width: 55 }} type="number" min="0" value={em.score_t1} onChange={e => upd("score_t1", e.target.value)} />
                             :

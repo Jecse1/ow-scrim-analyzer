@@ -311,7 +311,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                           <div style={inputGroupStyle}>
                             <label style={labelStyle}><Trophy size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smWinnerLabel}</label>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              {[['', t.woNone], [match.team1Name, match.team1Name], [match.team2Name, match.team2Name]].map(([val, label], wi) => {
+                              {[['', t.smWinnerUndecided], [match.team1Name, match.team1Name], [match.team2Name, match.team2Name], ['Draw', t.woDraw]].map(([val, label], wi) => {
                                 const active = (match.winner || '') === val;
                                 return (
                                   <button key={wi} onClick={() => updateMatch(idx, 'winner', val)}
@@ -326,7 +326,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                             </div>
                           </div>
                           <div style={inputGroupStyle}>
-                            <label style={labelStyle}>{t.smScoreLabel}</label>
+                            <label style={labelStyle}>{t.smScoreLabel} <span style={{ fontWeight: 'normal', fontSize: '11px', color: theme.textSub }}>· {t.smWinnerAutoHint}</span></label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <input type="number" min="0" value={match.score_t1} onChange={e => updateMatch(idx, 'score_t1', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
                               <span style={{ color: theme.textSub, fontWeight: 'bold' }}>:</span>

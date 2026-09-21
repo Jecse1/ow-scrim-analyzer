@@ -1701,7 +1701,7 @@ const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => {
           <div style={{ fontSize: '40px', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
             {md.team1_name} <span style={{ color: theme.textSub }}>{md.score_t1} : {md.score_t2}</span> {md.team2_name}
           </div>
-          {effWinner && <div style={{ fontSize: '15px' }}>{t.smWinnerLabel}: <b>{effWinner}</b></div>}
+          {effWinner && <div style={{ fontSize: '15px' }}>{t.smWinnerLabel}: <b>{effWinner === 'Draw' ? t.woDraw : effWinner}</b></div>}
           {vodUrl && (
             <a href={vodUrl} target="_blank" rel="noopener noreferrer"
                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: theme.text, fontWeight: 700, textDecoration: 'none', border: `1px solid ${theme.borderHighlight}`, borderRadius: 10, padding: '10px 16px', width: 'fit-content' }}>

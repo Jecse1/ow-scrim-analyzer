@@ -215,8 +215,17 @@ async def register_scrim_manual(request: Request):
         src = "manual" if (match.source or "log") == "manual" else "log"
         manual_winner = ""
         if src == "manual":
+            # 'Draw' = 무승부(로그 매치 winner_override 표기와 동일). 미정('')이고 스코어가
+            # 입력돼 있으면 자동 판정(큰 쪽 승, 동점 = Draw; 0:0은 미입력으로 보고 미정 유지).
             mw = (match.winner or "").strip()
-            manual_winner = mw if mw in (t1_name, t2_name) else ""
+            s1 = int(match.score_t1 or 0)
+            s2 = int(match.score_t2 or 0)
+            if mw in (t1_name, t2_name, "Draw"):
+                manual_winner = mw
+            elif s1 != s2:
+                manual_winner = t1_name if s1 > s2 else t2_name
+            elif s1 > 0:
+                manual_winner = "Draw"
 
         processed_matches.append({
             "id": str(uuid.uuid4()),
@@ -907,14 +916,24 @@ async def patch_match(match_id: str, body: MatchPatchInput):
                 m.map_name = body.map_name.strip(); meta_fields["map_name"] = m.map_name
             if body.winner is not None:
                 w = body.winner.strip()
-                if w and w not in (m.team1_name, m.team2_name):
+                # 'Draw' = 무승부(로그 매치 winner_override 표기와 동일)
+                if w and w not in (m.team1_name, m.team2_name, "Draw"):
                     raise HTTPException(status_code=422,
-                                        detail=f"winner must be one of ['{m.team1_name}', '{m.team2_name}'] or ''")
+                                        detail=f"winner must be one of ['{m.team1_name}', '{m.team2_name}', 'Draw'] or ''")
                 m.winner = w; meta_fields["winner"] = w
             if body.score_t1 is not None:
                 m.score_t1 = max(0, int(body.score_t1)); meta_fields["score_t1"] = m.score_t1
             if body.score_t2 is not None:
                 m.score_t2 = max(0, int(body.score_t2)); meta_fields["score_t2"] = m.score_t2
+            # 수기 매치: 승리 팀 미정('')이고 스코어가 입력돼 있으면 자동 판정
+            # (큰 쪽 승, 동점 = Draw; 0:0은 미입력으로 보고 미정 유지). 명시 선택은 위에서 이미 반영됨.
+            if is_manual and body.winner is not None and not body.winner.strip():
+                s1, s2 = m.score_t1 or 0, m.score_t2 or 0
+                if s1 != s2:
+                    m.winner = m.team1_name if s1 > s2 else m.team2_name
+                elif s1 > 0:
+                    m.winner = "Draw"
+                meta_fields["winner"] = m.winner
             if body.video_url is not None:
                 m.video_url = body.video_url.strip(); meta_fields["video_url"] = m.video_url
             if body.video_offset is not None:

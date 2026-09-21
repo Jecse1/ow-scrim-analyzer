@@ -145,7 +145,12 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
         # 스코어는 원본 그대로 유지(밀기 미기록이면 0 : 0) — DB의 result 원본 문자열은 무변경.
         "result": ((f"무승부 ({m.score_t1 or 0} : {m.score_t2 or 0})" if m.winner_override == "Draw"
                     else f"{m.winner_override} 승 ({m.score_t1 or 0} : {m.score_t2 or 0})")
-                   if m.winner_override else (m.result or "")),
+                   if m.winner_override
+                   # 수기 매치: winner 직접 입력값으로 result 문자열 계산(응답 전용, DB result 무변경)
+                   else ((f"무승부 ({m.score_t1 or 0} : {m.score_t2 or 0})" if m.winner == "Draw"
+                          else f"{m.winner} 승 ({m.score_t1 or 0} : {m.score_t2 or 0})")
+                         if ((getattr(m, "source", None) or "log") == "manual" and (m.winner or ""))
+                         else (m.result or ""))),
         "video_url": m.video_url or "",
         "video_offset": m.video_offset or 0,
         # 'manual' = 로그 없는 수기 매치(rounds/events 없음, 로그 표본 지표에서 제외)
