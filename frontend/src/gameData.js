@@ -119,10 +119,44 @@ for (const m of MAPS) {
   const forms = [m.ko, m.en, ...(m.aliases || [])];
   for (const f of forms) if (f && !_mapLookup.has(f)) _mapLookup.set(f, m);
 }
+// 맵명 정규화 키: 트림 → 소문자 → 모든 공백 제거(전각 공백 포함) → NFC.
+//   언어·띄어쓰기·대소문자와 무관하게 같은 맵이면 같은 키가 된다.
+export const normalizeMapKey = (s) =>
+  String(s ?? '').trim().toLowerCase().replace(/[\s 　]+/g, '').normalize('NFC');
+// 정규화 색인: ko/en/zh/aliases/mapTypeData 키 전 표기형 → 엔트리.
+const _mapLookupNorm = new Map();
+const _mapNormForms = new Map(); // 엔트리 → 정규화 표기형 Set (부분 일치 검색용)
+for (const m of MAPS) {
+  const forms = [m.ko, m.en, m.zh, ...(m.aliases || []), ...Object.keys(m.mapTypeData || {})];
+  const set = new Set();
+  for (const f of forms) {
+    const k = normalizeMapKey(f);
+    if (!k) continue;
+    set.add(k);
+    if (!_mapLookupNorm.has(k)) _mapLookupNorm.set(k, m);
+  }
+  _mapNormForms.set(m, set);
+}
+// 어떤 표기든 맵 엔트리로 해석: 정확 일치 → 정규화 일치. 없으면 null.
+export const resolveMapEntry = (name) => {
+  const raw = String(name ?? '').trim();
+  if (!raw) return null;
+  return _mapLookup.get(raw) || _mapLookupNorm.get(normalizeMapKey(raw)) || null;
+};
+// 부분 입력 검색: 정규화한 text 가 표기형(정규화)에 포함되는 엔트리 목록(중복 제거).
+export const findMapEntriesByPartial = (text) => {
+  const k = normalizeMapKey(text);
+  if (!k) return [];
+  const hits = [];
+  for (const [m, set] of _mapNormForms) {
+    for (const f of set) if (f.includes(k)) { hits.push(m); break; }
+  }
+  return hits;
+};
 export const getMapDisplayName = (name, lang = _displayLang) => {
   const raw = String(name ?? '').trim();
   if (!raw) return '';
-  const m = _mapLookup.get(raw);
+  const m = resolveMapEntry(raw);
   if (!m) return raw;
   if (lang === 'zh') return m.zh || m.en || m.ko || raw;
   if (lang === 'en') return m.en || m.ko || raw;

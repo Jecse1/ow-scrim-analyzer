@@ -106,7 +106,7 @@ export default function FirstFightStats() {
                     <MapIcon size={16} color={theme.textSub} />
                     <select value={selectedMap} onChange={e => setSelectedMap(e.target.value)} style={selectStyle}>
                         <option value="All">{t.ffAllMaps}</option>
-                        {mapList.map(mp => <option key={mp} value={mp}>{mp}</option>)}
+                        {mapList.map(mp => <option key={mp} value={mp}>{getMapDisplayName(mp)}</option>)}
                     </select>
                 </div>
             </div>

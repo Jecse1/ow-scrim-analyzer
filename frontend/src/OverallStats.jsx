@@ -10,7 +10,7 @@ import { computeFights } from './utils/fightAnalysis';
 import { buildMapSummary, manualToPseudoRecords } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
 import { useVod, vodClickProps } from './VodPlayerContext';
-import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName } from './gameData';
+import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey } from './gameData';
 import { BASE_TEAM } from './config';
 
 const API_BASE = import.meta.env.PROD ? "" : "";
@@ -18,7 +18,6 @@ const API_BASE = import.meta.env.PROD ? "" : "";
 const KEYWORD_TYPES = { MAP: "MAP", HERO: "HERO", EVENT: "EVENT", RESULT: "RESULT", PLAYER: "PLAYER" };
 const EVENT_KEYWORDS = { "궁극기": "ultimate_start", "궁": "ultimate_start", "ult": "ultimate_start", "처치": "kill", "킬": "kill", "kill": "kill", "죽음": "death", "데스": "death", "death": "death" };
 const RESULT_KEYWORDS = { "승리": "win", "승": "win", "win": "win", "패배": "loss", "패": "loss", "loss": "loss", "lose": "loss", "무승부": "draw", "무": "draw", "draw": "draw" };
-const KNOWN_MAPS = [ "왕의길", "왕의 길", "눔바니", "미드타운", "블리자드월드", "블리자드 월드", "아이헨발데", "파라이수", "할리우드", "도라도", "리알토", "서킷로얄", "서킷 로얄", "쓰레기촌", "66번국도", "66번 국도", "지브롤터", "샴발리", "샴발리수도원", "샴발리 수도원", "하바나", "네팔", "리장", "리장타워", "부산", "오아시스", "일리오스", "남극", "남극기지", "사모아", "뉴퀸스트리트", "뉴 퀸 스트리트", "콜로세오", "에스페란사", "루나사피", "뉴정크시티", "뉴 정크 시티", "수라바사", "하나오카", "아누비스" ];
 const KNOWN_HEROES = [ '디바', '둠피스트', '정커퀸', '마우가', '오리사', '라마트라', '라인하르트', '로드호그', '시그마', '윈스턴', '레킹볼', '자리야', '해저드', '애쉬', '바스티온', '캐서디', '에코', '겐지', '한조', '정크랫', '메이', '파라', '리퍼', '소전', '솔저76', '솜브라', '시메트라', '토르비욘', '트레이서', '위도우메이커', '벤처', '벤데타', '프레야', '시온', '아나', '바티스트', '브리기테', '일리아리', '주노', '키리코', '라이프위버', '루시우', '메르시', '모이라', '젠야타', '우양', '제트팩 캣', '미즈키', '엠레', '디몬', 'D.Mon' ];
 
 const COLOR_TEAM1 = '#60a5fa';
@@ -37,6 +36,13 @@ const normalize = (str) => (str || "").replace(/\s+/g, "").toLowerCase();
 // 영웅명 비교 키: SSOT 정본(logName)으로 해석 — '디바'/'D.Va'/'솔저76'/'솔저: 76' 등 어떤 표기든 동일 키
 const heroKey = (name) => getHeroByName(name)?.logName || normalize(name);
 const isSameHero = (a, b) => heroKey(a) === heroKey(b);
+// 맵 필터 판정: 매치의 map_name 을 정본 엔트리로 해석해 태그 value(정본 ko)와 비교.
+// 정본으로 해석되지 않는 미지 맵명은 정규화 문자열이 같을 때만 일치.
+const isMapMatch = (mapName, tagValue) => {
+  const e = resolveMapEntry(mapName);
+  if (e) return e.ko === tagValue;
+  return normalizeMapKey(mapName) === normalizeMapKey(tagValue);
+};
 
 // 'YYYY-MM-DD' 하루 가감 (요약 추세의 이전 기간 산출용, UTC 산술)
 const addDaysStr = (s, n) => {
@@ -239,7 +245,21 @@ export default function OverallStats({ onBack, onGoSessions }) {
     let label = cleanText;
 
     const heroHit = getHeroByName(cleanText);
-    if (KNOWN_MAPS.some(m => cleanText.includes(m) || m.includes(cleanText))) type = KEYWORD_TYPES.MAP;
+    // 맵 판정: 정확(정규화) 일치 우선, 부분 일치는 후보가 정확히 1개일 때만.
+    // 정확 일치가 영웅 쪽(heroHit)에 있으면 맵 부분 일치보다 영웅을 우선한다
+    // (예: "ana" 는 Havana/Hanaoka 부분 문자열이지만 영웅 아나 정확 해석이 우선).
+    const mapExact = resolveMapEntry(cleanText);
+    const mapPartial = !mapExact && !heroHit
+      ? (() => { const c = findMapEntriesByPartial(cleanText); return c.length === 1 ? c[0] : null; })()
+      : null;
+    const mapEntry = mapExact || mapPartial;
+    if (mapEntry) {
+        type = KEYWORD_TYPES.MAP;
+        // 영웅 태그와 같은 구조: value = 정본 ko, label = 현재 언어 표시명
+        value = mapEntry.ko;
+        label = getMapDisplayName(mapEntry.ko);
+        if (activeTags.some(t => t.type === KEYWORD_TYPES.MAP && t.value === value)) { setInputText(""); return; }
+    }
     else if (heroHit || KNOWN_HEROES.some(h => normalize(cleanText) === normalize(h))) {
         type = KEYWORD_TYPES.HERO;
         // 영웅 태그는 정본(logName)으로 저장하고 표시명으로 라벨링 — "솔저"/"d.va" 등 어떤 표기든 같은 태그
@@ -278,7 +298,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
       return true;
     });
     const mapTag = activeTags.find(tg => tg.type === KEYWORD_TYPES.MAP);
-    if (mapTag) fMatches = fMatches.filter(m => m.map_name.includes(mapTag.label));
+    if (mapTag) fMatches = fMatches.filter(m => isMapMatch(m.map_name, mapTag.value));
     if (baseTeam !== 'All') fMatches = fMatches.filter(m => m.team_1_name === baseTeam || m.team_2_name === baseTeam);
 
     if (fMatches.length === 0) return null;
@@ -409,7 +429,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
     const heroTag = activeTags.find(t => t.type === KEYWORD_TYPES.HERO);
     const playerTag = activeTags.find(t => t.type === KEYWORD_TYPES.PLAYER);
 
-    if (mapTag) targetMatches = targetMatches.filter(m => m.map_name.includes(mapTag.label));
+    if (mapTag) targetMatches = targetMatches.filter(m => isMapMatch(m.map_name, mapTag.value));
 
     // baseMatches: date+map 필터만 적용, resultTag 미적용 (moments에서 fight 레벨로 필터)
     const baseMatches = targetMatches;
@@ -706,7 +726,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
             {activeTags.map((tag, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: `${tagColor(tag.type)}20`, border: `1px solid ${tagColor(tag.type)}`, padding: '6px 12px', borderRadius: '20px', fontSize: '13px', color: tagColor(tag.type), fontWeight: 'bold' }}>
                     {tag.type === KEYWORD_TYPES.MAP && <MapIcon size={12}/>}{tag.type === KEYWORD_TYPES.HERO && <Zap size={12}/>}{tag.type === KEYWORD_TYPES.PLAYER && <User size={12}/>}{tag.type === KEYWORD_TYPES.RESULT && <Trophy size={12}/>}
-                    <span>{tag.label}</span>
+                    <span>{tag.type === KEYWORD_TYPES.MAP ? getMapDisplayName(tag.value) : tag.label}</span>
                     <button onClick={() => removeTag(idx)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display:'flex', alignItems:'center' }}><X size={14} /></button>
                 </div>
             ))}
