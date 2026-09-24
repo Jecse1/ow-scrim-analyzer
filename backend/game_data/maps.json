@@ -40,7 +40,9 @@
       "type": "control",
       "typeLabelKo": "쟁탈",
       "modeLabelKo": "쟁탈",
-      "aliases": [],
+      "aliases": [
+        "리장타워"
+      ],
       "controlKeyword": true,
       "mapTypeData": {
         "리장 타워": "쟁탈",
@@ -246,7 +248,9 @@
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
-      "aliases": [],
+      "aliases": [
+        "서킷로얄"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "서킷 로얄": "화물",
@@ -292,7 +296,9 @@
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
-      "aliases": [],
+      "aliases": [
+        "66번국도"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "66번 국도": "화물",
@@ -344,7 +350,9 @@
       "type": "escort",
       "typeLabelKo": "화물",
       "modeLabelKo": "호위",
-      "aliases": [],
+      "aliases": [
+        "샴발리수도원"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "샴발리 수도원": "화물",
@@ -484,7 +492,9 @@
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
-      "aliases": [],
+      "aliases": [
+        "왕의길"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "왕의 길": "혼합",
@@ -579,7 +589,9 @@
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
-      "aliases": [],
+      "aliases": [
+        "뉴퀸스트리트"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "뉴 퀸 스트리트": "밀기",
@@ -679,7 +691,9 @@
       "type": "flashpoint",
       "typeLabelKo": "플래시포인트",
       "modeLabelKo": "플래시포인트",
-      "aliases": [],
+      "aliases": [
+        "뉴정크시티"
+      ],
       "controlKeyword": false,
       "mapTypeData": {
         "뉴 정크 시티": "플래시포인트",

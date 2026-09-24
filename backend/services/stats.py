@@ -8,7 +8,7 @@ compute_player_fight_stats: /api/player-fight-stats 라우터의 계산부를 �
   (main import 금지 — 순환 방지)
 """
 from config import NUMERIC_FIELDS, KOREAN_HERO_MAP
-from parsers.log_parser import normalize_team_name
+from parsers.log_parser import normalize_team_name, resolve_map_type
 from serializers import _db_event_to_dict
 from services.fight_analysis import compute_fights
 from services.fight_metrics import (
@@ -61,7 +61,9 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
         if attacker == n_team1: score_obj_t1 += max_idx
         elif attacker == n_team2: score_obj_t2 += max_idx
 
-    is_push = any(k in map_name for k in ["밀기", "Push", "에스페란사", "이스페란사", "뉴 퀸", "콜로세오", "룬아사피", "루나사피"])
+    # 밀기 판정: 하드코딩 부분문자열 목록(공백 변형 '뉴퀸스트리트' 등 미매치) 대신 맵 타입 조회로 통일.
+    #   resolve_map_type 이 공백제거 정규화까지 흡수하므로 표기 변형에 안전. 판정 결과 외 로직 무변경.
+    is_push = resolve_map_type(map_name) in ("밀기", "Push")
     has_payload = any(e.get("event_type") == "payload_progress" for e in parsed["events"])
     is_hybrid_escort = has_payload or any(k in game_mode for k in ["Escort", "화물", "Hybrid", "혼합"])
 
