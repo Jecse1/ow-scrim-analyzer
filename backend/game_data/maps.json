@@ -511,14 +511,14 @@
     },
     {
       "id": "paraiso",
-      "ko": "파라이소",
+      "ko": "파라이수",
       "en": "Paraíso",
       "zh": "帕拉伊苏",
       "type": "hybrid",
       "typeLabelKo": "혼합",
       "modeLabelKo": "혼합",
       "aliases": [
-        "파라이수"
+        "파라이소"
       ],
       "controlKeyword": false,
       "mapTypeData": {
@@ -659,14 +659,14 @@
     },
     {
       "id": "lunasafi",
-      "ko": "룬아사피",
+      "ko": "루나사피",
       "en": "Runasapi",
       "zh": "鲁纳萨皮",
       "type": "push",
       "typeLabelKo": "밀기",
       "modeLabelKo": "밀기",
       "aliases": [
-        "루나사피"
+        "룬아사피"
       ],
       "controlKeyword": false,
       "mapTypeData": {
