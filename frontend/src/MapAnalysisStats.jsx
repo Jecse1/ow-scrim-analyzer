@@ -5,7 +5,7 @@
 //         FightLabStats에서 재사용하되 상태는 이 탭에서 독립. 맵 필터는 무의미하므로 hideMap.
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
-import { getMapDisplayName, getModeLabel } from './gameData';
+import { getMapDisplayName, getModeLabel, canonicalMapName } from './gameData';
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile } from "./utils/responsive";
 import { manualToPseudoRecords } from './utils/mapSummary';
@@ -202,8 +202,9 @@ export default function MapAnalysisStats({ onGoSession }) {
         const typePast = groupInto(past, r => r.map_type || 'Unknown');
         const tRows = Array.from(groupInto(now, r => r.map_type || 'Unknown').entries())
             .map(([k, v]) => buildRow(k, v, typePast.get(k), total)).sort(byRate);
-        const mapPast = groupInto(past, r => r.map_name || '?');
-        const mRows = Array.from(groupInto(now, r => r.map_name || '?').entries())
+        // 집계 키 = 정본 맵명: 표기 변형(alias)이 섞인 DB 도 같은 맵이면 한 행으로 병합.
+        const mapPast = groupInto(past, r => canonicalMapName(r.map_name) || '?');
+        const mRows = Array.from(groupInto(now, r => canonicalMapName(r.map_name) || '?').entries())
             .map(([k, v]) => buildRow(k, v, mapPast.get(k), total)).sort(byRate);
         return { typeRows: tRows, mapRows: mRows, totalPlays: total, overallMs: matchStat(allMatches) };
     }, [sc.recsNow, sc.recsB, sc.compareOn]);
@@ -247,7 +248,7 @@ export default function MapAnalysisStats({ onGoSession }) {
         if (!selectedWeek || !weekly || !weekly.weeks.includes(selectedWeek)) return null;
         const end7 = addDays(selectedWeek, 6);
         const wRecs = sc.recsNow.filter(r => r.session_date >= selectedWeek && r.session_date <= end7);
-        const rows = Array.from(groupInto(wRecs, r => r.map_name || '?').entries())
+        const rows = Array.from(groupInto(wRecs, r => canonicalMapName(r.map_name) || '?').entries())
             .map(([k, v]) => {
                 const matches = collectMatches(v);
                 return { key: k, mapType: v[0]?.map_type || 'Unknown', picks: matches.length, ms: matchStat(matches), fs: fightStat(v) };

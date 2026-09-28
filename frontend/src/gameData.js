@@ -143,6 +143,8 @@ export const resolveMapEntry = (name) => {
   if (!raw) return null;
   return _mapLookup.get(raw) || _mapLookupNorm.get(normalizeMapKey(raw)) || null;
 };
+// 집계·필터 키용 정본 맵명: 어떤 표기든 정본 ko 로 수렴, 미지 맵명은 원문 유지(별도 행).
+export const canonicalMapName = (name) => resolveMapEntry(name)?.ko || name;
 // 부분 입력 검색: 정규화한 text 가 표기형(정규화)에 포함되는 엔트리 목록(중복 제거).
 export const findMapEntriesByPartial = (text) => {
   const k = normalizeMapKey(text);

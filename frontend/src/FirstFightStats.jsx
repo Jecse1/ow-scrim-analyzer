@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
-import { getMapDisplayName } from './gameData';
+import { getMapDisplayName, canonicalMapName } from './gameData';
 import { Swords, Youtube, Map as MapIcon, Users, Clock } from 'lucide-react';
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
@@ -66,14 +66,15 @@ export default function FirstFightStats() {
 
     const mapList = useMemo(() => {
         const maps = new Set();
-        items.forEach(it => { if (it.map_name) maps.add(it.map_name); });
+        // 옵션값 = 정본 맵명(표기 변형 중복 제거), 비교도 canonicalMapName 으로 동일 기준.
+        items.forEach(it => { if (it.map_name) maps.add(canonicalMapName(it.map_name)); });
         return Array.from(maps).sort();
     }, [items]);
 
     const filtered = useMemo(() => {
         return items.filter(it => {
             if (selectedOpponent !== 'All' && opponentOf(it) !== selectedOpponent) return false;
-            if (selectedMap !== 'All' && it.map_name !== selectedMap) return false;
+            if (selectedMap !== 'All' && canonicalMapName(it.map_name) !== selectedMap) return false;
             return true;
         });
     }, [items, selectedOpponent, selectedMap]);

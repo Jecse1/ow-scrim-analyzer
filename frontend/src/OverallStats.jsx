@@ -10,7 +10,7 @@ import { computeFights } from './utils/fightAnalysis';
 import { buildMapSummary, manualToPseudoRecords } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
 import { useVod, vodClickProps } from './VodPlayerContext';
-import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey } from './gameData';
+import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey, canonicalMapName } from './gameData';
 import { BASE_TEAM } from './config';
 
 const API_BASE = import.meta.env.PROD ? "" : "";
@@ -471,9 +471,11 @@ export default function OverallStats({ onBack, onGoSessions }) {
             totalGames++;
             if (isWin) totalWins++;
 
-            if (!mapMap[m.map_name]) mapMap[m.map_name] = { games: 0, wins: 0 };
-            mapMap[m.map_name].games++;
-            if (isWin) mapMap[m.map_name].wins++;
+            // 맵별 집계 키 = 정본 맵명(표기 변형 병합, 미지 맵명은 원문 행 유지)
+            const mapKey = canonicalMapName(m.map_name);
+            if (!mapMap[mapKey]) mapMap[mapKey] = { games: 0, wins: 0 };
+            mapMap[mapKey].games++;
+            if (isWin) mapMap[mapKey].wins++;
         }
 
         // 매치 합산 킬/뎃/뎀은 aggregate stats 사용 (선수별 정확한 합산값)

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchCached } from './utils/apiCache';
-import { getMapDisplayName, getDisplayName } from './gameData';
+import { getMapDisplayName, getDisplayName, canonicalMapName } from './gameData';
 import { ChevronDown, ChevronRight, Youtube, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
@@ -173,7 +173,7 @@ function PlayerBreakdown({ pfs, rangeA, rangeB, compareOn, minSample, perspectiv
 
     const matchFilter = it =>
         (selectedOpponent === 'All' || it.enemy_team === selectedOpponent) &&
-        (selectedMap === 'All' || it.map_name === selectedMap);
+        (selectedMap === 'All' || canonicalMapName(it.map_name) === selectedMap);
 
     // 행(기간 A, 시점·필터 적용) / 자기 과거(기간 B, 동일 조건)
     const rowsA = useMemo(
@@ -1437,14 +1437,15 @@ export function useFightScope(records, t) {
         return Array.from(s).sort();
     }, [records]);
     const mapList = useMemo(() => {
-        const s = new Set(); records.forEach(r => { if (r.map_name) s.add(r.map_name); });
+        // 옵션값 = 정본 맵명(표기 변형 중복 제거), 비교도 canonicalMapName 으로 동일 기준.
+        const s = new Set(); records.forEach(r => { if (r.map_name) s.add(canonicalMapName(r.map_name)); });
         return Array.from(s).sort();
     }, [records]);
 
     // 맵/상대팀 필터 (두 기간에 동일 적용). 필터는 항상 원본(기준 팀 기준) 필드로 판정.
     const filtered = useMemo(() => records.filter(r => {
         if (selectedOpponent !== 'All' && r.enemy_team !== selectedOpponent) return false;
-        if (selectedMap !== 'All' && r.map_name !== selectedMap) return false;
+        if (selectedMap !== 'All' && canonicalMapName(r.map_name) !== selectedMap) return false;
         return true;
     }), [records, selectedOpponent, selectedMap]);
 
