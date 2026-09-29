@@ -1182,8 +1182,9 @@ const EventsView = ({ matchData, t1Name, t2Name }) => {
   const processedEvents = useMemo(() => {
     if (!matchData) return { general: [], ultimates: [] };
 
-    // vodRound = 이벤트가 속한 라운드 번호(VOD 보정용 태깅 — round_start/end의 round_number와 동일 값)
-    const allEvents = (matchData.rounds || []).flatMap(r => (r.events || []).map(e => ({ ...e, vodRound: r.round_number }))).sort((a, b) => a.timestamp - b.timestamp);
+    // vodRound = 이벤트가 속한 라운드 번호(VOD 보정용 태깅).
+    // round_start(N)는 경계 배정상 N−1 라운드 events에 담기므로, 시작되는 라운드 N의 보정을 타도록 round_number를 우선한다.
+    const allEvents = (matchData.rounds || []).flatMap(r => (r.events || []).map(e => ({ ...e, vodRound: (e.event_type === 'round_start' && e.round_number) ? e.round_number : r.round_number }))).sort((a, b) => a.timestamp - b.timestamp);
     
     const finalGeneral = [];
     const killsBuffer = []; 
