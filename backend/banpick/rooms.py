@@ -204,8 +204,12 @@ async def banpick_ws(websocket: WebSocket):
                         sm.apply_ban(room.state, my_role, msg.get("hero_id"))
                     elif mtype == "pick_toggle":
                         sm.apply_pick_toggle(room.state, my_role, msg.get("hero_id"))
+                    elif mtype == "set_active_slot":
+                        sm.apply_set_active_slot(room.state, my_role, msg.get("slot"))
                     elif mtype == "pick_lock":
                         sm.apply_pick_lock(room.state, my_role)
+                    elif mtype == "pick_unlock":
+                        sm.apply_pick_unlock(room.state, my_role)
                     elif mtype == "set_result":
                         sm.apply_set_result(room.state, msg.get("result"),
                                             msg.get("scoreA"), msg.get("scoreB"))

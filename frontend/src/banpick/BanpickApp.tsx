@@ -877,11 +877,12 @@ type PickColumnProps = {
   pickSlots: Record<Team, (string | null)[]>;
   pickLockedTeam: Record<Team, boolean>;
   activeSlot: Record<Team, number>;
-  setActiveSlot: React.Dispatch<React.SetStateAction<Record<Team, number>>>;
+  onFocusSlot: (team: Team, idx: number) => void; // [1-2] 슬롯 재포커스(로컬=setActiveSlot, 1v1=set_active_slot)
   confirmPick: (team: Team) => void;
+  onUnlock: (team: Team) => void;                 // [1-2] 레디 해제
+  canUnlock: boolean;                             // [1-2] 해제 가능(본인 팀·상대 미락·세트 미확정)
   canPickForTeam: (team: Team) => boolean;
   heroById: (id: string) => Hero | undefined;
-  slotFocusEnabled?: boolean; // 원격 1v1은 서버가 슬롯을 순서대로 채우므로 수동 슬롯 포커스 비활성
 };
 const PickColumn = React.memo(function PickColumn({
   team,
@@ -892,11 +893,12 @@ const PickColumn = React.memo(function PickColumn({
   pickSlots,
   pickLockedTeam,
   activeSlot,
-  setActiveSlot,
+  onFocusSlot,
   confirmPick,
+  onUnlock,
+  canUnlock,
   canPickForTeam,
   heroById,
-  slotFocusEnabled = true,
 }: PickColumnProps) {
   const label = team === "A" ? teamName.A : teamName.B;
   const locked = pickLockedTeam[team];
@@ -958,6 +960,18 @@ const PickColumn = React.memo(function PickColumn({
             : ready
             ? { borderColor: "var(--bp-primary)", color: "var(--bp-primary)", background: "rgba(59,130,246,0.14)" }
             : { borderColor: "var(--bp-border2)", background: "var(--bp-surface2)", color: "var(--bp-textsub)" }; // 대기 = 중립 pill
+          // [1-2] 확정(락) 상태 + 해제 가능 → '레디 해제' 클릭 버튼으로 전환(세트 확정 후엔 비활성 ✓ 픽 완료)
+          if (done && canUnlock) {
+            return (
+              <button
+                className="w-full px-2 py-2 rounded-lg border text-xs font-semibold"
+                style={{ borderColor: "var(--bp-danger)", color: "var(--bp-danger)", background: "rgba(239,68,68,0.12)" }}
+                onClick={() => onUnlock(team)}
+              >
+                ✓ 픽 완료 · 레디 해제
+              </button>
+            );
+          }
           return (
             <button
               className="w-full px-2 py-2 rounded-lg border text-xs font-semibold"
@@ -981,7 +995,7 @@ const PickColumn = React.memo(function PickColumn({
             <button
               key={i}
               disabled={!clickable}
-              onClick={() => slotFocusEnabled && clickable && setActiveSlot((p) => ({ ...p, [team]: i }))}
+              onClick={() => clickable && onFocusSlot(team, i)}
               className={["w-full rounded-xl border text-center p-2", active ? "bp-sel-pick" : "border-neutral-300", !clickable && "opacity-60 cursor-not-allowed"].join(" ")}
               style={{ paddingLeft: 8, paddingRight: 8 }}
             >
@@ -1286,7 +1300,7 @@ export default function BanpickApp() {
     setPickLocked((v) => remote.pickLocked ?? v);
     // activeSlot은 서버(권위)를 따른다. 서버는 팀별로만 activeSlot을 갱신하므로 '내 팀' 값은
     // 상대 픽으로 변하지 않는다 → 상대 브로드캐스트가 내 슬롯 포커스·역할 필터를 흔들지 않음(#4).
-    // 원격에서 수동 슬롯 포커스는 비활성(slotFocusEnabled=false)이라 서버와 어긋날 여지도 없다.
+    // [1-2] 원격 수동 슬롯 포커스는 set_active_slot 액션으로 서버에 반영 → 서버 activeSlot과 일치.
     setActiveSlot((v) => remote.activeSlot ?? v);
 
     setScrimMode((v) => remote.scrimMode ?? v);
@@ -1700,6 +1714,29 @@ export default function BanpickApp() {
     // ★ 서버에도 락 반영
     if (syncOn) patch({ pickLockedTeam: nextLocked });
   }
+
+  // [1-2] 픽 확정(레디) 해제 — 본인 팀만, 상대 미락·세트 미확정일 때만. 서버가 해제 상태 broadcast.
+  function unlockPick(team: Team) {
+    if (remoteMode) { wsSend({ type: "pick_unlock" }); return; }
+    if (pickLocked || !pickLockedTeam[team] || pickLockedTeam[otherTeam(team)]) return;
+    const next = { ...pickLockedTeam, [team]: false };
+    setPickLockedTeam(next);
+    logLine(`${teamName[team]} 픽 해제`);
+    if (syncOn) patch({ pickLockedTeam: next });
+  }
+
+  // [1-2] 슬롯 재포커스(해당 슬롯만 교체용). 로컬=로컬 setActiveSlot, 1v1=서버 set_active_slot.
+  function focusSlot(team: Team, idx: number) {
+    if (phase !== "HERO_PICK" || pickLocked || pickLockedTeam[team]) return;
+    if (!canPickForTeam(team)) return;
+    if (remoteMode) { wsSend({ type: "set_active_slot", slot: idx }); return; }
+    setActiveSlot((p) => ({ ...p, [team]: idx }));
+  }
+
+  // [1-2] 해제 가능 여부: 본인 팀 통제 + 락 상태 + 상대 미락 + 세트 미확정.
+  const controllableTeam = (team: Team) => partMode === "SOLO" || myTeamRole === team;
+  const canUnlockTeam = (team: Team) =>
+    pickLockedTeam[team] && !pickLocked && !pickLockedTeam[otherTeam(team)] && controllableTeam(team);
 
   // ‼️ 'finishSet' 함수 (단순 승리)
   function finishSet(winner: Team) {
@@ -2210,11 +2247,12 @@ export default function BanpickApp() {
                       pickSlots={pickSlots}
                       pickLockedTeam={pickLockedTeam}
                       activeSlot={activeSlot}
-                      setActiveSlot={setActiveSlot}
+                      onFocusSlot={focusSlot}
                       confirmPick={confirmPick}
+                      onUnlock={unlockPick}
+                      canUnlock={canUnlockTeam("A")}
                       canPickForTeam={canPickForTeam}
                       heroById={heroById}
-                      slotFocusEnabled={!remoteMode}
                     />
                   </aside>
 
@@ -2241,11 +2279,12 @@ export default function BanpickApp() {
                       pickSlots={pickSlots}
                       pickLockedTeam={pickLockedTeam}
                       activeSlot={activeSlot}
-                      setActiveSlot={setActiveSlot}
+                      onFocusSlot={focusSlot}
                       confirmPick={confirmPick}
+                      onUnlock={unlockPick}
+                      canUnlock={canUnlockTeam("B")}
                       canPickForTeam={canPickForTeam}
                       heroById={heroById}
-                      slotFocusEnabled={!remoteMode}
                     />
                   </aside>
                 </div>
@@ -2272,6 +2311,15 @@ export default function BanpickApp() {
                           {pickTurnTeam === tm && !locked && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full border font-semibold" style={{ borderColor: "var(--bp-primary)", color: "var(--bp-primary)", background: "rgba(59,130,246,0.14)" }}>{t.curTurn}</span>
                           )}
+                          {locked && canUnlockTeam(tm) && (
+                            <button
+                              className="text-[10px] px-2 py-0.5 rounded-full border font-semibold bp-touch"
+                              style={{ borderColor: "var(--bp-danger)", color: "var(--bp-danger)", background: "rgba(239,68,68,0.12)" }}
+                              onClick={() => unlockPick(tm)}
+                            >
+                              레디 해제
+                            </button>
+                          )}
                         </div>
                         <div className="flex gap-1">
                           {SLOT_ROLES.map((sr, i) => {
@@ -2282,7 +2330,7 @@ export default function BanpickApp() {
                               <button
                                 key={i}
                                 disabled={!clickable}
-                                onClick={() => !remoteMode && clickable && setActiveSlot((p) => ({ ...p, [tm]: i }))}
+                                onClick={() => clickable && focusSlot(tm, i)}
                                 className={["flex-1 min-w-0 rounded-lg border p-0.5", active ? "bp-sel-pick" : "border-neutral-300", !clickable && "opacity-60"].join(" ")}
                               >
                                 <div className="relative w-full aspect-square rounded overflow-hidden bg-neutral-100">

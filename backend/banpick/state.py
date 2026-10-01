@@ -299,6 +299,32 @@ def apply_pick_lock(state, team):
     return state
 
 
+def apply_pick_unlock(state, team):
+    """픽 확정(레디) 해제 — 본인 팀만. 상대가 아직 락 전(= 세트 미확정)일 때만 허용.
+    양 팀 락 → pickLocked/awaitingResult 전이 이후에는 거부(WRONG_PHASE). 타이머 영향 없음."""
+    if state["phase"] != "HERO_PICK":
+        raise BanpickError("WRONG_PHASE")
+    # 양 팀 락(세트 확정) 이후엔 거부. (self·opp 둘 다 락이면 pickLocked=True 이므로 여기서 막힘)
+    if state["pickLocked"] or state["awaitingResult"]:
+        raise BanpickError("WRONG_PHASE", "세트가 확정되어 해제할 수 없습니다.")
+    if not state["pickLockedTeam"][team]:
+        raise BanpickError("INVALID_ACTION", "확정 상태가 아닙니다.")
+    state["pickLockedTeam"][team] = False
+    _log(state, f"{state['teamName'][team]} 픽 해제")
+    return state
+
+
+def apply_set_active_slot(state, team, idx):
+    """활성 슬롯(다음 픽이 들어갈 자리) 지정 — 재픽 시 '해당 슬롯만 교체'용.
+    픽 페이즈 + 본인 팀 미락일 때만. 범위 밖 인덱스는 거부. 타이머 영향 없음."""
+    if state["phase"] != "HERO_PICK" or state["pickLocked"] or state["pickLockedTeam"][team]:
+        raise BanpickError("WRONG_PHASE")
+    if not isinstance(idx, int) or idx < 0 or idx >= len(SLOT_ROLES):
+        raise BanpickError("INVALID_ACTION", "bad slot index")
+    state["activeSlot"][team] = idx
+    return state
+
+
 def apply_set_result(state, result, score_a=None, score_b=None):
     # result: "A"|"B"|"D"(무). 스냅샷 기록 후 다음 세트 or 시리즈 종료.
     if not state["awaitingResult"]:

@@ -283,6 +283,103 @@ def test_set_team_name():
     print("test_set_team_name OK — 권한검사/빈값거부/트림클램프")
 
 
+def _advance_to_pick(st):
+    picker = st["mapPicker"]
+    sm.apply_map_pick(st, picker, _first_pickable_map(st), "PICKER")
+    b1 = st["turn"]
+    sm.apply_ban(st, b1, _heroes_by_role("Tank")[0])
+    b2 = st["turn"]
+    sm.apply_ban(st, b2, _heroes_by_role("Damage")[0])
+    assert st["phase"] == "HERO_PICK"
+
+
+def _fill_team(st, team):
+    banned = set(st["bans"]["A"]) | set(st["bans"]["B"])
+    used = set(banned) | {h for h in st["pickSlots"][team] if h}
+    for i, role in enumerate(sm.SLOT_ROLES):
+        if st["pickSlots"][team][i] is not None:
+            continue
+        sm.apply_set_active_slot(st, team, i)
+        hid = next(h for h in _heroes_by_role(role, exclude=used)); used.add(hid)
+        sm.apply_pick_toggle(st, team, hid)
+
+
+def test_pick_unlock():
+    """픽 해제: 상대 락 전엔 본인 팀 해제 허용, 재픽 가능. 양 팀 락(세트 확정) 후엔 거부."""
+    rng = random.Random(3)
+    st = sm.new_state({"mode": 3, "sets": 3}, rng=rng)
+    sm.set_ready(st, "A", True); sm.set_ready(st, "B", True)
+    sm.start(st, rng=rng)
+    _advance_to_pick(st)
+    _fill_team(st, "A"); _fill_team(st, "B")
+
+    # A 락 → 상대(B) 아직 미락 → A 해제 허용
+    sm.apply_pick_lock(st, "A")
+    assert st["pickLockedTeam"]["A"] is True and not st["pickLocked"]
+    sm.apply_pick_unlock(st, "A")
+    assert st["pickLockedTeam"]["A"] is False
+
+    # 해제 후 재픽(해당 슬롯만 교체): 슬롯 1(Damage) 다른 영웅으로
+    used = (set(st["bans"]["A"]) | set(st["bans"]["B"])
+            | {h for h in st["pickSlots"]["A"] if h} | {h for h in st["pickSlots"]["B"] if h})
+    new_dmg = next(h for h in _heroes_by_role("Damage", exclude=used))
+    old = st["pickSlots"]["A"][1]
+    sm.apply_set_active_slot(st, "A", 1)
+    sm.apply_pick_toggle(st, "A", old)        # 기존 제거
+    sm.apply_pick_toggle(st, "A", new_dmg)    # 신규로 교체
+    assert st["pickSlots"]["A"][1] == new_dmg
+    assert all(st["pickSlots"]["A"]), "슬롯 1만 교체, 나머지 유지"
+
+    # 다시 양 팀 락 → 세트 확정
+    sm.apply_pick_lock(st, "A")
+    sm.apply_pick_lock(st, "B")
+    assert st["pickLocked"] and st["awaitingResult"]
+    # 확정 후 해제 시도 → 거부
+    for team in ("A", "B"):
+        try:
+            sm.apply_pick_unlock(st, team)
+            assert False, "should reject unlock after both locked"
+        except sm.BanpickError as e:
+            assert e.code == "WRONG_PHASE"
+    print("test_pick_unlock OK — 상대 락 전 해제/재픽 가능, 확정 후 거부")
+
+
+def test_pick_unlock_blocked_by_opponent():
+    """상대가 먼저 락한 뒤 본인이 미락이면 해제할 것이 없음(= INVALID_ACTION)."""
+    rng = random.Random(5)
+    st = sm.new_state({"mode": 3, "sets": 3}, rng=rng)
+    sm.set_ready(st, "A", True); sm.set_ready(st, "B", True)
+    sm.start(st, rng=rng)
+    _advance_to_pick(st)
+    _fill_team(st, "A"); _fill_team(st, "B")
+    sm.apply_pick_lock(st, "B")  # B 먼저 락
+    # A는 아직 미락 → A 해제 시도는 '확정 상태 아님'
+    try:
+        sm.apply_pick_unlock(st, "A")
+        assert False
+    except sm.BanpickError as e:
+        assert e.code == "INVALID_ACTION"
+    print("test_pick_unlock_blocked_by_opponent OK")
+
+
+def test_set_active_slot_guard():
+    """활성 슬롯 지정: 범위 밖/락 상태 거부."""
+    rng = random.Random(9)
+    st = sm.new_state({"mode": 3, "sets": 3}, rng=rng)
+    sm.set_ready(st, "A", True); sm.set_ready(st, "B", True)
+    sm.start(st, rng=rng)
+    _advance_to_pick(st)
+    sm.apply_set_active_slot(st, "A", 3)
+    assert st["activeSlot"]["A"] == 3
+    for bad in (-1, 5, 99, None, "2"):
+        try:
+            sm.apply_set_active_slot(st, "A", bad)
+            assert False, f"should reject slot={bad}"
+        except sm.BanpickError as e:
+            assert e.code in ("INVALID_ACTION", "WRONG_PHASE")
+    print("test_set_active_slot_guard OK")
+
+
 if __name__ == "__main__":
     test_full_draft()
     test_series_end()
@@ -290,4 +387,7 @@ if __name__ == "__main__":
     test_blind_pick_redaction()
     test_broadcast_passthrough()
     test_set_team_name()
+    test_pick_unlock()
+    test_pick_unlock_blocked_by_opponent()
+    test_set_active_slot_guard()
     print("ALL PASS")
