@@ -1079,6 +1079,14 @@ export default function BanpickApp() {
   const setScrimModeSync = setScrimMode;
   const setScrimTimeSync = setScrimTime;
 
+  // [1-1] 팀명 변경: 로컬 즉시 반영 + 1v1은 서버에 저장 요청.
+  //   서버가 전원 broadcast → 상대 화면 반영 + 재접속/새로고침 시 유지(서버 state가 정본).
+  //   편집 권한(A명=HOST/A, B명=B)은 클라 disabled + 서버 FORBIDDEN 양쪽에서 강제.
+  const renameTeam = React.useCallback((team: Team, name: string) => {
+    setTeamName((p) => ({ ...p, [team]: name }));
+    if (remoteMode) wsSend({ type: "set_team_name", team, name });
+  }, [remoteMode, wsSend]);
+
   // READY: 서버 state의 ready 기준, 토글은 내 역할로 액션 전송
   const readyA = !!remote?.ready?.A;
   const readyB = !!remote?.ready?.B;
@@ -1258,6 +1266,7 @@ export default function BanpickApp() {
   useEffect(() => {
     if (!syncOn || !remote) return;
 
+    setTeamName((v) => remote.teamName ?? v);   // [1-1] 서버 권위 팀명 반영(상대 변경·재접속 유지)
     setStarted((v) => remote.started ?? v);
     setPhase((v) => remote.phase ?? v);
     setTimer((v) => remote.timer ?? v);
@@ -1299,6 +1308,7 @@ export default function BanpickApp() {
     if (myRole !== "HOST") return;
 
     // 게스트가 바꾸는 가능성이 있는 필드들만 흡수
+    if (remote.teamName) setTeamName(remote.teamName);   // [1-1] 게스트(B)의 팀명 변경 흡수
     if (remote.pickSlots) setPickSlots(remote.pickSlots);
     if (remote.activeSlot) setActiveSlot(remote.activeSlot);
     if (remote.pendingBan) setPendingBan(remote.pendingBan);
@@ -1872,7 +1882,7 @@ export default function BanpickApp() {
         {!started ? (
           <Setup
             teamName={teamName}
-            setTeamName={setTeamName}
+            onRenameTeam={renameTeam}
             sets={sets}
             setSets={setSets}
             mode={mode}
@@ -2455,7 +2465,7 @@ export default function BanpickApp() {
 /* ================= Setup ================= */
 function Setup(props: {
   teamName: Record<Team, string>;
-  setTeamName: React.Dispatch<React.SetStateAction<Record<Team, string>>>;
+  onRenameTeam: (team: Team, name: string) => void;
   sets: number;
   setSets: (v: number) => void;
   mode: number;
@@ -2520,9 +2530,9 @@ function Setup(props: {
 
       <div className="grid gap-3">
         <label className="text-xs">{t.teamAName}</label>
-        <input className={fieldStyle} value={props.teamName.A} onChange={(e) => props.setTeamName((p) => ({ ...p, A: e.target.value }))} disabled={!canEditAName} />
+        <input className={fieldStyle} value={props.teamName.A} onChange={(e) => props.onRenameTeam("A", e.target.value)} disabled={!canEditAName} />
         <label className="text-xs">{t.teamBName}</label>
-        <input className={fieldStyle} value={props.teamName.B} onChange={(e) => props.setTeamName((p) => ({ ...p, B: e.target.value }))} disabled={!canEditBName} />
+        <input className={fieldStyle} value={props.teamName.B} onChange={(e) => props.onRenameTeam("B", e.target.value)} disabled={!canEditBName} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-4">

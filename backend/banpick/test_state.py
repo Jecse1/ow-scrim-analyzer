@@ -254,10 +254,40 @@ def test_broadcast_passthrough():
     print("test_broadcast_passthrough OK — 무가공 전송(상대 픽 실시간 공개)")
 
 
+def test_set_team_name():
+    """팀명 변경 + 편집 권한(본인 팀만). 권한 외 요청은 FORBIDDEN, 빈 이름은 거부."""
+    st = sm.new_state({"mode": 3, "sets": 3, "teamNameA": "레드", "teamNameB": "블루"})
+    # 역할 A가 A명 변경 → 허용
+    sm.set_team_name(st, "A", "팰컨", actor="A")
+    assert st["teamName"]["A"] == "팰컨"
+    # 역할 B가 B명 변경 → 허용
+    sm.set_team_name(st, "B", "티원", actor="B")
+    assert st["teamName"]["B"] == "티원"
+    # 역할 A가 B명 변경 시도 → 거부
+    try:
+        sm.set_team_name(st, "B", "해킹", actor="A")
+        assert False, "should reject cross-team edit"
+    except sm.BanpickError as e:
+        assert e.code == "FORBIDDEN"
+    assert st["teamName"]["B"] == "티원"  # 불변
+    # 빈 이름 → 거부(기존 유지)
+    try:
+        sm.set_team_name(st, "A", "   ", actor="A")
+        assert False
+    except sm.BanpickError as e:
+        assert e.code == "INVALID_ACTION"
+    assert st["teamName"]["A"] == "팰컨"
+    # 공백 트림 + 24자 클램프
+    sm.set_team_name(st, "A", "  " + "가" * 30 + "  ", actor="A")
+    assert st["teamName"]["A"] == "가" * 24
+    print("test_set_team_name OK — 권한검사/빈값거부/트림클램프")
+
+
 if __name__ == "__main__":
     test_full_draft()
     test_series_end()
     test_interleaved_picks()
     test_blind_pick_redaction()
     test_broadcast_passthrough()
+    test_set_team_name()
     print("ALL PASS")

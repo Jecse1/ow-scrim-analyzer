@@ -103,6 +103,20 @@ def set_ready(state, team, value):
     return state
 
 
+def set_team_name(state, team, name, actor=None):
+    """팀명 변경(서버 저장 → 전원 broadcast 대상). 편집 권한: 본인 팀만(A명=역할A, B명=역할B).
+    actor(요청자 역할)가 주어지면 team과 일치해야 하며, 불일치 시 FORBIDDEN 으로 거부한다."""
+    if team not in ("A", "B"):
+        raise BanpickError("INVALID_ACTION", "team must be A|B")
+    if actor is not None and actor != team:
+        raise BanpickError("FORBIDDEN", "본인 팀 이름만 변경할 수 있습니다.")
+    nm = ("" if name is None else str(name)).strip()[:24]
+    if not nm:
+        raise BanpickError("INVALID_ACTION", "empty name")
+    state["teamName"][team] = nm
+    return state
+
+
 def _start_next_set(state, rng=random, first=False):
     # 세트 초기화 (원본 세트초기화 useEffect 대응). 선택권: 첫 세트=firstSetPicker, 이후=직전 패자.
     if first or not state["completedSets"]:

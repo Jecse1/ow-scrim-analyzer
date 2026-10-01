@@ -189,6 +189,9 @@ async def banpick_ws(websocket: WebSocket):
                 try:
                     if mtype == "ready":
                         sm.set_ready(room.state, my_role, msg.get("value", True))
+                    elif mtype == "set_team_name":
+                        # 편집 권한: 본인 팀만(A명=역할A, B명=역할B). 권한 외 요청은 FORBIDDEN.
+                        sm.set_team_name(room.state, msg.get("team"), msg.get("name"), actor=my_role)
                     elif mtype == "start":
                         sm.start(room.state)
                         await room.ensure_timer(manager)
