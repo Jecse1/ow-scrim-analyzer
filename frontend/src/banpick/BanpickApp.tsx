@@ -2749,7 +2749,7 @@ type PickCenterProps = {
 };
 const PickCenter = React.memo(function PickCenter({ lang, t, filterRole, teamName, bannedIds, pickedA, pickedB, onHeroClick }: PickCenterProps) {
   return (
-    <div className="w-full grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(168px,1fr))]">
+    <div className="w-full grid gap-3 bp-grid-pick">
       {HEROES.filter((h) => h.role === filterRole).map((h) => {
         const pickedAFlag = pickedA.includes(h.id);
         const pickedBFlag = pickedB.includes(h.id);

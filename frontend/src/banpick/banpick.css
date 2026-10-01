@@ -338,13 +338,15 @@
 .bp-root .bp-touch { min-height: 44px; }
 .bp-root button.bp-touch { display: inline-flex; align-items: center; justify-content: center; }
 
-/* 맵/밴 그리드 — 모바일 열수 축소(기본), md:이상은 기존 값 복원.
-   맵: 104px(≈3열/390px) · 밴: 96px(≈3열, 타일 64px 이상). */
+/* 맵/밴/픽 그리드 — 모바일 열수 축소(기본), md:이상은 기존 값 복원.
+   맵: 104px(≈3열/390px) · 밴/픽: 104px(≈3열). */
 .bp-root .bp-grid-map { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
 .bp-root .bp-grid-ban { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.bp-root .bp-grid-pick { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 @media (min-width: 768px) {
   .bp-root .bp-grid-map { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
   .bp-root .bp-grid-ban { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+  .bp-root .bp-grid-pick { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
 }
 
 /* 하단 고정 액션바(밴/맵 확정 등) — 모바일만 sticky, 주소창/홈바 안전영역 확보.
