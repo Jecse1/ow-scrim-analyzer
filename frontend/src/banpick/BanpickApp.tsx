@@ -953,6 +953,30 @@ function HeaderSummary({
   );
 }
 
+/* ================= [STEP3] 밴 연출 오버레이 (tear) ================= */
+/* 밴 확정 순간 화면 중앙에 밴 영웅 초상화가 떠오름(1.0초):
+   0~0.2 등장(스케일업·페이드인·컬러) → 0.2~0.7 회색 전환 + 대각선 두 조각으로 어긋나며 벌어짐
+   → 0.7~1.0 페이드아웃. pointer-events none(입력 차단 없음). 그리드/헤더의 정적 밴 표시는 별도 유지. */
+function BanReveal({ team, heroId, teamName, heroById, t }: {
+  team: Team;
+  heroId: string;
+  teamName: Record<Team, string>;
+  heroById: (id: string) => Hero | undefined;
+  t: I18n;
+}) {
+  const name = getDisplayName(heroById(heroId)?.name ?? heroId);
+  const teamNm = team === "A" ? teamName.A : teamName.B;
+  return (
+    <div className="bp-br-overlay pointer-events-none fixed inset-0 flex flex-col items-center justify-center" style={{ zIndex: 60 }}>
+      <div className="bp-br-portrait bp-br-tear">
+        <div className="bp-br-piece bp-br-piece-top"><HeroThumb id={heroId} contain={false} /></div>
+        <div className="bp-br-piece bp-br-piece-bot"><HeroThumb id={heroId} contain={false} /></div>
+      </div>
+      <div className="bp-br-caption">{teamNm} {t.banned} — {name}</div>
+    </div>
+  );
+}
+
 /* ================= UI 작은 컴포넌트 ================= */
 function RoleIcon({ role, lang, className }: { role: Role; lang: Lang; className?: string }) {
   const [idx, setIdx] = React.useState(0);
@@ -1256,6 +1280,36 @@ export default function BanpickApp() {
   const [showScrimSummary, setShowScrimSummary] = useState(false);
   const [showSideModal, setShowSideModal] = useState(false);
   const [frozenSummarySets, setFrozenSummarySets] = useState<SetSnapshot[]>([]);
+
+  /* === [STEP3] 밴 연출 오버레이 큐 ===
+     밴 확정 시 화면 중앙에 밴 영웅 초상화를 띄워 tear(대각 찢기) 모션 재생(1.0초). 큐로 순차 재생. */
+  const [revealQueue, setRevealQueue] = useState<{ team: Team; heroId: string; id: number }[]>([]);
+  const revealIdRef = useRef(0);
+  const enqueueReveal = React.useCallback((team: Team, heroId: string) => {
+    setRevealQueue((q) => [...q, { team, heroId, id: ++revealIdRef.current }]);
+  }, []);
+  const currentReveal = revealQueue[0] ?? null;
+  useEffect(() => {
+    if (!currentReveal) return;
+    const tid = window.setTimeout(() => setRevealQueue((q) => q.slice(1)), 1000);
+    return () => window.clearTimeout(tid);
+  }, [currentReveal?.id]);
+
+  // [STEP3] 1v1 트리거 — remote.bans 변화 감지(밴한 쪽·상대 모두). 이전 스냅샷 대비 '추가된' 밴만 재생.
+  //   최초 수신(마운트·재접속·새로고침)은 스냅샷만 저장하고 재생 생략.
+  //   리셋(세트 전환)은 추가가 아니라 제거/초기화라 added가 비어 재생 안 됨(=밴 페이즈 외 재생 방지).
+  const prevRemoteBansRef = useRef<Record<Team, string[]> | null>(null);
+  useEffect(() => {
+    if (!remoteMode) return;
+    const rb = remote?.bans as Record<Team, string[]> | undefined;
+    if (!rb) return;
+    const prev = prevRemoteBansRef.current;
+    if (prev === null) { prevRemoteBansRef.current = { A: [...rb.A], B: [...rb.B] }; return; } // 최초 수신 생략
+    (["A", "B"] as Team[]).forEach((tm) => {
+      rb[tm].filter((h) => !prev[tm].includes(h)).forEach((h) => enqueueReveal(tm, h));
+    });
+    prevRemoteBansRef.current = { A: [...rb.A], B: [...rb.B] };
+  }, [remote?.bans, remoteMode, enqueueReveal]);
 
   const otherTeam = (t: Team): Team => (t === "A" ? "B" : "A");
   const canEditWinner = useMemo(() => (partMode === "COACH_1V1" ? myTeamRole === "A" : myRole !== "OBS"), [partMode, myTeamRole, myRole]);
@@ -1726,9 +1780,12 @@ export default function BanpickApp() {
         pendingBan: newPending,
         turn: nextTurn,
       };
-      if (total >= 2) payload.phase = nextPhase; 
+      if (total >= 2) payload.phase = nextPhase;
       patch(payload);
     }
+
+    // [STEP3] 밴 연출 트리거 — 로컬 분기 성공 시점(1v1은 remote.bans 변화 감지로 별도 처리).
+    enqueueReveal(team, id);
 
     popToast(t.toastBan);
   }
@@ -2482,6 +2539,18 @@ export default function BanpickApp() {
 
       {/* 토스트 */}
       {toast && <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 ${theme.panel} rounded-full px-3 py-1 text-xs shadow-lg`}>{toast}</div>}
+
+      {/* [STEP3] 밴 연출 오버레이 — 큐의 맨 앞 1건 재생(key로 remount). */}
+      {currentReveal && (
+        <BanReveal
+          key={currentReveal.id}
+          team={currentReveal.team}
+          heroId={currentReveal.heroId}
+          teamName={teamName}
+          heroById={heroById}
+          t={t}
+        />
+      )}
 
       {/* 요약/로그 모달 */}
       {showSummaryOpen && (
