@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import {
-  LayoutDashboard, History, Users, BarChart3, Moon, Sun, Upload, AlertCircle, Globe, User, Zap, Skull, Crosshair, Swords, Map as MapIcon, ChevronDown, Ban, Menu, X
+  LayoutDashboard, History, Users, BarChart3, Moon, Sun, Upload, AlertCircle, Globe, User, Zap, Skull, Crosshair, Swords, Map as MapIcon, ChevronDown, Ban, Menu, X, Network
 } from "lucide-react";
 
 import { ThemeProvider, useTheme } from "./ThemeContext";
@@ -25,6 +25,8 @@ import FightLabStats from "./FightLabStats";
 import UltimateAnalysisStats from "./UltimateAnalysisStats";
 import MapAnalysisStats from "./MapAnalysisStats";
 import BanpickApp from "./banpick/BanpickApp";
+import PlansHome from "./plans/PlansHome";
+import PlanCanvasPage from "./plans/PlanCanvasPage";
 import { FlaskConical } from "lucide-react";
 import { TANK_HEROES, SUPPORT_HEROES } from "./gameData";
 
@@ -59,6 +61,7 @@ function MainApp() {
   const [currentView, setCurrentView] = useState("home");
   const [activeScrimId, setActiveScrimId] = useState(null);
   const [activeMatchId, setActiveMatchId] = useState(null);
+  const [activePlanMapId, setActivePlanMapId] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -331,6 +334,8 @@ function MainApp() {
   const goPersonal = () => { setCurrentView("personal"); setActiveScrimId(null); setActiveMatchId(null); };
   const goBanpick = () => { setCurrentView("banpick"); setActiveScrimId(null); setActiveMatchId(null); };
   const goCompare = () => { setCurrentView("compare"); setActiveScrimId(null); setActiveMatchId(null); };
+  const goPlans = () => { setCurrentView("plans"); setActiveScrimId(null); setActiveMatchId(null); };
+  const goPlanCanvas = (planMapId) => { setActivePlanMapId(planMapId); setCurrentView("plan-canvas"); };
 
   const goToScrim = (scrimId) => { setActiveScrimId(scrimId); setCurrentView("scrim"); };
   const goToMatch = (matchId) => { setActiveMatchId(matchId); setCurrentView("match"); };
@@ -432,6 +437,7 @@ function MainApp() {
       ],
     },
     { key: "banpick", label: t.navBanpick, Icon: Ban, onSelect: goBanpick, activeViews: ["banpick"] },
+    { key: "plans", label: t.navPlans, Icon: Network, onSelect: goPlans, activeViews: ["plans", "plan-canvas"] },
   ];
 
   const groupOf = (k) => NAV_ITEMS.find((i) => i.key === k);
@@ -660,6 +666,8 @@ function MainApp() {
     if (currentView === "ultanalysis") return <UltimateAnalysisStats />;
     if (currentView === "mapanalysis") return <MapAnalysisStats onGoSession={goToScrim} />;
     if (currentView === "banpick") return <BanpickApp />;
+    if (currentView === "plans") return <PlansHome onOpenMap={goPlanCanvas} />;
+    if (currentView === "plan-canvas") return <PlanCanvasPage planMapId={activePlanMapId} onBack={goPlans} onOpenMap={goPlanCanvas} />;
     if (currentView === "personal") return <div style={{ padding: '24px' }}><PlayerProfileView playersData={dynamicPlayersData} /></div>;
     if (currentView === "compare") return <div style={{ padding: '24px' }}><PlayerCompareView playersData={dynamicPlayersData} /></div>;
 

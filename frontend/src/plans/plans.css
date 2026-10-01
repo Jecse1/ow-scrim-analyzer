@@ -1,0 +1,152 @@
+/* plans.css — 드래프트 플랜 전용 스코프드 스타일(.plan-root). 전역 오염 0.
+   팔레트는 밴픽(.bp-root)과 동일 톤. 다크 기본 + .light 오버라이드. 외부 폰트/아이콘 없음. */
+.plan-root {
+  --pl-bg: #0b0b0d;
+  --pl-surface: #18181b;
+  --pl-surface2: #1f1f23;
+  --pl-surface3: #27272a;
+  --pl-border: #2b2b31;
+  --pl-border2: #3f3f46;
+  --pl-text: #fafafa;
+  --pl-textsub: #a1a1aa;
+  --pl-primary: #3b82f6;
+  --pl-green: #4ade80;
+  --pl-danger: #ef4444;
+  color: var(--pl-text);
+  min-height: calc(100vh - 56px);
+}
+.plan-root.light {
+  --pl-bg: #f4f4f5;
+  --pl-surface: #ffffff;
+  --pl-surface2: #f4f4f5;
+  --pl-surface3: #e4e4e7;
+  --pl-border: #e4e4e7;
+  --pl-border2: #d4d4d8;
+  --pl-text: #18181b;
+  --pl-textsub: #52525b;
+}
+.plan-root * { box-sizing: border-box; }
+.plan-root button { font: inherit; color: inherit; cursor: pointer; }
+
+/* ── 홈 레이아웃 ── */
+.plan-home { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 20px; max-width: 1720px; margin: 0 auto; }
+@media (max-width: 767px) { .plan-home { grid-template-columns: 1fr; padding: 12px; gap: 12px; } }
+
+/* ── 보드 사이드바 ── */
+.plan-sidebar { background: var(--pl-surface); border: 1px solid var(--pl-border); border-radius: 14px; padding: 10px; align-self: start; }
+.plan-sidebar-title { font-size: 12px; font-weight: 700; color: var(--pl-textsub); padding: 4px 6px 8px; }
+.plan-board-row { display: flex; align-items: center; gap: 6px; padding: 8px 8px; border-radius: 9px; border: 1px solid transparent; }
+.plan-board-row + .plan-board-row { margin-top: 2px; }
+.plan-board-row:hover { background: var(--pl-surface2); }
+.plan-board-row.active { background: var(--pl-surface3); border-color: var(--pl-border2); }
+.plan-board-row.dragover { border-color: var(--pl-primary); }
+.plan-board-handle { color: var(--pl-textsub); opacity: .5; cursor: grab; display: flex; }
+.plan-board-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-board-count { font-size: 11px; color: var(--pl-textsub); flex-shrink: 0; }
+.plan-board-del { color: var(--pl-textsub); opacity: 0; display: flex; }
+.plan-board-row:hover .plan-board-del { opacity: .7; }
+.plan-board-del:hover { color: var(--pl-danger); opacity: 1; }
+.plan-board-name-input { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; background: var(--pl-bg); color: var(--pl-text); border: 1px solid var(--pl-primary); border-radius: 6px; padding: 2px 6px; outline: none; }
+.plan-addboard { width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed var(--pl-border2); border-radius: 9px; color: var(--pl-textsub); font-size: 13px; background: transparent; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.plan-addboard:hover { color: var(--pl-text); border-color: var(--pl-primary); }
+
+/* 모드/역할 아이콘(shared 컴포넌트가 bp-mapicon·bp-roleicon 클래스 사용) — banpick.css 규칙을 .plan-root 로 포팅 */
+.plan-root .bp-mapicon { width: 16px; height: 16px; flex: 0 0 16px; filter: brightness(0) invert(1); opacity: .92; }
+.plan-root.light .bp-mapicon { filter: brightness(0); opacity: .8; }
+.plan-root .bp-roleicon { width: 14px; height: 14px; flex: 0 0 14px; filter: brightness(0) invert(1); opacity: .92; }
+.plan-root.light .bp-roleicon { filter: brightness(0); opacity: .8; }
+
+/* 모바일/데스크톱 토글 (.plan-root 접두로 .plan-board-select(display:flex) 보다 우선) */
+.plan-root .plan-mobile-only { display: none; }
+@media (max-width: 767px) {
+  .plan-root .plan-desktop-only { display: none; }
+  .plan-root .plan-mobile-only { display: flex; }
+  .plan-sidebar { display: flex; flex-direction: column; gap: 8px; }
+}
+/* 모바일 보드 드롭다운 */
+.plan-board-select { display: flex; gap: 8px; align-items: center; }
+.plan-board-select select { flex: 1; background: var(--pl-surface); color: var(--pl-text); border: 1px solid var(--pl-border); border-radius: 9px; padding: 8px; font-size: 14px; }
+
+/* ── 메인(맵 카드 그리드) ── */
+.plan-main { min-width: 0; }
+.plan-main-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.plan-main-title { font-size: 18px; font-weight: 800; color: var(--pl-text); }
+.plan-add-map { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 9px; background: var(--pl-primary); color: #fff; font-size: 13px; font-weight: 600; border: none; }
+.plan-add-map:hover { filter: brightness(1.08); }
+
+.plan-map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+@media (max-width: 767px) { .plan-map-grid { grid-template-columns: 1fr; } }
+
+.plan-card { position: relative; background: var(--pl-surface); border: 1px solid var(--pl-border); border-radius: 13px; overflow: hidden; cursor: pointer; transition: border-color .12s, transform .12s; }
+.plan-card:hover { border-color: var(--pl-border2); }
+.plan-card.dragover { border-color: var(--pl-primary); }
+.plan-card-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--pl-surface3); }
+.plan-card-badge { position: absolute; top: 8px; right: 8px; z-index: 4; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,.6); border-radius: 999px; padding: 2px 8px; }
+.plan-card-meta { padding: 9px 11px; }
+.plan-card-name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; min-width: 0; }
+.plan-card-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-card-time { font-size: 11px; color: var(--pl-textsub); margin-top: 3px; }
+
+/* 카드 호버 액션(데스크톱) */
+.plan-card-actions { position: absolute; left: 0; right: 0; top: 0; z-index: 5; display: flex; gap: 6px; justify-content: flex-end; padding: 8px; opacity: 0; transition: opacity .12s; background: linear-gradient(to bottom, rgba(0,0,0,.55), transparent); }
+.plan-card:hover .plan-card-actions { opacity: 1; }
+.plan-act-btn { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(24,24,27,.85); color: #fff; border: 1px solid rgba(255,255,255,.12); }
+.plan-act-btn:hover { background: rgba(39,39,42,.95); }
+.plan-act-btn.danger:hover { background: var(--pl-danger); }
+/* 이동 드롭다운 */
+.plan-move-menu { position: absolute; z-index: 20; top: 42px; right: 8px; background: var(--pl-surface); border: 1px solid var(--pl-border2); border-radius: 10px; padding: 4px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.plan-move-item { display: block; width: 100%; text-align: left; padding: 7px 10px; border-radius: 7px; font-size: 13px; background: transparent; border: none; }
+.plan-move-item:hover { background: var(--pl-surface3); }
+.plan-move-item:disabled { opacity: .4; cursor: default; }
+.plan-move-head { font-size: 11px; color: var(--pl-textsub); padding: 4px 10px; }
+/* 모바일 ⋯ 메뉴 트리거 */
+.plan-card-kebab { position: absolute; top: 8px; left: 8px; z-index: 6; width: 30px; height: 30px; border-radius: 8px; background: rgba(24,24,27,.8); color: #fff; display: none; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.12); }
+@media (max-width: 767px) { .plan-card-kebab { display: inline-flex; } .plan-card-actions { display: none; } }
+
+/* ── 빈 상태 ── */
+.plan-empty { border: 1px dashed var(--pl-border2); border-radius: 14px; padding: 48px 20px; text-align: center; color: var(--pl-textsub); }
+.plan-empty-strong { color: var(--pl-text); font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.plan-empty-card { cursor: pointer; }
+.plan-empty-card:hover { border-color: var(--pl-primary); color: var(--pl-text); }
+
+/* ── 모달 ── */
+.plan-modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.plan-modal { background: var(--pl-surface); border: 1px solid var(--pl-border2); border-radius: 16px; width: 100%; max-width: 620px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; }
+.plan-modal.sm { max-width: 420px; }
+.plan-modal-head { display: flex; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid var(--pl-border); font-weight: 800; font-size: 16px; }
+.plan-modal-close { margin-left: auto; color: var(--pl-textsub); display: flex; }
+.plan-modal-body { padding: 16px 18px; overflow-y: auto; }
+.plan-modal-foot { padding: 14px 18px; border-top: 1px solid var(--pl-border); display: flex; gap: 8px; justify-content: flex-end; }
+.plan-btn { padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 600; border: 1px solid var(--pl-border2); background: var(--pl-surface2); color: var(--pl-text); }
+.plan-btn:hover { background: var(--pl-surface3); }
+.plan-btn.primary { background: var(--pl-primary); border-color: var(--pl-primary); color: #fff; }
+.plan-btn.danger { background: var(--pl-danger); border-color: var(--pl-danger); color: #fff; }
+
+/* 맵 추가 모달 */
+.plan-modetabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.plan-modetab { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--pl-border2); font-size: 12px; background: transparent; }
+.plan-modetab.active { background: var(--pl-green); border-color: var(--pl-green); color: #052e16; font-weight: 700; }
+.plan-search { width: 100%; background: var(--pl-bg); color: var(--pl-text); border: 1px solid var(--pl-border2); border-radius: 9px; padding: 8px 12px; font-size: 13px; outline: none; margin-bottom: 12px; }
+.plan-pool-head { font-size: 12px; font-weight: 700; color: var(--pl-textsub); margin: 10px 0 8px; display: flex; align-items: center; gap: 6px; }
+.plan-pool-toggle { margin-left: auto; font-size: 12px; color: var(--pl-primary); background: none; border: none; }
+.plan-mapgrid-modal { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.plan-mapitem { position: relative; border: 1px solid var(--pl-border); border-radius: 10px; overflow: hidden; background: var(--pl-surface2); text-align: left; }
+.plan-mapitem:hover { border-color: var(--pl-primary); }
+.plan-mapitem-thumb { position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--pl-surface3); }
+.plan-mapitem-name { display: flex; align-items: center; gap: 5px; padding: 6px 8px; font-size: 12px; font-weight: 600; }
+.plan-mapitem-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-mapitem-in { position: absolute; top: 6px; right: 6px; z-index: 4; font-size: 10px; font-weight: 700; background: rgba(59,130,246,.9); color: #fff; border-radius: 999px; padding: 1px 7px; }
+
+/* ── 캔버스 페이지(STEP2 자리) ── */
+.plan-canvas-topbar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--pl-border); background: var(--pl-surface); }
+.plan-back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--pl-textsub); background: none; border: none; }
+.plan-back:hover { color: var(--pl-text); }
+.plan-topbar-map { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.plan-topbar-thumb { position: relative; width: 56px; height: 32px; border-radius: 6px; overflow: hidden; background: var(--pl-surface3); flex-shrink: 0; }
+.plan-topbar-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-mapstrip { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px; border-bottom: 1px solid var(--pl-border); background: var(--pl-surface2); }
+.plan-strip-card { position: relative; width: 104px; flex-shrink: 0; border: 1px solid var(--pl-border); border-radius: 8px; overflow: hidden; background: var(--pl-surface3); }
+.plan-strip-card.active { border-color: var(--pl-primary); box-shadow: 0 0 0 1px var(--pl-primary); }
+.plan-strip-thumb { position: relative; width: 100%; aspect-ratio: 16/9; }
+.plan-strip-name { font-size: 10px; padding: 3px 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-canvas-empty { height: calc(100vh - 56px - 53px - 69px); display: flex; align-items: center; justify-content: center; color: var(--pl-textsub); background: var(--pl-bg); background-image: radial-gradient(var(--pl-border) 1px, transparent 1px); background-size: 20px 20px; }

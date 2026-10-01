@@ -8,7 +8,7 @@ export const translations = {
   ko: {
     back: "뒤로", loading: "데이터 로딩 중...", noData: "데이터가 없습니다.", add: "추가",
     dashboard: "대시보드", sessions: "스크림 세션", overall: "전체 통계", teamManage: "팀 관리 (준비중)",
-    navGroupStats: "통계", navGroupAnalysis: "분석", navBanpick: "밴픽",
+    navGroupStats: "통계", navGroupAnalysis: "분석", navBanpick: "밴픽", navPlans: "드래프트 플랜",
     ssCalendar: "달력", ssList: "리스트",
     title: "스크림 데이터 센터", desc: "오버워치 스크림 로그를 업로드하여 팀의 퍼포먼스를 분석하세요.", desc2: "데이터는 서버에 안전하게 저장됩니다.",
     createScrim: "스크림 생성하기", viewHistory: "기록 보기", uploading: "업로드 중...",
@@ -391,7 +391,7 @@ export const translations = {
   en: {
     back: "Back", loading: "Loading data...", noData: "No data available.", add: "Add",
     dashboard: "Dashboard", sessions: "Sessions", overall: "Overall Stats", teamManage: "Team Manage (WIP)",
-    navGroupStats: "Stats", navGroupAnalysis: "Analysis", navBanpick: "Ban/Pick",
+    navGroupStats: "Stats", navGroupAnalysis: "Analysis", navBanpick: "Ban/Pick", navPlans: "Draft Plans",
     ssCalendar: "Calendar", ssList: "List",
     title: "Scrim Data Center", desc: "Upload Overwatch scrim logs to analyze team performance.", desc2: "Data is safely stored on the server.",
     createScrim: "Create Scrim", viewHistory: "View History", uploading: "Uploading...",
@@ -774,7 +774,7 @@ export const translations = {
   zh: {
     back: "返回", loading: "数据加载中...", noData: "暂无数据。", add: "添加",
     dashboard: "仪表盘", sessions: "训练赛场次", overall: "总体统计", teamManage: "队伍管理（开发中）",
-    navGroupStats: "统计", navGroupAnalysis: "分析", navBanpick: "禁选",
+    navGroupStats: "统计", navGroupAnalysis: "分析", navBanpick: "禁选", navPlans: "草案计划",
     ssCalendar: "日历", ssList: "列表",
     title: "训练赛数据中心", desc: "上传守望先锋训练赛日志，分析队伍表现。", desc2: "数据将安全存储在服务器。",
     createScrim: "创建训练赛", viewHistory: "查看记录", uploading: "上传中...",
