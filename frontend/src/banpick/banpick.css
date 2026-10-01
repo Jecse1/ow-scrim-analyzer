@@ -373,6 +373,33 @@
 }
 
 /* ============================================================
+   [STEP2] 헤더 요약 패널 (가 상단 가로 패널) — 선택된 맵 + 양 팀 밴.
+   [STEP7] HERO_BAN 전용으로 복원(dc39c45). 맵 썸네일 16:9, 밴 초상화 정사각.
+   기본=태블릿/중폭, ≥1024 상향, ≤767 상단 가로 띠.
+   ============================================================ */
+.bp-root .bp-sum-map { width: 114px; height: 64px; }   /* 16:9 */
+.bp-root .bp-sum-ban { width: 56px; height: 56px; }
+.bp-root .bp-sum-name { font-size: 13px; line-height: 1.2; }
+.bp-root .bp-sum-label { font-size: 10px; line-height: 1.2; }
+/* 데스크톱(≥1024) 크기 상향 */
+@media (min-width: 1024px) {
+  .bp-root .bp-sum-map { width: 176px; height: 99px; }   /* 16:9 */
+  .bp-root .bp-sum-ban { width: 80px; height: 80px; }
+  .bp-root .bp-sum-name { font-size: 16px; }
+  .bp-root .bp-sum-label { font-size: 11px; }
+}
+/* 모바일(≤767) — 상단 가로 띠로 축소 */
+@media (max-width: 767px) {
+  .bp-root .bp-sum-map { width: 71px; height: 40px; }
+  .bp-root .bp-sum-ban { width: 40px; height: 40px; }
+  .bp-root .bp-sum-name { font-size: 11px; }
+  /* 한 줄 유지, 넘치면 가로 스크롤(세로 공간 절약) */
+  .bp-root .bp-hdr-a { flex-wrap: nowrap; overflow-x: auto; gap: 12px; padding: 8px; }
+  .bp-root .bp-sum-cell { flex: 0 0 auto; }
+  .bp-root .bp-hdr-a .ml-auto { margin-left: 0; }
+}
+
+/* ============================================================
    [STEP5] 밴픽 헤더(맵 배경 띠) + 밴 카드(팀 열) + 드래프트 3열
    ============================================================ */
 /* 헤더 띠 — 맵 배경 blur+어둡게, 좌우 끝 패널색 페이드, 중앙 맵명, 우상단 페이즈·턴 */
