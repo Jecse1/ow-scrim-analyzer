@@ -854,86 +854,18 @@ function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사
   copyText(text).then((ok) => toast(ok ? okMsg : failMsg));
 }
 
-/* ================= [STEP2] 헤더 요약 패널 (가 상단 가로 패널) ================= */
-/* [STEP7] HERO_BAN 전용으로 복원(dc39c45). 선택 맵(16:9) + 양 팀 밴 초상화 셀 한 줄.
-   HERO_PICK은 BanpickHeader(맵 배경 띠)를 그대로 사용. */
-function HeaderSummary({
-  selectedMap, bans, mode, lang, teamName, heroById, t,
-}: {
-  selectedMap: string | null;
-  bans: Record<Team, string[]>;
-  mode: number;
-  lang: Lang;
-  teamName: Record<Team, string>;
-  heroById: (id: string) => Hero | undefined;
-  t: I18n;
-}) {
-  const m = selectedMap ? MAPS.find((x) => x.id === selectedMap) : null;
-  const showMap = mode !== MODE.HERO_BAN_ONLY;
-
-  const mapCell = (
-    <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
-      <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-map">
-        {m ? <MapThumb id={m.id} /> : null}
-      </div>
-      <div className="min-w-0">
-        <div className="bp-sum-label opacity-60">{t.selectedMap}</div>
-        <div className="flex items-center gap-1 font-semibold bp-sum-name">
-          <MapTypeBadge type={(m?.type ?? "Control") as MapType} lang={lang} className="shrink-0" />
-          <span className="truncate">{m ? getMapDisplayName(m.name) : "—"}</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  const banCell = (team: Team) => {
-    const hid = bans[team][0] ?? null; // 팀당 최대 1밴
-    return (
-      <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
-        <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-ban">
-          {hid ? (
-            <>
-              <HeroThumb id={hid} contain={false} />
-              <BanSlashOverlay />
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center opacity-30 text-xs">—</div>
-          )}
-        </div>
-        <div className="min-w-0">
-          <div className="bp-sum-label opacity-60 truncate">{(team === "A" ? teamName.A : teamName.B)} {t.banned}</div>
-          <div className="font-semibold bp-sum-name truncate" style={{ color: hid ? "var(--bp-danger)" : undefined }}>
-            {hid ? getDisplayName(heroById(hid)?.name ?? hid) : "—"}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // (가) 상단 가로 패널 — 전체 폭 카드 한 줄에 맵·A밴·B밴.
-  return (
-    <div className="bp-hdr-a rounded-xl border p-3 mb-3" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
-      <div className="flex items-center gap-4 flex-wrap">
-        {showMap && <div className="min-w-0">{mapCell}</div>}
-        <div className="flex items-center gap-5 flex-wrap ml-auto">
-          {banCell("A")}
-          {banCell("B")}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ================= [STEP5] 밴픽 헤더 (맵 배경 띠) ================= */
 /* 선택된 맵 이미지를 전체 폭 배경(blur+어둡게)으로 깔고 좌우 끝은 패널색으로 페이드.
    중앙에 "선택된 맵 · <모드>" + 맵명 크게, 우상단에 페이즈·턴. 밴 셀은 헤더에서 제거(팀 열로 이동).
    HERO_BAN_ONLY/맵 없음은 중립 배경 + 페이즈만. 맵 이미지=public/maps/<맵명>.webp. */
-function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, t, lang }: {
+function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, heroById, t, lang }: {
   selectedMap: string | null;
   mode: number;
   phase: Phase;
   turnTeam: Team | null;
   teamName: Record<Team, string>;
+  bans?: Record<Team, string[]>;
+  heroById?: (id: string) => Hero | undefined;
   t: I18n;
   lang: Lang;
 }) {
@@ -945,26 +877,51 @@ function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, t, lang }
     phase === "HERO_PICK" ? (lang === "ko" ? "영웅 픽" : lang === "zh" ? "英雄选取" : "Hero Pick") :
     phase === "BAN_ORDER" ? t.banOrder : "";
   const turnWord = lang === "ko" ? "턴" : lang === "zh" ? "回合" : "turn";
-  return (
-    <div className={cn("bp-bghdr", !hasMap && "nomap")}>
-      {hasMap && (
-        <div className="bp-bghdr-img" style={{ backgroundImage: `url("/maps/${encodeURIComponent(m!.name)}.webp")` }} />
-      )}
-      <div className="bp-bghdr-content">
-        <div className="bp-bghdr-center">
-          {hasMap ? (
-            <>
-              <div className="bp-bghdr-sub">{t.selectedMap} · {modeLbl}</div>
-              <div className="bp-bghdr-name">{getMapDisplayName(m!.name)}</div>
-            </>
-          ) : (
-            <div className="bp-bghdr-name">{phaseLabel}</div>
-          )}
+  // [STEP7] 밴 페이즈에서만 양 팀 밴 현황 셀을 헤더 안(좌하단)에 표시. 맵명(중앙)과 겹치지 않음.
+  const showBans = phase === "HERO_BAN" && !!bans && !!heroById;
+  const banCell = (tm: Team) => {
+    const hid = bans![tm][0] ?? null;
+    const name = hid ? getDisplayName(heroById!(hid)?.name ?? hid) : "—";
+    return (
+      <div key={tm} className="bp-bghdr-bancell">
+        <div className="bp-bghdr-banthumb">
+          {hid ? (<><HeroThumb id={hid} contain={false} /><BanSlashOverlay /></>) : <span className="bp-bghdr-bandash">—</span>}
         </div>
-        <div className="bp-bghdr-phase">
-          {phaseLabel}{turnTeam ? ` · ${teamName[turnTeam]} ${turnWord}` : ""}
+        <div className="bp-bghdr-banmeta">
+          <span className="bp-bghdr-banteam">{teamName[tm]} {t.banned}</span>
+          <span className="bp-bghdr-banname" style={{ color: hid ? "var(--bp-danger)" : undefined }}>{name}</span>
         </div>
       </div>
+    );
+  };
+  return (
+    <div className={cn("bp-bghdr-wrap", showBans && "hasbans")}>
+      <div className={cn("bp-bghdr", !hasMap && "nomap")}>
+        {hasMap && (
+          <div className="bp-bghdr-img" style={{ backgroundImage: `url("/maps/${encodeURIComponent(m!.name)}.webp")` }} />
+        )}
+        <div className="bp-bghdr-content">
+          <div className="bp-bghdr-center">
+            {hasMap ? (
+              <>
+                <div className="bp-bghdr-sub">{t.selectedMap} · {modeLbl}</div>
+                <div className="bp-bghdr-name">{getMapDisplayName(m!.name)}</div>
+              </>
+            ) : (
+              <div className="bp-bghdr-name">{phaseLabel}</div>
+            )}
+          </div>
+          <div className="bp-bghdr-phase">
+            {phaseLabel}{turnTeam ? ` · ${teamName[turnTeam]} ${turnWord}` : ""}
+          </div>
+        </div>
+      </div>
+      {showBans && (
+        <div className="bp-bghdr-bans">
+          {banCell("A")}
+          {banCell("B")}
+        </div>
+      )}
     </div>
   );
 }
@@ -2180,16 +2137,12 @@ export default function BanpickApp() {
                 )}
               </div>
             </div>
-            {/* [STEP7] 헤더: MAP_PICK=h2, HERO_BAN=요약 패널(가, dc39c45 복원), HERO_PICK/BAN_ORDER=맵 배경 띠(STEP5). */}
+            {/* [STEP7] 헤더: MAP_PICK=h2, 그 외(HERO_BAN·HERO_PICK·BAN_ORDER)=맵 배경 띠(BanpickHeader).
+                HERO_BAN은 헤더 좌하단에 양 팀 밴 셀 표시(bans/heroById 전달). "영웅 밴" h2는 헤더 우상단 표시로 대체. */}
             {phase === "MAP_PICK" ? (
               <h2 className="font-semibold mb-3">{mode !== MODE.HERO_BAN_ONLY && STR[lang].mapPick}</h2>
-            ) : phase === "HERO_BAN" ? (
-              <>
-                <h2 className="font-semibold mb-3">{STR[lang].heroBan}</h2>
-                <HeaderSummary selectedMap={selectedMap} bans={bans} mode={mode} lang={lang} teamName={teamName} heroById={heroById} t={t} />
-              </>
             ) : (
-              <BanpickHeader selectedMap={selectedMap} mode={mode} phase={phase} turnTeam={headerTurnTeam} teamName={teamName} t={t} lang={lang} />
+              <BanpickHeader selectedMap={selectedMap} mode={mode} phase={phase} turnTeam={headerTurnTeam} teamName={teamName} bans={bans} heroById={heroById} t={t} lang={lang} />
             )}
 
             {/* MAP PICK */}

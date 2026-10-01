@@ -373,30 +373,23 @@
 }
 
 /* ============================================================
-   [STEP2] 헤더 요약 패널 (가 상단 가로 패널) — 선택된 맵 + 양 팀 밴.
-   [STEP7] HERO_BAN 전용으로 복원(dc39c45). 맵 썸네일 16:9, 밴 초상화 정사각.
-   기본=태블릿/중폭, ≥1024 상향, ≤767 상단 가로 띠.
+   [STEP7] 밴 페이즈 헤더 내 양 팀 밴 현황 셀 — 맵 배경 띠(BanpickHeader) 좌하단.
+   데스크톱=띠 위 오버레이(좌하단), 모바일(≤767)=띠 아래 한 줄.
    ============================================================ */
-.bp-root .bp-sum-map { width: 114px; height: 64px; }   /* 16:9 */
-.bp-root .bp-sum-ban { width: 56px; height: 56px; }
-.bp-root .bp-sum-name { font-size: 13px; line-height: 1.2; }
-.bp-root .bp-sum-label { font-size: 10px; line-height: 1.2; }
-/* 데스크톱(≥1024) 크기 상향 */
-@media (min-width: 1024px) {
-  .bp-root .bp-sum-map { width: 176px; height: 99px; }   /* 16:9 */
-  .bp-root .bp-sum-ban { width: 80px; height: 80px; }
-  .bp-root .bp-sum-name { font-size: 16px; }
-  .bp-root .bp-sum-label { font-size: 11px; }
-}
-/* 모바일(≤767) — 상단 가로 띠로 축소 */
+.bp-root .bp-bghdr-wrap { position: relative; }
+.bp-root .bp-bghdr-bans { position: absolute; left: 16px; bottom: 22px; z-index: 3; display: flex; gap: 16px; }
+.bp-root .bp-bghdr-bancell { display: flex; align-items: center; gap: 6px; }
+.bp-root .bp-bghdr-banthumb { position: relative; width: 42px; height: 42px; border-radius: 7px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); box-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+.bp-root .bp-bghdr-banthumb img { filter: grayscale(1) brightness(0.92); }
+.bp-root .bp-bghdr-bandash { color: #fff; opacity: 0.6; font-size: 15px; }
+.bp-root .bp-bghdr-banmeta { display: flex; flex-direction: column; line-height: 1.15; text-shadow: 0 1px 5px rgba(0,0,0,0.95); }
+.bp-root .bp-bghdr-banteam { font-size: 10px; color: #fff; opacity: 0.85; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-root .bp-bghdr-banname { font-size: 12px; font-weight: 700; color: #fff; }
+/* 모바일(≤767) — 띠 아래 한 줄(정적 배치) */
 @media (max-width: 767px) {
-  .bp-root .bp-sum-map { width: 71px; height: 40px; }
-  .bp-root .bp-sum-ban { width: 40px; height: 40px; }
-  .bp-root .bp-sum-name { font-size: 11px; }
-  /* 한 줄 유지, 넘치면 가로 스크롤(세로 공간 절약) */
-  .bp-root .bp-hdr-a { flex-wrap: nowrap; overflow-x: auto; gap: 12px; padding: 8px; }
-  .bp-root .bp-sum-cell { flex: 0 0 auto; }
-  .bp-root .bp-hdr-a .ml-auto { margin-left: 0; }
+  .bp-root .bp-bghdr-wrap.hasbans .bp-bghdr { margin-bottom: 6px; }
+  .bp-root .bp-bghdr-bans { position: static; gap: 14px; margin-bottom: 10px; padding: 0 2px; }
+  .bp-root .bp-bghdr-banthumb { width: 34px; height: 34px; }
 }
 
 /* ============================================================
