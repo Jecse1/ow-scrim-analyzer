@@ -357,33 +357,6 @@ function HeroThumb({ id, className, contain = true }: { id: string | null; class
   );
 }
 
-function useBoxSize<T extends HTMLElement>() {
-  const ref = React.useRef<T>(null);
-  const [size, setSize] = React.useState({ width: 0, height: 0, padX: 0, padY: 0 });
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const update = () => {
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      setSize({
-        width: r.width,
-        height: r.height,
-        padX: parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight),
-        padY: parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom),
-      });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    window.addEventListener("resize", update);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-  return [ref, size] as const;
-}
 
 /** 밴 오버레이 */
 function BanSlashOverlay() {
@@ -881,74 +854,73 @@ function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사
   copyText(text).then((ok) => toast(ok ? okMsg : failMsg));
 }
 
-/* ================= [STEP2] 헤더 요약 패널 (상단 가로 패널) ================= */
-/* 선택된 맵(이미지+맵명+모드) · Team A 밴 · Team B 밴 를 전체 폭 카드 한 줄로 표시.
-   맵 이미지는 public/maps/*.webp 사용, 없으면 중립 타일로 폴백하되 모드 아이콘
-   (MapTypeBadge)+맵명은 항상 표시. 밴은 팀당 1개 고정(state.py apply_ban:217 /
-   BanpickApp applyBan:1693). 비상호작용(표시 전용). 크기는 banpick.css(≥1024 상향). */
-function HeaderSummary({
-  selectedMap, bans, mode, lang, teamName, heroById, t,
-}: {
+/* ================= [STEP5] 밴픽 헤더 (맵 배경 띠) ================= */
+/* 선택된 맵 이미지를 전체 폭 배경(blur+어둡게)으로 깔고 좌우 끝은 패널색으로 페이드.
+   중앙에 "선택된 맵 · <모드>" + 맵명 크게, 우상단에 페이즈·턴. 밴 셀은 헤더에서 제거(팀 열로 이동).
+   HERO_BAN_ONLY/맵 없음은 중립 배경 + 페이즈만. 맵 이미지=public/maps/<맵명>.webp. */
+function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, t, lang }: {
   selectedMap: string | null;
-  bans: Record<Team, string[]>;
   mode: number;
-  lang: Lang;
+  phase: Phase;
+  turnTeam: Team | null;
   teamName: Record<Team, string>;
-  heroById: (id: string) => Hero | undefined;
   t: I18n;
+  lang: Lang;
 }) {
   const m = selectedMap ? MAPS.find((x) => x.id === selectedMap) : null;
-  const showMap = mode !== MODE.HERO_BAN_ONLY;
-
-  const mapCell = (
-    <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
-      <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-map">
-        {m ? <MapThumb id={m.id} /> : null}
-      </div>
-      <div className="min-w-0">
-        <div className="bp-sum-label opacity-60">{t.selectedMap}</div>
-        <div className="flex items-center gap-1 font-semibold bp-sum-name">
-          <MapTypeBadge type={(m?.type ?? "Control") as MapType} lang={lang} className="shrink-0" />
-          <span className="truncate">{m ? getMapDisplayName(m.name) : "—"}</span>
+  const hasMap = mode !== MODE.HERO_BAN_ONLY && !!m;
+  const modeLbl = m ? MAP_LABELS[lang][m.type] : "";
+  const phaseLabel =
+    phase === "HERO_BAN" ? t.heroBan :
+    phase === "HERO_PICK" ? (lang === "ko" ? "영웅 픽" : lang === "zh" ? "英雄选取" : "Hero Pick") :
+    phase === "BAN_ORDER" ? t.banOrder : "";
+  const turnWord = lang === "ko" ? "턴" : lang === "zh" ? "回合" : "turn";
+  return (
+    <div className={cn("bp-bghdr", !hasMap && "nomap")}>
+      {hasMap && (
+        <div className="bp-bghdr-img" style={{ backgroundImage: `url("/maps/${encodeURIComponent(m!.name)}.webp")` }} />
+      )}
+      <div className="bp-bghdr-content">
+        <div className="bp-bghdr-center">
+          {hasMap ? (
+            <>
+              <div className="bp-bghdr-sub">{t.selectedMap} · {modeLbl}</div>
+              <div className="bp-bghdr-name">{getMapDisplayName(m!.name)}</div>
+            </>
+          ) : (
+            <div className="bp-bghdr-name">{phaseLabel}</div>
+          )}
+        </div>
+        <div className="bp-bghdr-phase">
+          {phaseLabel}{turnTeam ? ` · ${teamName[turnTeam]} ${turnWord}` : ""}
         </div>
       </div>
     </div>
   );
+}
 
-  const banCell = (team: Team) => {
-    const hid = bans[team][0] ?? null; // 팀당 최대 1밴
-    return (
-      <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
-        <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-ban">
-          {hid ? (
-            <>
-              <HeroThumb id={hid} contain={false} />
-              <BanSlashOverlay />
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center opacity-30 text-xs">—</div>
-          )}
-        </div>
-        <div className="min-w-0">
-          <div className="bp-sum-label opacity-60 truncate">{(team === "A" ? teamName.A : teamName.B)} {t.banned}</div>
-          <div className="font-semibold bp-sum-name truncate" style={{ color: hid ? "var(--bp-danger)" : undefined }}>
-            {hid ? getDisplayName(heroById(hid)?.name ?? hid) : "—"}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // (가) 상단 가로 패널 — 전체 폭 카드 한 줄에 맵·A밴·B밴.
+/* 밴 카드 — 팀 열 최상단(픽 슬롯 위). 밴 영웅 회색+빨강 대각선 2줄 + "BAN" 태그 + 영웅명(빨강).
+   밴 전엔 점선 테두리 '밴 대기'. 팀당 밴 1개 고정이라 단일 카드. */
+function BanCard({ heroId, heroById, lang, mobile }: {
+  heroId: string | null;
+  heroById: (id: string) => Hero | undefined;
+  lang: Lang;
+  mobile?: boolean;
+}) {
+  const name = heroId ? getDisplayName(heroById(heroId)?.name ?? heroId) : "";
+  const wait = lang === "ko" ? "밴 대기" : lang === "zh" ? "等待禁用" : "Awaiting ban";
   return (
-    <div className="bp-hdr-a rounded-xl border p-3 mb-3" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
-      <div className="flex items-center gap-4 flex-wrap">
-        {showMap && <div className="min-w-0">{mapCell}</div>}
-        <div className="flex items-center gap-5 flex-wrap ml-auto">
-          {banCell("A")}
-          {banCell("B")}
-        </div>
-      </div>
+    <div className={cn("bp-bancard", heroId ? "banned" : "empty", mobile && "mobile")}>
+      {heroId ? (
+        <>
+          <div className="bp-bancard-img"><HeroThumb id={heroId} contain={false} /></div>
+          <BanSlashOverlay />
+          <span className="bp-bancard-tag">BAN</span>
+          <span className="bp-bancard-name">{name}</span>
+        </>
+      ) : (
+        <span className="bp-bancard-wait">{wait}</span>
+      )}
     </div>
   );
 }
@@ -1003,7 +975,8 @@ type PickColumnProps = {
   teamName: Record<Team, string>;
   lang: Lang;
   t: I18n;
-  btnBorderClass: string;
+  phase: Phase;                                   // [STEP5] HERO_BAN/HERO_PICK 공용 열 — 픽 컨트롤은 PICK만
+  bans: Record<Team, string[]>;                   // [STEP5] 팀 밴(헤더 대신 열 최상단 밴 카드)
   pickSlots: Record<Team, (string | null)[]>;
   pickLockedTeam: Record<Team, boolean>;
   activeSlot: Record<Team, number>;
@@ -1019,7 +992,8 @@ const PickColumn = React.memo(function PickColumn({
   teamName,
   lang,
   t,
-  btnBorderClass,
+  phase,
+  bans,
   pickSlots,
   pickLockedTeam,
   activeSlot,
@@ -1032,46 +1006,16 @@ const PickColumn = React.memo(function PickColumn({
 }: PickColumnProps) {
   const label = team === "A" ? teamName.A : teamName.B;
   const locked = pickLockedTeam[team];
-  const act = activeSlot[team];
-
-  const [wrapRef, wrap] = useBoxSize<HTMLDivElement>();
-  const headerRef = React.useRef<HTMLDivElement>(null);
-  const footerRef = React.useRef<HTMLDivElement>(null);
-
-  const SLOT_GAP = 12;
-  const BTN_VPAD = 16;
-  const LABEL_H = 18;
-  const LABEL_MT = 4;
-  const BORDER_Y = 2;
-  const EXTRA_PER = BTN_VPAD + LABEL_H + LABEL_MT + BORDER_Y;
-  const FOOTER_MARGIN = 12;
-  const SAFE = 2;
-  const BTN_PAD_X = 16;
-
-  const slotPx = React.useMemo(() => {
-    const h = wrap.height,
-      w = wrap.width;
-    if (!h || !w) return 84;
-    const head = headerRef.current?.offsetHeight ?? 0;
-    const foot = footerRef.current?.offsetHeight ?? 0;
-    const innerH = h - wrap.padY - head - foot - FOOTER_MARGIN - SAFE;
-    const byH = Math.floor((innerH - EXTRA_PER * 5 - SLOT_GAP * 4) / 5);
-    const innerW = Math.max(0, w - wrap.padX - BTN_PAD_X);
-    const byW = Math.floor(innerW);
-    return Math.max(56, Math.min(byH, byW));
-  }, [wrap]);
-
   const roleLabel = (r: Role) => ROLE_LABELS[lang][r];
   const canClickSlot = (t: Team) => canPickForTeam(t) && !pickLockedTeam[t];
 
   return (
     <div
-      ref={wrapRef}
-      className={["h-full flex flex-col overflow-visible", "p-3 pb-5 rounded-xl border", locked ? "border-emerald-500" : "border-neutral-300", "w-full min-w-[220px] max-w-[320px] mx-auto"].join(" ")}
+      className={["h-full flex flex-col overflow-hidden", "p-2 rounded-xl border", locked ? "border-emerald-500" : "border-neutral-300", "w-full min-w-[220px] max-w-[320px] mx-auto"].join(" ")}
       style={locked ? { borderColor: "#4ade80", boxShadow: "0 0 0 1px #4ade8055" } : undefined}
     >
-      <div ref={headerRef} className="shrink-0 mb-2">
-        <div className="flex items-center mb-2">
+      <div className="shrink-0 mb-2">
+        <div className="flex items-center mb-1">
           <div className="text-xs font-semibold">{label}</div>
           {locked && (
             <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full border font-semibold" style={{ borderColor: "#4ade80", color: "#4ade80", background: "rgba(74,222,128,0.14)" }}>
@@ -1079,8 +1023,10 @@ const PickColumn = React.memo(function PickColumn({
             </span>
           )}
         </div>
-        {/* 픽 완료 — 상태 배지형 버튼: 완료=초록 / 진행가능=파랑 / 대기=중립. 양팀 완료 시 호스트가 승패 결정. */}
-        {(() => {
+        {/* [STEP5] 밴 카드 — 열 최상단, 픽 슬롯 바로 위 */}
+        <BanCard heroId={bans[team][0] ?? null} heroById={heroById} lang={lang} />
+        {/* 픽 완료 — 상태 배지형 버튼(HERO_PICK 전용): 완료=초록 / 진행가능=파랑 / 대기=중립. */}
+        {phase === "HERO_PICK" && (() => {
           const allFilled = !pickSlots[team].some((v) => v === null);
           const canAct = canPickForTeam(team);
           const done = locked;
@@ -1115,42 +1061,31 @@ const PickColumn = React.memo(function PickColumn({
         })()}
       </div>
 
-      <div className="flex-1 flex flex-col gap-3 overflow-visible">
+      {/* [STEP5] 슬롯 5개 — flex로 남은 높이를 균등 분배(세로 스크롤 없음). 이미지는 정사각. */}
+      <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
         {SLOT_ROLES.map((sr, i) => {
           const hid = pickSlots[team][i];
           const active = activeSlot[team] === i && !pickLockedTeam[team];
           const heroName = hid ? getDisplayName(heroById(hid)?.name ?? hid) : roleLabel(sr);
           const clickable = canClickSlot(team);
+          const slotRole: Role = (hid ? (heroById(hid)?.role as Role) : sr) ?? sr;
           return (
             <button
               key={i}
               disabled={!clickable}
               onClick={() => clickable && onFocusSlot(team, i)}
-              className={["w-full rounded-xl border text-center p-2", active ? "bp-sel-pick" : "border-neutral-300", !clickable && "opacity-60 cursor-not-allowed"].join(" ")}
-              style={{ paddingLeft: 8, paddingRight: 8 }}
+              className={["flex-1 min-h-0 w-full rounded-xl border flex flex-col p-1", active ? "bp-sel-pick" : "border-neutral-300", !clickable && "opacity-60 cursor-not-allowed"].join(" ")}
             >
-              <div className="relative mx-auto rounded-lg overflow-hidden bg-neutral-100" style={{ width: slotPx, height: slotPx }}>
+              <div className="relative flex-1 min-h-0 aspect-square mx-auto rounded-lg overflow-hidden bg-neutral-100">
                 <HeroThumb id={hid ?? null} />
               </div>
-              <div className="mt-1 text-[11px] md:text-[12px] font-medium px-1">
-                <div className="w-full flex items-center justify-center gap-1 min-h-[18px] truncate">
-                  {(() => {
-                    const slotRole: Role = (hid ? (heroById(hid)?.role as Role) : sr) ?? sr;
-                    return <RoleIcon role={slotRole} lang={lang} className="shrink-0" />;
-                  })()}
-                  <span className="truncate">{heroName}</span>
-                </div>
+              <div className="mt-0.5 text-[11px] font-medium flex items-center justify-center gap-1 min-h-[15px] truncate shrink-0">
+                <RoleIcon role={slotRole} lang={lang} className="shrink-0" />
+                <span className="truncate">{heroName}</span>
               </div>
             </button>
           );
         })}
-      </div>
-
-      <div ref={footerRef} className="mt-3 flex items-center shrink-0">
-        <span className="text-[11px]">
-          {t.slot} {act + 1}/5
-        </span>
-        {/* 픽 완료 버튼은 열 최상단으로 이동함 */}
       </div>
     </div>
   );
@@ -2073,6 +2008,57 @@ export default function BanpickApp() {
   const canEditOrderStuff = partMode === "SOLO" || canControlMapOrOrder(partMode, myRole, orderChooser);
   const canBanThisTurn = partMode === "SOLO" || canControlBanTurn(partMode, myRole, turn);
 
+  // [STEP5] 진행 팀(표시용): SOLO=미잠금 팀 우선, 그 외=내 팀. 헤더 턴/모바일 공용.
+  const pickTurnTeam: Team | null =
+    partMode === "SOLO" ? (!pickLockedTeam.A ? "A" : !pickLockedTeam.B ? "B" : null) : (myTeamRole as Team | null);
+  const headerTurnTeam: Team | null = phase === "HERO_BAN" ? turn : phase === "HERO_PICK" ? pickTurnTeam : null;
+
+  // [STEP5] 밴 중앙 영역(역할 필터 + 밴 그리드 + 확정 바) — 데스크톱/모바일 공용. HERO_BAN에서만 호출.
+  const renderBanArea = () => (
+    <>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        {(["Tank", "Damage", "Support"] as Role[])
+          .filter((r) => { const lock = roleLock[r]; return !lock || lock === turn; })
+          .map((r) => (
+            <button key={r} onClick={() => setFilterRole(r)} className={"px-3 py-1 rounded-full border text-xs " + (filterRole === r ? theme.activeGreen : "border-neutral-300")}>{roleLabel(r)}</button>
+          ))}
+        <div className="ml-auto text-xs">{t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b> · {t.timeLeft}: <b>{timer}s</b></div>
+      </div>
+      <div className="grid gap-3 bp-grid-ban">
+        {HEROES.filter((h) => h.role === filterRole).map((h) => {
+          const isLockedRole = roleLock[h.role] && roleLock[h.role] !== turn;
+          const bannedThisSet = bans.A.includes(h.id) || bans.B.includes(h.id);
+          const bannedByThisTeamBefore = teamBanHistory[turn].has(h.id);
+          const disabled = !canBanThisTurn || !!isLockedRole || bannedThisSet || bannedByThisTeamBefore || bans[turn].length >= 1;
+          const selected = pendingBan[turn] === h.id;
+          return (
+            <div
+              key={h.id}
+              onClick={() => { if (disabled) return; setPendingBan((p) => { const next = { ...p, [turn]: p[turn] === h.id ? null : h.id }; if (syncOn) patch({ pendingBan: next }); return next; }); }}
+              className={"cursor-pointer rounded-xl border overflow-hidden " + (disabled ? "opacity-50 border-neutral-200" : selected ? "bp-sel-ban" : "border-neutral-300")}
+            >
+              <div className="relative w-full aspect-square overflow-hidden">
+                <HeroThumb id={h.id} contain={false} />
+                {bannedThisSet && <BanSlashOverlay />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex items-center gap-2 bp-actionbar">
+        <button className={`px-3 py-2 rounded-lg border ${theme.btnBorder} bp-touch`} onClick={() => setRun((r) => { const next = !r; popToast(next ? t.play : t.pause); return next; })}>{run ? t.pause : t.play}</button>
+        <button className={`px-3 py-2 rounded-lg border ${theme.btnBorder} bp-touch`} disabled={!pendingBan[turn] || !canBanThisTurn} onClick={() => commitBan()}>{t.confirmBan}</button>
+      </div>
+    </>
+  );
+
+  // [STEP5] PickColumn 공통 props(A/B) — HERO_BAN·HERO_PICK 공용.
+  const pickColProps = (team: Team) => ({
+    team, teamName, lang, t, phase, bans, pickSlots, pickLockedTeam,
+    activeSlot, onFocusSlot: focusSlot, confirmPick, onUnlock: unlockPick, canUnlock: canUnlockTeam(team),
+    canPickForTeam, heroById,
+  });
+
   /* ============== UI ============== */
   return (
     <div className={"bp-root " + (dark ? "" : "light ") + theme.root}>
@@ -2122,27 +2108,11 @@ export default function BanpickApp() {
                 )}
               </div>
             </div>
-            {/* [STEP2] "영웅 픽 (탱-딜-딜-힐-힐)" 문구 제거 — HERO_PICK은 h2 비표시(요약 패널이 대체). */}
-            {phase !== "HERO_PICK" && (
-              <h2 className="font-semibold mb-3">
-                {mode !== MODE.HERO_BAN_ONLY && phase === "MAP_PICK" && STR[lang].mapPick}
-                {phase === "BAN_ORDER" && STR[lang].banOrder}
-                {phase === "HERO_BAN" && STR[lang].heroBan}
-              </h2>
-            )}
-
-            {/* [STEP2] 요약 패널(선택된 맵 + 양 팀 밴) — 밴/픽 페이즈 상시(상단 가로 패널).
-                MAP_PICK엔 자체 UI가 있으므로 제외. */}
-            {phase !== "MAP_PICK" && (
-              <HeaderSummary
-                selectedMap={selectedMap}
-                bans={bans}
-                mode={mode}
-                lang={lang}
-                teamName={teamName}
-                heroById={heroById}
-                t={t}
-              />
+            {/* [STEP5] 밴픽 헤더(맵 배경 띠) — 밴순서/밴/픽 페이즈 상시. MAP_PICK은 자체 UI라 h2만. */}
+            {phase === "MAP_PICK" ? (
+              <h2 className="font-semibold mb-3">{mode !== MODE.HERO_BAN_ONLY && STR[lang].mapPick}</h2>
+            ) : (
+              <BanpickHeader selectedMap={selectedMap} mode={mode} phase={phase} turnTeam={headerTurnTeam} teamName={teamName} t={t} lang={lang} />
             )}
 
             {/* MAP PICK */}
@@ -2285,152 +2255,24 @@ export default function BanpickApp() {
               </div>
             )}
 
-            {/* HERO BAN */}
-            {phase === "HERO_BAN" && (
-              <div>
-                {/* 상단: 역할 필터 및 턴 정보 */}
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {(["Tank", "Damage", "Support"] as Role[])
-                    .filter((r) => {
-                      const lock = roleLock[r];
-                      return !lock || lock === turn;
-                    })
-                    .map((r) => (
-                      <button key={r} onClick={() => setFilterRole(r)} className={"px-3 py-1 rounded-full border text-xs " + (filterRole === r ? theme.activeGreen : "border-neutral-300")}>
-                        {roleLabel(r)}
-                      </button>
-                    ))}
-                  <div className="ml-auto text-xs">
-                    {t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b> · {t.timeLeft}: <b>{timer}s</b>
-                  </div>
-                </div>
-
-                {/* 메인: 영웅 그리드 */}
-                <div className="mx-auto w-full max-w-[1440px] px-1 sm:px-2">
-                  <div className="grid gap-3 bp-grid-ban">
-                    {HEROES.filter((h) => h.role === filterRole).map((h) => {
-                      // 1. 역할군 락 확인 (상대방이 먼저 밴 한 역할군인지)
-                      const isLockedRole = roleLock[h.role] && roleLock[h.role] !== turn;
-                      
-                      // 2. [이번 세트]에 밴 되었는지 확인 (누구든 밴 했으면 선택 불가 + 빨간 줄)
-                      const bannedThisSet = bans.A.includes(h.id) || bans.B.includes(h.id);
-                      
-                      // 3. [과거 세트]에 '현재 턴인 팀'이 밴 했었는지 확인 (중복 밴 불가 + 빨간 줄 X)
-                      const bannedByThisTeamBefore = teamBanHistory[turn].has(h.id);
-                      
-                      // 클릭 비활성화 조건: 
-                      // 내 턴 아님 OR 역할 잠김 OR 이번 세트 밴 됨 OR 내가 예전에 밴 했음 OR 이미 밴 카드 씀
-                      const disabled = !canBanThisTurn || !!isLockedRole || bannedThisSet || bannedByThisTeamBefore || bans[turn].length >= 1;
-                      
-                      const selected = pendingBan[turn] === h.id;
-                      
-                      return (
-                        <div
-                          key={h.id}
-                          onClick={() => {
-                            if (disabled) return;
-                            setPendingBan((p) => {
-                              const next = { ...p, [turn]: p[turn] === h.id ? null : h.id };
-                              if (syncOn) patch({ pendingBan: next });
-                              return next;
-                            });
-                          }}
-                          className={"cursor-pointer rounded-xl border overflow-hidden " + (disabled ? "opacity-50 border-neutral-200" : selected ? "bp-sel-ban" : "border-neutral-300")}
-                        >
-                          <div className="relative w-full aspect-square overflow-hidden">
-                            <HeroThumb id={h.id} contain={false} />
-                            
-                            {/* ★ 중요: 빨간 줄(BanSlashOverlay)은 오직 '이번 세트'에 밴 된 경우에만 표시 */}
-                            {/* 과거에 밴 했던 영웅은 위 disabled 로직에 의해 흐려지기만 하고 빨간 줄은 안 뜸 */}
-                            {(bannedThisSet) && <BanSlashOverlay />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 하단: 제어 버튼 (모바일=하단 고정, 안전영역 확보) */}
-                <div className="mt-3 flex items-center gap-2 bp-actionbar">
-                  <button
-                    className={`px-3 py-2 rounded-lg border ${theme.btnBorder} bp-touch`}
-                    onClick={() =>
-                      setRun((r) => {
-                        const next = !r;
-                        popToast(next ? t.play : t.pause);
-                        return next;
-                      })
-                    }
-                  >
-                    {run ? t.pause : t.play}
-                  </button>
-                  <button className={`px-3 py-2 rounded-lg border ${theme.btnBorder} bp-touch`} disabled={!pendingBan[turn] || !canBanThisTurn} onClick={() => commitBan()}>
-                    {t.confirmBan}
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* HERO PICK */}
-            {phase === "HERO_PICK" && (() => {
-              // 픽 진행 팀(표시용): SOLO=미잠금 팀 우선, 그 외=내 팀. 상태머신 무변경.
-              const pickTurnTeam: Team | null =
-                partMode === "SOLO"
-                  ? (!pickLockedTeam.A ? "A" : !pickLockedTeam.B ? "B" : null)
-                  : (myTeamRole as Team | null);
+            {/* [STEP5] HERO_BAN · HERO_PICK 공용 3열 — 팀 열(밴 카드 + 슬롯) | 가운데(밴/픽 그리드) */}
+            {(phase === "HERO_BAN" || phase === "HERO_PICK") && (() => {
               return (
               <>
-                {/* ===== 데스크톱: 3열(팀A|그리드|팀B) — 기존 유지 ===== */}
-                <div className="hidden md:flex h-[calc(100vh-180px)] overflow-hidden gap-4">
+                {/* ===== 데스크톱: 3열(팀A | 그리드 | 팀B) — 열 최상단 밴 카드 + 슬롯 ===== */}
+                <div className="hidden md:flex bp-draft-cols overflow-hidden gap-4">
                   <aside className="min-w-0 w-full md:w-[260px] lg:w-[300px] h-full pr-2">
-                    <PickColumn
-                      team="A"
-                      teamName={teamName}
-                      lang={lang}
-                      t={t}
-                      btnBorderClass={theme.btnBorder}
-                      pickSlots={pickSlots}
-                      pickLockedTeam={pickLockedTeam}
-                      activeSlot={activeSlot}
-                      onFocusSlot={focusSlot}
-                      confirmPick={confirmPick}
-                      onUnlock={unlockPick}
-                      canUnlock={canUnlockTeam("A")}
-                      canPickForTeam={canPickForTeam}
-                      heroById={heroById}
-                    />
+                    <PickColumn {...pickColProps("A")} />
                   </aside>
 
                   <main className="min-w-0 flex-1 h-full overflow-y-auto pr-2">
-                    <PickCenter
-                      lang={lang}
-                      t={t}
-                      filterRole={filterRole}
-                      teamName={teamName}
-                      bannedIds={allBannedThisSet}
-                      pickedA={pickSlots.A}
-                      pickedB={pickSlots.B}
-                      onHeroClick={handleHeroClick}
-                    />
+                    {phase === "HERO_BAN" ? renderBanArea() : (
+                      <PickCenter lang={lang} t={t} filterRole={filterRole} teamName={teamName} bannedIds={allBannedThisSet} pickedA={pickSlots.A} pickedB={pickSlots.B} onHeroClick={handleHeroClick} />
+                    )}
                   </main>
 
                   <aside className="min-w-0 w-full md:w-[260px] lg:w-[300px] h-full">
-                    <PickColumn
-                      team="B"
-                      teamName={teamName}
-                      lang={lang}
-                      t={t}
-                      btnBorderClass={theme.btnBorder}
-                      pickSlots={pickSlots}
-                      pickLockedTeam={pickLockedTeam}
-                      activeSlot={activeSlot}
-                      onFocusSlot={focusSlot}
-                      confirmPick={confirmPick}
-                      onUnlock={unlockPick}
-                      canUnlock={canUnlockTeam("B")}
-                      canPickForTeam={canPickForTeam}
-                      heroById={heroById}
-                    />
+                    <PickColumn {...pickColProps("B")} />
                   </aside>
                 </div>
 
@@ -2438,14 +2280,14 @@ export default function BanpickApp() {
                 <div className="md:hidden">
                   {/* 턴·남은시간 — 스크롤 무관 항상 상단 고정 */}
                   <div className="bp-turnbar flex items-center gap-2 text-xs">
-                    <span>{t.curTurn}: <b>{pickTurnTeam ? teamName[pickTurnTeam] : "-"}</b></span>
+                    <span>{t.curTurn}: <b>{headerTurnTeam ? teamName[headerTurnTeam] : "-"}</b></span>
                     <span className="ml-auto">{t.timeLeft}: <b>{timer}s</b></span>
                   </div>
 
-                  {/* 양 팀 픽 현황 — 작은 슬롯 가로 나열(탭하여 채울 슬롯 선택) */}
+                  {/* 양 팀: 밴 카드 + 가로 슬롯 행(HERO_BAN은 슬롯 비활성 플레이스홀더) */}
                   {(["A", "B"] as Team[]).map((tm) => {
                     const locked = pickLockedTeam[tm];
-                    const clickable = canPickForTeam(tm) && !locked;
+                    const clickable = phase === "HERO_PICK" && canPickForTeam(tm) && !locked;
                     return (
                       <div key={tm} className="mb-2">
                         <div className="flex items-center gap-2 mb-1">
@@ -2453,7 +2295,7 @@ export default function BanpickApp() {
                           {locked && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full border font-semibold" style={{ borderColor: "#4ade80", color: "#4ade80", background: "rgba(74,222,128,0.14)" }}>{t.ready}</span>
                           )}
-                          {pickTurnTeam === tm && !locked && (
+                          {phase === "HERO_PICK" && pickTurnTeam === tm && !locked && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full border font-semibold" style={{ borderColor: "var(--bp-primary)", color: "var(--bp-primary)", background: "rgba(59,130,246,0.14)" }}>{t.curTurn}</span>
                           )}
                           {locked && canUnlockTeam(tm) && (
@@ -2466,7 +2308,8 @@ export default function BanpickApp() {
                             </button>
                           )}
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 items-stretch">
+                          <div className="flex-1 min-w-0"><BanCard heroId={bans[tm][0] ?? null} heroById={heroById} lang={lang} mobile /></div>
                           {SLOT_ROLES.map((sr, i) => {
                             const hid = pickSlots[tm][i];
                             const active = activeSlot[tm] === i && !locked;
@@ -2492,20 +2335,13 @@ export default function BanpickApp() {
                     );
                   })}
 
-                  {/* 영웅 그리드 */}
-                  <PickCenter
-                    lang={lang}
-                    t={t}
-                    filterRole={filterRole}
-                    teamName={teamName}
-                    bannedIds={allBannedThisSet}
-                    pickedA={pickSlots.A}
-                    pickedB={pickSlots.B}
-                    onHeroClick={handleHeroClick}
-                  />
+                  {/* 가운데 그리드 — 밴(renderBanArea) / 픽(PickCenter) */}
+                  {phase === "HERO_BAN" ? renderBanArea() : (
+                    <PickCenter lang={lang} t={t} filterRole={filterRole} teamName={teamName} bannedIds={allBannedThisSet} pickedA={pickSlots.A} pickedB={pickSlots.B} onHeroClick={handleHeroClick} />
+                  )}
 
-                  {/* 하단 고정 확정 — 현재 픽 팀(안전영역 확보) */}
-                  {pickTurnTeam && (() => {
+                  {/* 하단 고정 확정 — HERO_PICK 전용(HERO_BAN은 renderBanArea에 밴 확정 포함) */}
+                  {phase === "HERO_PICK" && pickTurnTeam && (() => {
                     const tm = pickTurnTeam;
                     const allFilled = !pickSlots[tm].some((v) => v === null);
                     const canAct = canPickForTeam(tm);
