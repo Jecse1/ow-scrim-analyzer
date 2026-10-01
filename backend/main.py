@@ -64,6 +64,13 @@ app.include_router(stats_router)
 from routers.scrims import router as scrims_router
 app.include_router(scrims_router)
 
+# 드래프트 플랜(플랜 전용 테이블·캐시. 경로 /api/plans/* — 기존 라우터와 충돌 없음)
+try:
+    from plans import router as plans_router
+    app.include_router(plans_router)
+except Exception as _e:
+    print(f"[plans] router not loaded: {_e}")
+
 
 # ── 하위호환 re-export ────────────────────────────────────────────────────────
 # scripts/dump_game_data.py · scripts/make_game_data_json.py 가 `import main` 후

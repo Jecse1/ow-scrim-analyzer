@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from db.database import Base
@@ -199,3 +199,35 @@ class Event(Base):
     extra_data = Column(JSON)
 
     round = relationship("Round", back_populates="events")
+
+
+# ── 드래프트 플랜(맵별 밴픽 구상 보드) — 플랜 전용 테이블. 스크림 데이터 테이블과 무관. ──
+class PlanBoard(Base):
+    __tablename__ = "plan_boards"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    maps = relationship(
+        "PlanMap",
+        back_populates="board",
+        cascade="all, delete-orphan",
+        order_by="PlanMap.sort_order",
+    )
+
+
+class PlanMap(Base):
+    __tablename__ = "plan_maps"
+
+    id = Column(String, primary_key=True)
+    board_id = Column(String, ForeignKey("plan_boards.id", ondelete="CASCADE"), nullable=False, index=True)
+    map_id = Column(String, nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    # 캔버스 문서 JSON 문자열(version:1, nodes/edges/groups). 전체 치환 저장.
+    canvas_json = Column(Text, nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    board = relationship("PlanBoard", back_populates="maps")
