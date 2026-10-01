@@ -88,3 +88,6 @@ docs/_internal_do_not_publish/
 # ---- allowlist: keep the anonymized sample even though *.txt logs are data ----
 !sample_data/
 !sample_data/**
+
+# 밴픽 UI 작업 캡처(로컬 보관, 커밋 제외)
+docs/banpick_ui/
