@@ -881,6 +881,78 @@ function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사
   copyText(text).then((ok) => toast(ok ? okMsg : failMsg));
 }
 
+/* ================= [STEP2] 헤더 요약 패널 (상단 가로 패널) ================= */
+/* 선택된 맵(이미지+맵명+모드) · Team A 밴 · Team B 밴 를 전체 폭 카드 한 줄로 표시.
+   맵 이미지는 public/maps/*.webp 사용, 없으면 중립 타일로 폴백하되 모드 아이콘
+   (MapTypeBadge)+맵명은 항상 표시. 밴은 팀당 1개 고정(state.py apply_ban:217 /
+   BanpickApp applyBan:1693). 비상호작용(표시 전용). 크기는 banpick.css(≥1024 상향). */
+function HeaderSummary({
+  selectedMap, bans, mode, lang, teamName, heroById, t,
+}: {
+  selectedMap: string | null;
+  bans: Record<Team, string[]>;
+  mode: number;
+  lang: Lang;
+  teamName: Record<Team, string>;
+  heroById: (id: string) => Hero | undefined;
+  t: I18n;
+}) {
+  const m = selectedMap ? MAPS.find((x) => x.id === selectedMap) : null;
+  const showMap = mode !== MODE.HERO_BAN_ONLY;
+
+  const mapCell = (
+    <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
+      <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-map">
+        {m ? <MapThumb id={m.id} /> : null}
+      </div>
+      <div className="min-w-0">
+        <div className="bp-sum-label opacity-60">{t.selectedMap}</div>
+        <div className="flex items-center gap-1 font-semibold bp-sum-name">
+          <MapTypeBadge type={(m?.type ?? "Control") as MapType} lang={lang} className="shrink-0" />
+          <span className="truncate">{m ? getMapDisplayName(m.name) : "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const banCell = (team: Team) => {
+    const hid = bans[team][0] ?? null; // 팀당 최대 1밴
+    return (
+      <div className="flex items-center gap-2 min-w-0 bp-sum-cell">
+        <div className="relative rounded-lg overflow-hidden shrink-0 bg-neutral-100 bp-sum-ban">
+          {hid ? (
+            <>
+              <HeroThumb id={hid} contain={false} />
+              <BanSlashOverlay />
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center opacity-30 text-xs">—</div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="bp-sum-label opacity-60 truncate">{(team === "A" ? teamName.A : teamName.B)} {t.banned}</div>
+          <div className="font-semibold bp-sum-name truncate" style={{ color: hid ? "var(--bp-danger)" : undefined }}>
+            {hid ? getDisplayName(heroById(hid)?.name ?? hid) : "—"}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // (가) 상단 가로 패널 — 전체 폭 카드 한 줄에 맵·A밴·B밴.
+  return (
+    <div className="bp-hdr-a rounded-xl border p-3 mb-3" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
+      <div className="flex items-center gap-4 flex-wrap">
+        {showMap && <div className="min-w-0">{mapCell}</div>}
+        <div className="flex items-center gap-5 flex-wrap ml-auto">
+          {banCell("A")}
+          {banCell("B")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ================= UI 작은 컴포넌트 ================= */
 function RoleIcon({ role, lang, className }: { role: Role; lang: Lang; className?: string }) {
   const [idx, setIdx] = React.useState(0);
@@ -1993,46 +2065,27 @@ export default function BanpickApp() {
                 )}
               </div>
             </div>
-            <h2 className="font-semibold mb-3">
-              {mode !== MODE.HERO_BAN_ONLY && phase === "MAP_PICK" && STR[lang].mapPick}
-              {phase === "BAN_ORDER" && STR[lang].banOrder}
-              {phase === "HERO_BAN" && STR[lang].heroBan}
-              {phase === "HERO_PICK" && STR[lang].heroPick}
-            </h2>
+            {/* [STEP2] "영웅 픽 (탱-딜-딜-힐-힐)" 문구 제거 — HERO_PICK은 h2 비표시(요약 패널이 대체). */}
+            {phase !== "HERO_PICK" && (
+              <h2 className="font-semibold mb-3">
+                {mode !== MODE.HERO_BAN_ONLY && phase === "MAP_PICK" && STR[lang].mapPick}
+                {phase === "BAN_ORDER" && STR[lang].banOrder}
+                {phase === "HERO_BAN" && STR[lang].heroBan}
+              </h2>
+            )}
 
-            {/* ① 현재 맵 상시 표시 + ② 양 팀 밴 목록 — 밴/픽 페이즈 상시(데스크톱+모바일 공용).
-                맵 선택 화면(MAP_PICK)엔 자체 UI가 있으므로 제외. HERO_BAN_ONLY 모드는 맵 숨김. */}
+            {/* [STEP2] 요약 패널(선택된 맵 + 양 팀 밴) — 밴/픽 페이즈 상시(상단 가로 패널).
+                MAP_PICK엔 자체 UI가 있으므로 제외. */}
             {phase !== "MAP_PICK" && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 text-xs">
-                {mode !== MODE.HERO_BAN_ONLY && selectedMap && (() => {
-                  const m = MAPS.find((x) => x.id === selectedMap);
-                  if (!m) return null;
-                  return (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
-                      <span className="opacity-70">{t.selectedMap}:</span>
-                      <b className="truncate max-w-[160px]">{getMapDisplayName(m.name)}</b>
-                      <MapTypeBadge type={m.type} lang={lang} />
-                    </span>
-                  );
-                })()}
-                {(["A", "B"] as Team[]).map((tm) => (
-                  <span key={tm} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border" style={{ borderColor: "var(--bp-border2)", background: "var(--bp-surface2)" }}>
-                    <span className="opacity-70">{(tm === "A" ? teamName.A : teamName.B)} {t.banned}:</span>
-                    {bans[tm].length === 0 ? (
-                      <span className="opacity-40">—</span>
-                    ) : (
-                      bans[tm].map((hid) => (
-                        <span key={hid} className="inline-flex items-center gap-1">
-                          <span className="relative inline-block w-5 h-5 rounded overflow-hidden align-middle bg-neutral-100">
-                            <HeroThumb id={hid} />
-                          </span>
-                          <span>{getDisplayName(heroById(hid)?.name ?? hid)}</span>
-                        </span>
-                      ))
-                    )}
-                  </span>
-                ))}
-              </div>
+              <HeaderSummary
+                selectedMap={selectedMap}
+                bans={bans}
+                mode={mode}
+                lang={lang}
+                teamName={teamName}
+                heroById={heroById}
+                t={t}
+              />
             )}
 
             {/* MAP PICK */}
