@@ -740,6 +740,7 @@ function ScrimSummaryModal({
   patch,
   onExitSeries,
   scrimTime,
+  onToast,
 }: {
   open: boolean;
   onClose: () => void;
@@ -752,6 +753,7 @@ function ScrimSummaryModal({
   patch: (data: any) => void;
   onExitSeries: () => void;
   scrimTime: string;
+  onToast: (m: string) => void;
 }) {
   if (!open) return null;
   const wins = sets.filter((s) => s.resultA === "W").length;
@@ -814,9 +816,7 @@ function ScrimSummaryModal({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`}
-            onClick={() => {
-              navigator.clipboard.writeText(lines);
-            }}
+            onClick={() => copyWithToast(lines, onToast, "요약 복사됨", "복사 실패")}
           >
             복사
           </button>
@@ -845,6 +845,40 @@ function yymmdd(d = new Date()) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}${m}${day}`;
+}
+
+/* [1-3] 클립보드 복사(공용). 보안 컨텍스트가 아니거나(HTTP) navigator.clipboard가 없으면
+   임시 textarea + execCommand('copy') 폴백. 성공 여부(boolean)를 반환한다. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* 폴백으로 진행 */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-9999px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+/* 복사 + 결과 토스트. 토스트 표시는 호출부가 주입(popToast). */
+function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사되었습니다", failMsg = "복사 실패") {
+  copyText(text).then((ok) => toast(ok ? okMsg : failMsg));
 }
 
 /* ================= UI 작은 컴포넌트 ================= */
@@ -1945,6 +1979,7 @@ export default function BanpickApp() {
             setScrimMode={setScrimModeSync}
             scrimTime={scrimTime}
             setScrimTime={setScrimTimeSync}
+            onToast={popToast}
           />
         ) : (
           <section className={`p-4 ${theme.panel}`}>
@@ -2504,6 +2539,7 @@ export default function BanpickApp() {
           patch={patch}
           onExitSeries={resetToHome}
           scrimTime={scrimTime}
+          onToast={popToast}
         />
       )}
     </div>
@@ -2539,6 +2575,7 @@ function Setup(props: {
   setScrimMode: (v: boolean) => void;
   scrimTime: string;
   setScrimTime: (v: string) => void;
+  onToast: (m: string) => void;
 }) {
   const canEditGlobal = props.partMode === "SOLO" || props.myRole === "HOST" || props.scrimMode;
   const canEditAName = props.partMode === "SOLO" || props.myRole === "HOST" || props.myRole === "A" || props.scrimMode;
@@ -2692,7 +2729,7 @@ function Setup(props: {
                 <button
                   type="button"
                   className={`px-2 py-1 rounded border ${dark ? "border-neutral-700" : "border-neutral-300"} text-xs`}
-                  onClick={() => navigator.clipboard.writeText(props.roomCode!)}
+                  onClick={() => copyWithToast(props.roomCode!.toUpperCase(), props.onToast, "방 코드 복사됨", "복사 실패 — 코드를 길게 눌러 복사하세요")}
                 >
                   복사
                 </button>
