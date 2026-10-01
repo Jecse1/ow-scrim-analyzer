@@ -1800,7 +1800,7 @@
       "banpick": {
         "id": "sierra",
         "name": "시에라",
-        "role": "Support",
+        "role": "Damage",
         "order": 52
       }
     },
