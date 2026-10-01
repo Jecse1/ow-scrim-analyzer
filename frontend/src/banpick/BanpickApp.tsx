@@ -4,6 +4,8 @@ import { useBanpickWS } from "./useBanpickWS";
 import { useLanguage } from "../LanguageContext";
 import { useTheme } from "../ThemeContext";
 import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName, getDisplayName, getMapDisplayName } from "../gameData";
+// [STEP1-플랜] 자산 컴포넌트·리졸버는 공유 모듈로 추출(값·렌더 동일). 플랜 캔버스와 공용.
+import { HeroThumb, MapThumb, BanSlashOverlay, MapTypeBadge, RoleIcon } from "../shared/heroMapAssets";
 
 // ── 멀티플레이어(1v1 실시간 대전) 스텁 — 이번 통합 단계는 SOLO 전용 ──
 // 원본은 Firebase(Firestore 실시간 룸 + 익명 auth)로 코치 대전을 구현하지만,
@@ -294,132 +296,9 @@ type I18n = (typeof STR)[keyof typeof STR];
 const HEROES: Hero[] = BANPICK_HEROES as Hero[];
 const MAPS: MapInfo[] = BANPICK_MAPS as MapInfo[];
 
-/* === image helpers === */
-const IMG_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
-// [STEP3] 영웅 썸네일 후보: 정본 image 필드(getHeroByName) 1순위 → 확장자/표시명/id 순 폴백.
-//   후보 순서: /heroes/{image}.png → {image}.webp/.jpg/.jpeg → {name}.* → {id}.*
-//   1순위(image.png)가 아닌 후보로 표시되면(=image 필드 오류 신호) 개발 모드에서 경고(HeroThumb).
-function heroSrcCandidates(id: string): string[] {
-  const h = HEROES.find((x) => x.id === id);
-  const entry = h?.name ? getHeroByName(h.name) : null;
-  const bases: string[] = [];
-  if (entry?.image) bases.push(entry.image); // 1순위: 정본 image
-  if (h?.name) bases.push(h.name);           // 폴백: 표시명
-  bases.push(id);                            // 폴백: id
-  const list: string[] = [];
-  for (const b of bases) for (const ext of IMG_EXTS) list.push(`/heroes/${encodeURIComponent(b)}${ext}`);
-  return [...new Set(list)];
-}
-function mapSrcCandidates(id: string): string[] {
-  const m = MAPS.find((x) => x.id === id);
-  const bases: string[] = [];
-  if (m?.name) bases.push(m.name);
-  bases.push(id);
-  const list: string[] = [];
-  for (const b of bases) for (const ext of IMG_EXTS) list.push(`/maps/${encodeURIComponent(b)}${ext}`);
-  return list;
-}
-
-/** 맵 썸네일 */
-function MapThumb({ id, className, contain = false }: { id: string | null; className?: string; contain?: boolean }) {
-  const [idx, setIdx] = React.useState(0);
-  const candidates = React.useMemo(() => (id ? mapSrcCandidates(id) : []), [id]);
-  if (!id || idx >= candidates.length) {
-    return <div className={`absolute inset-0 bg-gradient-to-br from-neutral-100 to-neutral-200 ${className ?? ""}`} />;
-  }
-  return (
-    <img
-      src={candidates[idx]}
-      alt={id ?? ""}
-      onError={() => setIdx((i) => i + 1)}
-      draggable={false}
-      className={`absolute inset-0 w-full h-full ${contain ? "object-contain" : "object-cover"} ${className ?? ""}`}
-    />
-  );
-}
-
-/** 영웅 썸네일 */
-function HeroThumb({ id, className, contain = true }: { id: string | null; className?: string; contain?: boolean }) {
-  const [idx, setIdx] = React.useState(0);
-  const candidates = React.useMemo(() => (id ? heroSrcCandidates(id) : []), [id]);
-  if (!id || idx >= candidates.length) {
-    return <div className={`absolute inset-0 bg-gradient-to-br from-neutral-100 to-neutral-200 ${className ?? ""}`} />;
-  }
-  return (
-    <img
-      src={candidates[idx]}
-      alt={id ?? ""}
-      onError={() => setIdx((i) => i + 1)}
-      onLoad={() => { if (idx > 0 && import.meta.env.DEV) console.warn("[banpick] image fallback", id, candidates[idx]); }}
-      draggable={false}
-      className={["absolute inset-0 w-full h-full", contain ? "object-contain" : "object-cover", "object-center", className ?? ""].join(" ")}
-    />
-  );
-}
-
-
-/** 밴 오버레이 */
-function BanSlashOverlay() {
-  return (
-    <div className="pointer-events-none absolute inset-0 z-30">
-      <div className="absolute left-[-30%] right-[-30%] top-1/2 h-[5px] bg-red-600/90 -rotate-45" />
-      <div className="absolute left-[-30%] right-[-30%] top-[calc(50%+11px)] h-[5px] bg-red-600/90 -rotate-45" />
-    </div>
-  );
-}
-
-/** 맵 타입 아이콘/텍스트 */
-const MAPICON_EXTS = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
-function mapTypeIconCandidates(mt: MapType): string[] {
-  const bases = [mt.toLowerCase(), MAP_LABELS.ko[mt], MAP_LABELS.en[mt]];
-  const list: string[] = [];
-  for (const b of bases) for (const ext of MAPICON_EXTS) list.push(`/mapicons/${encodeURIComponent(b)}${ext}`);
-  return list;
-}
-function MapTypeBadge({ type, lang, className }: { type: MapType; lang: Lang; className?: string }) {
-  const [idx, setIdx] = React.useState(0);
-  const cands = React.useMemo(() => mapTypeIconCandidates(type), [type]);
-  if (idx >= cands.length) {
-    return <span className={`text-[10px] opacity-80 ${className ?? ""}`}>{MAP_LABELS[lang][type]}</span>;
-  }
-  return (
-    <img
-      src={cands[idx]}
-      alt={MAP_LABELS[lang][type]}
-      title={MAP_LABELS[lang][type]}
-      onError={() => setIdx((i) => i + 1)}
-      // bp-mapicon: 어두운 아이콘을 테마 텍스트 색 실루엣으로(다크=흰/라이트=검) 렌더해 식별 복구
-      className={`bp-mapicon object-contain ${className ?? ""}`}
-      draggable={false}
-    />
-  );
-}
-
-/** 역할 아이콘/텍스트 */
-const ROLE_ICON_EXTS = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
-function roleIconCandidates(role: Role, lang: Lang): string[] {
-  const bases = [role.toLowerCase(), ROLE_LABELS.ko[role], ROLE_LABELS.en[role]];
-  const list: string[] = [];
-  for (const b of bases) for (const ext of ROLE_ICON_EXTS) list.push(`/roles/${encodeURIComponent(b)}${ext}`);
-  return list;
-}
-function RoleBadge({ role, lang, className }: { role: Role; lang: Lang; className?: string }) {
-  const [idx, setIdx] = React.useState(0);
-  const cands = React.useMemo(() => roleIconCandidates(role, lang), [role, lang]);
-  if (idx >= cands.length) {
-    return <span className={`text-[10px] opacity-80 ${className ?? ""}`}>{ROLE_LABELS[lang][role]}</span>;
-  }
-  return (
-    <img
-      src={cands[idx]}
-      alt={ROLE_LABELS[lang][role]}
-      title={ROLE_LABELS[lang][role]}
-      onError={() => setIdx((i) => i + 1)}
-      className={`bp-roleicon object-contain ${className ?? ""}`}
-      draggable={false}
-    />
-  );
-}
+/* === 자산 컴포넌트·리졸버는 ../shared/heroMapAssets 로 추출(STEP1).
+   HeroThumb·MapThumb·BanSlashOverlay·MapTypeBadge·RoleIcon + *Candidates·IMG_EXTS·
+   MAPICON_EXTS·ROLE_ICON_EXTS 는 그곳에서 import. 렌더·경로 로직 동일. === */
 
 /* ================= Summary / Log Modal ================= */
 function SummaryLogModal(props: {
@@ -977,23 +856,7 @@ function BanReveal({ team, heroId, teamName, heroById, t }: {
 }
 
 /* ================= UI 작은 컴포넌트 ================= */
-function RoleIcon({ role, lang, className }: { role: Role; lang: Lang; className?: string }) {
-  const [idx, setIdx] = React.useState(0);
-  const cands = React.useMemo(() => roleIconCandidates(role, lang), [role, lang]);
-  if (idx >= cands.length) {
-    return <span className={`text-[10px] opacity-80 ${className ?? ""}`}>{ROLE_LABELS[lang][role]}</span>;
-  }
-  return (
-    <img
-      src={cands[idx]}
-      alt={ROLE_LABELS[lang][role]}
-      title={ROLE_LABELS[lang][role]}
-      onError={() => setIdx((i) => i + 1)}
-      className={`bp-roleicon object-contain ${className ?? ""}`}
-      draggable={false}
-    />
-  );
-}
+/* RoleIcon 은 ../shared/heroMapAssets 에서 import(추출). RoleBadge(동일 구현)는 RoleIcon 으로 통합. */
 const cn = (...a: (string | undefined | false)[]) => a.filter(Boolean).join(" ");
 
 /** 픽 컬럼(좌/우) */
@@ -2808,7 +2671,7 @@ const PickCenter = React.memo(function PickCenter({ lang, t, filterRole, teamNam
               </div>
             </div>
             <div className={["px-3 py-1 font-medium flex items-center gap-2 overflow-hidden", nameClass].join(" ")}>
-              <RoleBadge role={h.role} lang={lang} className="shrink-0" />
+              <RoleIcon role={h.role} lang={lang} className="shrink-0" />
               <span className="truncate leading-tight">{getDisplayName(h.name)}</span>
             </div>
           </div>
