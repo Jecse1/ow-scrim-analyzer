@@ -12,6 +12,21 @@ const SIDES = [
   { pos: Position.Left, key: "l" },
 ];
 
+// 밴 선후 순서(byNode[id]) → 배지 글자·라벨키. 체인에 안 걸린 밴은 null.
+const ORD_GLYPH = { 1: "①", 2: "②", 3: "③" };
+export function banInfo(orders) {
+  if (!orders || !orders.length) return null;
+  const nums = [...new Set(orders.map((o) => o.order))].sort((a, b) => a - b);
+  const first = nums.includes(1), second = nums.includes(2);
+  return { badge: nums.map((n) => ORD_GLYPH[n] || n).join(""), labelKey: first && second ? "banBoth" : first ? "banFirst" : "banSecond" };
+}
+// 좌상단 원형 ①/② 배지
+export function BanBadge({ orders }) {
+  const info = banInfo(orders);
+  if (!info) return null;
+  return <span className="pl-ban-badge" title={info.badge}>{info.badge}</span>;
+}
+
 // 각 변에 source+target 핸들을 겹쳐 둬서 어느 변에서든 연결 시작/도착 가능. 평소 숨김, hover/선택 시 "+".
 export function NodeHandles() {
   return (

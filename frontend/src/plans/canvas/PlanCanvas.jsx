@@ -21,6 +21,7 @@ import TextNode from "./nodes/TextNode";
 import GroupNode from "./nodes/GroupNode";
 import LabeledEdge from "./edges/LabeledEdge";
 import { COND_ORDER, COND_TYPES, NODE_KINDS, SLOT_ROLES, COLOR_TAGS, COLOR_TAG_ORDER } from "./constants";
+import { computeBanOrder } from "../banOrder";
 import { Copy, Unlink, Trash2 } from "lucide-react";
 import { applyTemplate, TEMPLATE_KINDS } from "./templates";
 import { exportCanvasPng, pngFilename } from "./pngExport";
@@ -230,11 +231,14 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [nodes, edges, undo, redo, pushHistory, setNodes, setEdges, rf]);
 
+  // 밴 선후 순서(연결 순서 기반) — 노드·엣지 변경 시 즉시 재계산. 캔버스 배지·인쇄가 같은 함수 사용.
+  const banByNode = useMemo(() => computeBanOrder(nodes, edges).byNode, [nodes, edges]);
+
   const ctxVal = useMemo(() => ({
-    lang: language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId,
+    lang: language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId, banByNode,
     openHeroPicker: (nodeId, opt) => setPicker({ nodeId, ...(opt || {}) }),
     openCondEdit: (nodeId) => setCondEdit({ nodeId }),
-  }), [language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId]);
+  }), [language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId, banByNode]);
 
   const onPickHero = (heroId) => {
     if (!picker) return;
@@ -296,7 +300,7 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
         </ReactFlow>
 
         {empty && !tplOpen && (
-          <div className="pl-empty-overlay"><div className="pl-empty-card"><b>{t.emptyTitle}</b><div>{t.emptyHint}</div></div></div>
+          <div className="pl-empty-overlay"><div className="pl-empty-card"><b>{t.emptyTitle}</b><div>{t.emptyHint}</div><div>{t.emptyHintBan}</div></div></div>
         )}
 
         {kindPopup && !mobile && (
@@ -412,6 +416,7 @@ function CondEditor({ node, lang, onType, onText, onHero, onClose }) {
               <button key={ct} className={"plan-modetab" + (node.data.condType === ct ? " active" : "")} style={node.data.condType === ct ? { background: COND_TYPES[ct].color, borderColor: COND_TYPES[ct].color, color: "#fff" } : {}} onClick={() => onType(ct)}>{COND_TYPES[ct].label[lang]}</button>
             ))}
           </div>
+          <div className="pl-cond-hint">{t.banOrderHint}</div>
           <button className="plan-btn" style={{ width: "100%", marginBottom: 8 }} onClick={onHero}>{t.pickHero}</button>
           <textarea className="plan-search" style={{ minHeight: 60 }} placeholder={lang === "ko" ? "텍스트(선택)" : "text"} value={node.data.text || ""} onChange={(e) => onText(e.target.value)} />
         </div>

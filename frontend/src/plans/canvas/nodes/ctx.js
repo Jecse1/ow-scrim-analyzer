@@ -8,6 +8,7 @@ export const CanvasCtx = createContext({
   deleteNode: () => {},
   deleteEdge: () => {},       // (edgeId)
   hoveredEdgeId: null,        // 호버 중인 엣지 id(중앙 × 표시)
+  banByNode: {},              // nodeId -> [{order, side}] (밴 선후 순서, computeBanOrder)
   openHeroPicker: () => {},   // (nodeId, { slotIndex, role })
   openCondEdit: () => {},     // (nodeId)
 });
