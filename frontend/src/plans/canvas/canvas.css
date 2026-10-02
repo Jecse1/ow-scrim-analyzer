@@ -70,7 +70,7 @@
 
 /* 조합 노드 */
 .pl-comp { display: flex; gap: 6px; padding: 9px; }
-.pl-comp-slot { width: 50px; border-radius: 8px; border: 1px solid var(--pl-border); background: var(--pl-surface2); padding: 3px; }
+.pl-comp-slot { width: 54px; border-radius: 8px; border: 1px solid var(--pl-border); background: var(--pl-surface2); padding: 3px; }
 .pl-comp-slot.empty { opacity: .55; }
 .pl-comp-slot:hover { border-color: var(--pl-primary); opacity: 1; }
 .pl-comp-thumb { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--pl-surface3); }
@@ -120,4 +120,4 @@
 
 /* 모바일 보기 전용 */
 .pl-mobile-note { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 15; background: var(--pl-surface); border: 1px solid var(--pl-border2); border-radius: 999px; padding: 6px 14px; font-size: 12px; color: var(--pl-textsub); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
-@media (max-width: 767px) { .pl-toolbar { display: none; } }
+@media (max-width: 767px) { .pl-toolbar { display: none; } .pl-topbar-right { display: none; } }

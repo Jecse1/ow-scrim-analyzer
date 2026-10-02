@@ -8,7 +8,7 @@ import { NodeShell } from "./NodeParts";
 export default function HeroNode({ id, data, selected }) {
   const { lang, openHeroPicker } = useCanvasCtx();
   return (
-    <NodeShell id={id} selected={selected} data={data} minWidth={92}>
+    <NodeShell id={id} selected={selected} data={data} minWidth={120}>
       <div className="pl-hero" onClick={() => openHeroPicker(id, {})}>
         <div className="pl-hero-thumb">
           {data?.heroId ? <HeroThumb id={data.heroId} /> : <span className="pl-hero-empty">+</span>}

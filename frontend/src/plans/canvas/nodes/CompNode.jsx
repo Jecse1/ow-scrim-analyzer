@@ -10,7 +10,7 @@ export default function CompNode({ id, data, selected }) {
   const { lang, openHeroPicker } = useCanvasCtx();
   const slots = data?.slots || [null, null, null, null, null];
   return (
-    <NodeShell id={id} selected={selected} data={data} minWidth={300}>
+    <NodeShell id={id} selected={selected} data={data} minWidth={320}>
       <div className="pl-comp">
         {SLOT_ROLES.map((role, i) => {
           const hid = slots[i];

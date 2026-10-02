@@ -26,7 +26,33 @@
   --pl-textsub: #52525b;
 }
 .plan-root * { box-sizing: border-box; }
-.plan-root button { font: inherit; color: inherit; cursor: pointer; }
+/* 전역 button { padding:0.6em 1.2em; border:1px } 리셋 — 고정 크기 아이콘 버튼이 꽉 채워져
+   콘텐츠(svg) 폭이 0으로 붕괴(빈 사각형)되는 문제 방지. 패딩/테두리 필요한 버튼은 각자 재지정. */
+.plan-root button { font: inherit; color: inherit; cursor: pointer; padding: 0; border: none; background: none; border-radius: 0; }
+
+/* [STEP3-fix] shared/heroMapAssets(HeroThumb·MapThumb·BanSlashOverlay·배지)가 쓰는 Tailwind 동등
+   유틸리티 — 밴픽(.bp-root)에만 있던 규칙을 .plan-root 로 복제. 없으면 img 가 미배치·원본비율로
+   과확대/세로 늘어남. 값은 밴픽과 동일. */
+.plan-root .relative { position: relative; }
+.plan-root .absolute { position: absolute; }
+.plan-root .inset-0 { inset: 0; }
+.plan-root .w-full { width: 100%; }
+.plan-root .h-full { height: 100%; }
+.plan-root .object-contain { object-fit: contain; }
+.plan-root .object-cover { object-fit: cover; }
+.plan-root .object-center { object-position: center; }
+.plan-root .pointer-events-none { pointer-events: none; }
+.plan-root .z-30 { z-index: 30; }
+.plan-root .top-1\/2 { top: 50%; }
+.plan-root .h-\[5px\] { height: 5px; }
+.plan-root .left-\[-30\%\] { left: -30%; }
+.plan-root .right-\[-30\%\] { right: -30%; }
+.plan-root .top-\[calc\(50\%\+11px\)\] { top: calc(50% + 11px); }
+.plan-root .-rotate-45 { transform: rotate(-45deg); }
+.plan-root .bg-red-600\/80, .plan-root .bg-red-600\/90 { background: #ef4444; }
+.plan-root .bg-gradient-to-br, .plan-root .from-neutral-100, .plan-root .to-neutral-200 { background-image: none; background-color: var(--pl-surface3); }
+.plan-root .opacity-80 { opacity: .8; }
+.plan-root .text-\[10px\] { font-size: 10px; line-height: 1rem; }
 
 /* ── 홈 레이아웃 ── */
 .plan-home { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 20px; max-width: 1720px; margin: 0 auto; }

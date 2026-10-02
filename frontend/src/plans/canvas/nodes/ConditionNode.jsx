@@ -10,7 +10,7 @@ export default function ConditionNode({ id, data, selected }) {
   const { lang, openCondEdit } = useCanvasCtx();
   const ct = COND_TYPES[data?.condType] || COND_TYPES.etc;
   return (
-    <NodeShell id={id} selected={selected} data={data} minWidth={150}>
+    <NodeShell id={id} selected={selected} data={data} minWidth={220}>
       <div className="pl-cond" onDoubleClick={() => openCondEdit(id)}>
         <span className="pl-cond-strip" style={{ background: ct.color }} />
         <div className="pl-cond-body">

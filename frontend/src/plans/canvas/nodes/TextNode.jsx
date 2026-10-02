@@ -9,7 +9,7 @@ export default function TextNode({ id, data, selected }) {
   const autosize = (el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } };
   useEffect(() => { autosize(taRef.current); }, [data?.body]);
   return (
-    <NodeShell id={id} selected={selected} data={data} minWidth={200}>
+    <NodeShell id={id} selected={selected} data={data} minWidth={260}>
       <div className="pl-text nodrag">
         <input
           className="pl-text-title"

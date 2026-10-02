@@ -18,6 +18,9 @@ export const COLOR_TAG_ORDER = ["priority", "alt", "ban", "memo"];
 
 export const SLOT_ROLES = ["Tank", "Damage", "Damage", "Support", "Support"];
 
+// 노드 기본 폭(템플릿 좌표 계산·겹침 방지용). NodeShell minWidth 로도 사용.
+export const NODE_W = { condition: 220, hero: 120, comp: 320, text: 260, group: 300 };
+
 export const NODE_KINDS = [
   { type: "condition", key: "1", label: { ko: "조건", en: "Condition", zh: "条件" } },
   { type: "hero",      key: "2", label: { ko: "영웅", en: "Hero",      zh: "英雄" } },
