@@ -6,6 +6,8 @@ export const CanvasCtx = createContext({
   updateEdgeData: () => {},
   duplicateNode: () => {},
   deleteNode: () => {},
+  deleteEdge: () => {},       // (edgeId)
+  hoveredEdgeId: null,        // 호버 중인 엣지 id(중앙 × 표시)
   openHeroPicker: () => {},   // (nodeId, { slotIndex, role })
   openCondEdit: () => {},     // (nodeId)
 });

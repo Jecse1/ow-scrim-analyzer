@@ -89,9 +89,20 @@
 .plan-root .pl-grp-handle { background: var(--pl-primary); border: 2px solid var(--pl-surface); width: 9px; height: 9px; border-radius: 2px; }
 
 /* 엣지 라벨 */
-.pl-edge-label { font-size: 11px; }
+.pl-edge-label { font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
 .pl-edge-text { background: var(--pl-surface); color: var(--pl-text); border: 1px solid var(--pl-border); border-radius: 6px; padding: 1px 6px; }
 .pl-edge-input { width: 92px; background: var(--pl-surface); color: var(--pl-text); border: 1px solid var(--pl-primary); border-radius: 6px; padding: 1px 6px; font-size: 11px; outline: none; }
+.pl-edge-del { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--pl-surface); border: 1px solid var(--pl-border2); color: var(--pl-textsub); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.pl-edge-del:hover { background: var(--pl-danger); border-color: var(--pl-danger); color: #fff; }
+
+/* 노드 우클릭 컨텍스트 메뉴 */
+.pl-ctx-backdrop { position: fixed; inset: 0; z-index: 69; }
+.pl-ctx-menu { position: fixed; z-index: 70; min-width: 148px; background: var(--pl-surface); border: 1px solid var(--pl-border2); border-radius: 10px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.pl-ctx-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 7px 9px; border-radius: 7px; background: transparent; border: none; color: var(--pl-text); font-size: 13px; }
+.pl-ctx-item:hover { background: var(--pl-surface3); }
+.pl-ctx-item.danger:hover { background: var(--pl-danger); color: #fff; }
+.pl-ctx-tags { display: flex; align-items: center; gap: 6px; padding: 6px 9px; }
+.pl-ctx-tags-label { font-size: 11px; color: var(--pl-textsub); margin-right: 2px; }
 
 /* 빈 캔버스 안내 */
 .pl-empty-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }

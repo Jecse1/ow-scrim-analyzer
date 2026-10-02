@@ -20,7 +20,8 @@ import CompNode from "./nodes/CompNode";
 import TextNode from "./nodes/TextNode";
 import GroupNode from "./nodes/GroupNode";
 import LabeledEdge from "./edges/LabeledEdge";
-import { COND_ORDER, COND_TYPES, NODE_KINDS, SLOT_ROLES } from "./constants";
+import { COND_ORDER, COND_TYPES, NODE_KINDS, SLOT_ROLES, COLOR_TAGS, COLOR_TAG_ORDER } from "./constants";
+import { Copy, Unlink, Trash2 } from "lucide-react";
 import { applyTemplate, TEMPLATE_KINDS } from "./templates";
 import { exportCanvasPng, pngFilename } from "./pngExport";
 import { formatRelative } from "../api";
@@ -47,6 +48,8 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
   const [tool, setTool] = useState("select");
   const [snap, setSnap] = useState(false);
   const [kindPopup, setKindPopup] = useState(null); // {x,y,flow,connect?}
+  const [nodeMenu, setNodeMenu] = useState(null);    // {x,y,nodeId} 노드 우클릭 컨텍스트 메뉴
+  const [hoveredEdgeId, setHoveredEdgeId] = useState(null); // 엣지 호버(중앙 × 표시)
   const [picker, setPicker] = useState(null);        // {nodeId, slotIndex?, role?}
   const [condEdit, setCondEdit] = useState(null);    // {nodeId}
   const [tplOpen, setTplOpen] = useState(false);     // 템플릿 선택(S4)
@@ -104,6 +107,16 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
     setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
   }, [pushHistory, setNodes, setEdges]);
 
+  const deleteEdge = useCallback((id) => {
+    pushHistory();
+    setEdges((es) => es.filter((e) => e.id !== id));
+  }, [pushHistory, setEdges]);
+
+  const disconnectNode = useCallback((id) => {
+    pushHistory();
+    setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
+  }, [pushHistory, setEdges]);
+
   const addNodeAt = useCallback((type, flow, connectFrom) => {
     pushHistory();
     const node = { id: newId(), type, position: flow, data: defaultData(type) };
@@ -123,6 +136,19 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
     setKindPopup({ x: pt.clientX, y: pt.clientY, flow, connect: { nodeId: from.id, handleId: state.fromHandle?.id } });
   }, [rf]);
 
+  // ── 엣지 우클릭 → 즉시 연결 해제(언두 가능), 브라우저 메뉴 차단 ──
+  const onEdgeContextMenu = useCallback((e, edge) => { e.preventDefault(); deleteEdge(edge.id); setHoveredEdgeId(null); }, [deleteEdge]);
+  const onEdgeMouseEnter = useCallback((_e, edge) => setHoveredEdgeId(edge.id), []);
+  const onEdgeMouseLeave = useCallback(() => setHoveredEdgeId(null), []);
+
+  // ── 노드 우클릭 → 소형 컨텍스트 메뉴(빈 곳 우클릭은 기본 동작 유지) ──
+  const onNodeContextMenu = useCallback((e, node) => {
+    if (mobile) return;
+    e.preventDefault(); e.stopPropagation();
+    setNodeMenu({ x: e.clientX, y: e.clientY, nodeId: node.id });
+    setKindPopup(null);
+  }, [mobile]);
+
   // ── 더블클릭 빈 곳 → 노드 종류 팝업 ──
   const onPaneDblClick = useCallback((e) => {
     if (mobile) return;
@@ -133,7 +159,7 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
 
   // ── 도구로 클릭 배치 ──
   const onPaneClick = useCallback((e) => {
-    setKindPopup(null); setCondEdit(null);
+    setKindPopup(null); setCondEdit(null); setNodeMenu(null);
     if (mobile) return;
     if (["condition", "hero", "comp", "text", "group"].includes(tool)) {
       const flow = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -205,10 +231,10 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
   }, [nodes, edges, undo, redo, pushHistory, setNodes, setEdges, rf]);
 
   const ctxVal = useMemo(() => ({
-    lang: language, updateNodeData, updateEdgeData, duplicateNode, deleteNode,
+    lang: language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId,
     openHeroPicker: (nodeId, opt) => setPicker({ nodeId, ...(opt || {}) }),
     openCondEdit: (nodeId) => setCondEdit({ nodeId }),
-  }), [language, updateNodeData, updateEdgeData, duplicateNode, deleteNode]);
+  }), [language, updateNodeData, updateEdgeData, duplicateNode, deleteNode, deleteEdge, hoveredEdgeId]);
 
   const onPickHero = (heroId) => {
     if (!picker) return;
@@ -252,6 +278,8 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes} edgeTypes={edgeTypes} defaultEdgeOptions={EDGE_OPTS}
           onConnect={onConnect} onConnectEnd={onConnectEnd}
+          onEdgeContextMenu={onEdgeContextMenu} onEdgeMouseEnter={onEdgeMouseEnter} onEdgeMouseLeave={onEdgeMouseLeave}
+          onNodeContextMenu={onNodeContextMenu}
           onPaneClick={onPaneClick} onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
           onNodeClick={mobile ? ((_e, n) => setMobileDetail(n)) : undefined}
           nodesDraggable={!mobile} nodesConnectable={!mobile} elementsSelectable={!mobile}
@@ -278,6 +306,29 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
             ))}
           </div>
         )}
+        {nodeMenu && !mobile && (() => {
+          const node = nodes.find((n) => n.id === nodeMenu.nodeId); if (!node) return null;
+          const close = () => setNodeMenu(null);
+          const run = (fn) => { fn(); close(); };
+          return (
+            <>
+              <div className="pl-ctx-backdrop" onMouseDown={close} onContextMenu={(e) => { e.preventDefault(); close(); }} />
+              <div className="pl-ctx-menu" style={{ left: nodeMenu.x, top: nodeMenu.y }}>
+                <button className="pl-ctx-item" onClick={() => run(() => duplicateNode(node.id))}><Copy size={13} /> {t.duplicate}</button>
+                <div className="pl-ctx-tags">
+                  <span className="pl-ctx-tags-label">{t.colorTag}</span>
+                  {COLOR_TAG_ORDER.map((tg) => (
+                    <button key={tg} className={"pl-tag-dot" + (node.data?.tag === tg ? " on" : "")} style={{ background: COLOR_TAGS[tg].color }}
+                      title={COLOR_TAGS[tg].label[language]}
+                      onClick={() => run(() => updateNodeData(node.id, { tag: node.data?.tag === tg ? null : tg }, true))} />
+                  ))}
+                </div>
+                <button className="pl-ctx-item" onClick={() => run(() => disconnectNode(node.id))}><Unlink size={13} /> {t.disconnectAll}</button>
+                <button className="pl-ctx-item danger" onClick={() => run(() => deleteNode(node.id))}><Trash2 size={13} /> {t.del}</button>
+              </div>
+            </>
+          );
+        })()}
         {mobile && <div className="pl-mobile-note">{t.mobileView}</div>}
       </div>
 
