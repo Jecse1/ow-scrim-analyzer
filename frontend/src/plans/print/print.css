@@ -14,30 +14,31 @@
 .pp-warn { background: rgba(245,158,11,.15); color: #f59e0b; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
 .pp-pageinfo { font-size: 12px; color: var(--pl-textsub); margin-bottom: 10px; }
 
-/* 종이(WYSIWYG): 흰 배경, A4 폭. 타일 크기는 CSS 변수로 보통/조밀 전환 */
-.pp-sheet { --tile: 14mm; --arrow: 6mm; --gap: 1.5mm; --mapw: 36mm;
+/* 종이(WYSIWYG): 흰 배경, A4 폭. 2열 그리드 — 타일은 한 열 폭(92mm)에 조건행(7타일)이 들어가도록 상한 적용 */
+.pp-sheet { --colw: 92mm; --tile: min(14mm, calc((var(--colw) - 14mm) / 7)); --arrow: 4mm; --gap: 1.2mm; --mapw: 30mm;
   background: #fff; color: #111; width: 210mm; max-width: 100%; margin: 0 auto; padding: 10mm;
   box-shadow: 0 2px 16px rgba(0,0,0,.4); box-sizing: border-box;
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.pp-sheet.dense { --tile: 10mm; }
+.pp-sheet.dense { --tile: min(10mm, calc((var(--colw) - 14mm) / 7)); }
+
+/* 2열 배치: 좌→우→다음 행. 블록은 열 안에서 끊지 않음 */
+.pp-blocks { display: grid; grid-template-columns: 1fr 1fr; column-gap: 6mm; row-gap: 2mm; align-items: start; }
 
 /* 상단: 보드명(10pt 굵게) + 날짜(8pt, 우측) */
 .pp-top { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid #111; padding-bottom: 3px; margin-bottom: 6px; }
 .pp-top-name { font-weight: 800; font-size: 10pt; color: #111; }
 .pp-top-date { font-size: 8pt; color: #333; }
 
-/* 맵 블록(가로 띠): 왼쪽 맵 이미지 + 오른쪽 행들 */
-.pp-block { display: flex; align-items: center; gap: 5mm; break-inside: avoid; page-break-inside: avoid;
-  margin-bottom: 4mm; padding-bottom: 3mm; border-bottom: 0.3pt solid #ccc; }
-.pp-block:last-child { border-bottom: none; }
-/* 조밀: 6맵×4행을 A4 1장에 — 간격 최소화 */
+/* 맵 블록: 맵 이미지(위)+맵명 → 행들(아래). 열 안에서 끊지 않음 */
+.pp-block { display: flex; flex-direction: column; align-items: flex-start; break-inside: avoid; page-break-inside: avoid;
+  min-width: 0; margin-bottom: 2mm; padding-bottom: 2mm; border-bottom: 0.3pt solid #ccc; }
 .pp-sheet.dense .pp-top { margin-bottom: 2.5mm; }
 .pp-sheet.dense .pp-block { margin-bottom: 1mm; padding-bottom: 1mm; }
 .pp-sheet.dense .pp-rows { gap: 0.8mm; }
-.pp-mapcol { flex: 0 0 var(--mapw); width: var(--mapw); display: flex; flex-direction: column; align-items: center; }
+.pp-mapcol { width: var(--mapw); display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5mm; }
 .pp-maptile { position: relative; width: var(--mapw); height: calc(var(--mapw) * 9 / 16); border-radius: 2mm; overflow: hidden; background: #eee; }
 .pp-mapname { font-size: 7pt; color: #111; margin-top: 1mm; text-align: center; max-width: var(--mapw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pp-rows { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2mm; }
+.pp-rows { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 2mm; }
 
 /* 행: [조건] → [우리 밴] → [픽 5] */
 .pp-row { display: flex; align-items: center; }

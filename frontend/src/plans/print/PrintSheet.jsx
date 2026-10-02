@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, Printer } from "lucide-react";
 import { useLanguage } from "../../LanguageContext";
 import { useTheme } from "../../ThemeContext";
-import { getMapDisplayName } from "../../gameData";
+import { getMapDisplayName, BANPICK_MAPS } from "../../gameData";
 import { HeroThumb, MapThumb, RoleIcon } from "../../shared/heroMapAssets";
 import { plansApi } from "../api";
 import { planT } from "../i18n";
@@ -18,18 +18,28 @@ const COND_KIND = { enemy_ban: "pp-c-eban", our_ban: "pp-c-oban", enemy_pick: "p
 const COND_BAN = { enemy_ban: "red", our_ban: "orange" };
 const EMPTY5 = [null, null, null, null, null];
 
-// A4 가용 높이 ≈ 277mm. 블록 높이(맵 이미지 vs 행 묶음 중 큰 값) 합으로 페이지 수 근사(CSS 간격과 일치).
+// 맵 id(밴픽 id) → 정본 ko 맵명. resolveMapEntry 가 id 를 직접 인식하지 못하므로
+// BANPICK_MAPS 의 ko 표기(name)를 거쳐 getMapDisplayName(ko)로 통일.
+const mapKoName = (mapId) => {
+  const bp = BANPICK_MAPS.find((m) => m.id === mapId);
+  return getMapDisplayName(bp ? bp.name : mapId, "ko");
+};
+
+// A4 가용 높이 ≈ 277mm. 2열 그리드 — 블록을 2개씩 묶어 그리드 행 높이(둘 중 큰 값) 합으로 근사.
+// 한 열 폭 92mm 에 조건행(타일 7개=조건+밴+픽5)이 들어가도록 타일 상한 min(14/10mm, (92-14)/7).
 function estimatePages(blocks, dense) {
-  const tile = dense ? 10 : 14;
+  const colw = 92;
+  const tile = Math.min(dense ? 10 : 14, (colw - 14) / 7);
   const rowGap = dense ? 0.8 : 2;
-  const blockOver = dense ? 2 : 7; // 블록 margin+padding
-  const top = dense ? 5 : 8;       // 상단 영역
-  const mapH = (36 * 9) / 16 + 5;  // 16:9 이미지 + 맵명 ≈ 25.25mm
+  const blockOver = dense ? 4 : 5;        // margin+padding
+  const mapTop = (30 * 9) / 16 + 4;       // 이미지(30mm 폭)+맵명 ≈ 20.9mm
+  const top = 7, gridGap = 2;
+  const H = blocks.map((b) => {
+    const vr = b.rows.reduce((s, r) => s + 1 + (r.comps && r.comps[1] ? 1 : 0), 0);
+    return mapTop + vr * (tile + rowGap) + blockOver;
+  });
   let h = top;
-  for (const b of blocks) {
-    const visualRows = b.rows.reduce((s, r) => s + 1 + (r.comps && r.comps[1] ? 1 : 0), 0);
-    h += Math.max(mapH, visualRows * (tile + rowGap)) + blockOver;
-  }
+  for (let i = 0; i < H.length; i += 2) h += Math.max(H[i], H[i + 1] || 0) + gridGap;
   return Math.max(1, Math.ceil(h / 277));
 }
 
@@ -146,7 +156,7 @@ export default function PrintSheet({ boardId, onBack }) {
         <div className="pp-opt-group">
           <span className="pp-opt-label">{t.maps}</span>
           {blocks.map((b) => (
-            <label key={b.mapRow.id} className="pp-check"><input type="checkbox" checked={!!(opts.maps && opts.maps[b.mapRow.id])} onChange={(e) => setOpts((o) => ({ ...o, maps: { ...o.maps, [b.mapRow.id]: e.target.checked } }))} /> {getMapDisplayName(b.mapRow.map_id, language)}</label>
+            <label key={b.mapRow.id} className="pp-check"><input type="checkbox" checked={!!(opts.maps && opts.maps[b.mapRow.id])} onChange={(e) => setOpts((o) => ({ ...o, maps: { ...o.maps, [b.mapRow.id]: e.target.checked } }))} /> {mapKoName(b.mapRow.map_id)}</label>
           ))}
         </div>
         <div className="pp-opt-group">
@@ -170,17 +180,19 @@ export default function PrintSheet({ boardId, onBack }) {
           <span className="pp-top-name">{board ? board.name : ""}</span>
           <span className="pp-top-date">{today}</span>
         </div>
-        {selected.map((b) => (
-          <div className="pp-block" key={b.mapRow.id}>
-            <div className="pp-mapcol">
-              <div className="pp-maptile"><MapThumb id={b.mapRow.map_id} /></div>
-              <div className="pp-mapname">{getMapDisplayName(b.mapRow.map_id, language)}</div>
+        <div className="pp-blocks">
+          {selected.map((b) => (
+            <div className="pp-block" key={b.mapRow.id}>
+              <div className="pp-mapcol">
+                <div className="pp-maptile"><MapThumb id={b.mapRow.map_id} /></div>
+                <div className="pp-mapname">{mapKoName(b.mapRow.map_id)}</div>
+              </div>
+              <div className="pp-rows">
+                {b.rows.map((row, i) => <Row key={i} row={row} />)}
+              </div>
             </div>
-            <div className="pp-rows">
-              {b.rows.map((row, i) => <Row key={i} row={row} />)}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
