@@ -5,6 +5,7 @@ import { BANPICK_MAPS, getMapDisplayName } from "../gameData";
 import * as GD from "../gameData"; // BANPICK_MAP_POOL 은 저장소에 따라 없을 수 있음(공개판 無, FLC 有)
 import { MapThumb, MapTypeBadge, MAP_LABELS } from "../shared/heroMapAssets";
 import { planT } from "./i18n";
+import { IMEInput } from "./IMEInput";
 
 const MODE_ORDER = ["Control", "Escort", "Hybrid", "Push", "Flashpoint"];
 
@@ -53,7 +54,7 @@ export default function AddMapModal({ lang, existingMapIds, onAdd, onClose }) {
           <button className="plan-modal-close" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </div>
         <div className="plan-modal-body">
-          <input className="plan-search" placeholder={t.search} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <IMEInput className="plan-search" placeholder={t.search} value={q} onChange={(v) => setQ(v)} autoFocus />
           <div className="plan-modetabs">
             <button className={"plan-modetab" + (mode === "All" ? " active" : "")} onClick={() => setMode("All")}>{t.allModes}</button>
             {MODE_ORDER.map((mt) => (

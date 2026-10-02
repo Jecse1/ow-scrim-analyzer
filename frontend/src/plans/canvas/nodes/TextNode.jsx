@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useCanvasCtx } from "./ctx";
 import { NodeShell } from "./NodeParts";
+import { IMEInput, IMETextarea } from "../../IMEInput";
 
 export default function TextNode({ id, data, selected }) {
   const { lang, updateNodeData } = useCanvasCtx();
@@ -34,21 +35,21 @@ export default function TextNode({ id, data, selected }) {
       <div className="pl-text" ref={wrapRef} onDoubleClick={() => setEditing(true)}>
         {editing ? (
           <>
-            <input
+            <IMEInput
               ref={titleRef}
               className="pl-text-title nodrag"
               value={title}
               placeholder={lang === "ko" ? "제목" : "Title"}
-              onChange={(e) => updateNodeData(id, { title: e.target.value })}
+              onChange={(v) => updateNodeData(id, { title: v })}
               onKeyDown={endKeys}
             />
-            <textarea
+            <IMETextarea
               ref={taRef}
               className="pl-text-body nodrag"
               value={body}
               placeholder={lang === "ko" ? "내용" : "Body"}
               rows={1}
-              onChange={(e) => { updateNodeData(id, { body: e.target.value }); autosize(e.target); }}
+              onChange={(v, e) => { updateNodeData(id, { body: v }); autosize(e.target); }}
               onKeyDown={endKeys}
             />
           </>

@@ -3,6 +3,7 @@ import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from "@xyflow/react";
 import { X } from "lucide-react";
 import { useCanvasCtx } from "../nodes/ctx";
+import { IMEInput } from "../../IMEInput";
 
 export default function LabeledEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, selected, data }) {
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
@@ -25,11 +26,11 @@ export default function LabeledEdge({ id, sourceX, sourceY, targetX, targetY, so
           >
             {selected ? (
               <>
-                <input
+                <IMEInput
                   className="pl-edge-input"
                   value={label}
                   placeholder={lang === "ko" ? "라벨" : "label"}
-                  onChange={(e) => updateEdgeData(id, { label: e.target.value })}
+                  onChange={(v) => updateEdgeData(id, { label: v })}
                   onMouseDown={(e) => e.stopPropagation()}
                 />
                 <button className="pl-edge-del" title={lang === "ko" ? "연결 삭제" : "Delete edge"} onMouseDown={(e) => e.stopPropagation()} onClick={del}><X size={12} /></button>

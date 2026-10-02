@@ -22,6 +22,7 @@ import GroupNode from "./nodes/GroupNode";
 import LabeledEdge from "./edges/LabeledEdge";
 import { COND_ORDER, COND_TYPES, NODE_KINDS, SLOT_ROLES, COLOR_TAGS, COLOR_TAG_ORDER } from "./constants";
 import { computeBanOrder } from "../banOrder";
+import { IMETextarea } from "../IMEInput";
 import { Copy, Unlink, Trash2 } from "lucide-react";
 import { applyTemplate, TEMPLATE_KINDS } from "./templates";
 import { exportCanvasPng, pngFilename } from "./pngExport";
@@ -418,7 +419,7 @@ function CondEditor({ node, lang, onType, onText, onHero, onClose }) {
           </div>
           <div className="pl-cond-hint">{t.banOrderHint}</div>
           <button className="plan-btn" style={{ width: "100%", marginBottom: 8 }} onClick={onHero}>{t.pickHero}</button>
-          <textarea className="plan-search" style={{ minHeight: 60 }} placeholder={lang === "ko" ? "텍스트(선택)" : "text"} value={node.data.text || ""} onChange={(e) => onText(e.target.value)} />
+          <IMETextarea className="plan-search" style={{ minHeight: 60 }} placeholder={lang === "ko" ? "텍스트(선택)" : "text"} value={node.data.text || ""} onChange={(v) => onText(v)} />
         </div>
         <div className="plan-modal-foot"><button className="plan-btn primary" onClick={onClose}>{t.done}</button></div>
       </div>

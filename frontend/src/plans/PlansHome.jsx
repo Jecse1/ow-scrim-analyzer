@@ -12,6 +12,7 @@ import { MapThumb, MapTypeBadge } from "../shared/heroMapAssets";
 import { plansApi, formatRelative } from "./api";
 import { planT } from "./i18n";
 import AddMapModal from "./AddMapModal";
+import { IMEInput } from "./IMEInput";
 import "./plans.css";
 
 const SS_BOARD = "plans.selectedBoard";
@@ -118,9 +119,10 @@ export default function PlansHome({ onOpenMap, onPrint }) {
   const maps = selectedBoard?.maps || [];
   const existingIds = useMemo(() => new Set(maps.map((m) => m.map_id)), [maps]);
 
-  // ── 렌더: 보드 한 행 ──
-  const BoardRow = ({ b, i }) => (
+  // 보드 한 행 렌더(인라인 — 별도 컴포넌트로 두면 부모 리렌더마다 재마운트되어 IME 조합이 깨짐)
+  const renderBoardRow = (b, i) => (
     <div
+      key={b.id}
       className={"plan-board-row" + (selectedBoard?.id === b.id ? " active" : "")}
       draggable={editingBoard !== b.id}
       onDragStart={() => { dragBoard.current = i; }}
@@ -130,9 +132,9 @@ export default function PlansHome({ onOpenMap, onPrint }) {
     >
       <span className="plan-board-handle"><GripVertical size={14} /></span>
       {editingBoard === b.id ? (
-        <input
+        <IMEInput
           className="plan-board-name-input" value={editName} autoFocus
-          onChange={(e) => setEditName(e.target.value)}
+          onChange={(v) => setEditName(v)}
           onKeyDown={(e) => { if (e.key === "Enter") commitRename(b.id); if (e.key === "Escape") setEditingBoard(null); }}
           onBlur={() => commitRename(b.id)}
           onClick={(e) => e.stopPropagation()}
@@ -213,7 +215,7 @@ export default function PlansHome({ onOpenMap, onPrint }) {
             </div>
           )}
           <div className="plan-desktop-only">
-            {boards.map((b, i) => <BoardRow key={b.id} b={b} i={i} />)}
+            {boards.map((b, i) => renderBoardRow(b, i))}
           </div>
           <button className="plan-addboard" onClick={addBoard}><Plus size={15} />{t.addBoard}</button>
         </div>

@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { BANPICK_HEROES, getDisplayName } from "../../gameData";
 import { HeroThumb, RoleIcon, ROLE_LABELS } from "../../shared/heroMapAssets";
 import { planT } from "../i18n";
+import { IMEInput } from "../IMEInput";
 
 const RECENT_KEY = "plans.recentHeroes";
 const ROLES = ["Tank", "Damage", "Support"];
@@ -47,7 +48,7 @@ export default function HeroPicker({ lang, defaultRole, onPick, onClose }) {
           <button className="plan-modal-close" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </div>
         <div className="plan-modal-body">
-          <input className="plan-search" placeholder={t.searchHero || "영웅 검색…"} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <IMEInput className="plan-search" placeholder={t.searchHero || "영웅 검색…"} value={q} onChange={(v) => setQ(v)} autoFocus />
           <div className="plan-modetabs">
             <button className={"plan-modetab" + (role === "All" ? " active" : "")} onClick={() => setRole("All")}>{t.allModes}</button>
             {ROLES.map((r) => (

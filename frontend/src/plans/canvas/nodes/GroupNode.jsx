@@ -3,6 +3,7 @@ import React from "react";
 import { NodeResizer } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
 import { useCanvasCtx } from "./ctx";
+import { IMEInput } from "../../IMEInput";
 
 export default function GroupNode({ id, data, selected }) {
   const { lang, updateNodeData, deleteNode } = useCanvasCtx();
@@ -10,11 +11,11 @@ export default function GroupNode({ id, data, selected }) {
     <div className="pl-group" style={{ width: "100%", height: "100%" }}>
       <NodeResizer minWidth={160} minHeight={120} isVisible={selected} lineClassName="pl-grp-line" handleClassName="pl-grp-handle" />
       <div className="pl-group-head nodrag">
-        <input
+        <IMEInput
           className="pl-group-title"
           value={data?.label || ""}
           placeholder={lang === "ko" ? "그룹" : "Group"}
-          onChange={(e) => updateNodeData(id, { label: e.target.value })}
+          onChange={(v) => updateNodeData(id, { label: v })}
         />
         {selected && <button className="pl-tb-btn danger" title="삭제" onClick={() => deleteNode(id)}><Trash2 size={13} /></button>}
       </div>
