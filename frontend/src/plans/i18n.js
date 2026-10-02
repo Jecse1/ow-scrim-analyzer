@@ -27,6 +27,9 @@ const STR = {
     recoverTitle: "복구할 임시 변경이 있습니다", recover: "복구", discard: "버리기",
     transparentBg: "배경 투명", exportTitle: "PNG 내보내기",
     mobileView: "보기 전용 — PC에서 편집", respGroup: "대응안", enemyBanQ: "상대 밴 ?",
+    createBoardFailed: "보드 생성 실패", updateFailed: "저장 실패", deleteFailed: "삭제 실패",
+    addMapFailed: "맵 추가 실패", dupFailed: "복제 실패", moveFailed: "이동 실패", orderFailed: "순서 변경 실패",
+    networkErr: "연결 실패(서버 확인)",
   },
   en: {
     title: "Draft Plans", boards: "Boards", newBoard: "New board", boardNamePh: "Board name",
@@ -53,6 +56,9 @@ const STR = {
     recoverTitle: "Unsaved changes to recover", recover: "Recover", discard: "Discard",
     transparentBg: "Transparent bg", exportTitle: "Export PNG",
     mobileView: "View only — edit on desktop", respGroup: "Response", enemyBanQ: "Enemy ban ?",
+    createBoardFailed: "Create board failed", updateFailed: "Save failed", deleteFailed: "Delete failed",
+    addMapFailed: "Add map failed", dupFailed: "Duplicate failed", moveFailed: "Move failed", orderFailed: "Reorder failed",
+    networkErr: "Connection failed (check server)",
   },
   zh: {
     title: "草案计划", boards: "看板", newBoard: "新建看板", boardNamePh: "看板名称",
@@ -79,6 +85,9 @@ const STR = {
     recoverTitle: "有可恢复的未保存更改", recover: "恢复", discard: "放弃",
     transparentBg: "透明背景", exportTitle: "导出 PNG",
     mobileView: "仅查看 — 请在电脑端编辑", respGroup: "应对", enemyBanQ: "对方禁用 ?",
+    createBoardFailed: "创建看板失败", updateFailed: "保存失败", deleteFailed: "删除失败",
+    addMapFailed: "添加地图失败", dupFailed: "复制失败", moveFailed: "移动失败", orderFailed: "排序失败",
+    networkErr: "连接失败(请检查服务器)",
   },
 };
 

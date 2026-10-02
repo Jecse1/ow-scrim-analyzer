@@ -32,10 +32,17 @@ export default function PlansHome({ onOpenMap }) {
   const [showAdd, setShowAdd] = useState(false);
   const [moveMenu, setMoveMenu] = useState(null); // plan_map id
   const [kebab, setKebab] = useState(null); // plan_map id (mobile)
+  const [toast, setToast] = useState(null);
 
   const dragBoard = useRef(null);
   const dragMap = useRef(null);
   const gridRef = useRef(null);
+  const toastSeq = useRef(0);
+
+  // API 실패 시 토스트(무반응 방지). axios 에러면 상태코드, 백엔드 미실행이면 네트워크 메시지.
+  const popToast = (msg) => { const id = ++toastSeq.current; setToast(msg); setTimeout(() => { if (toastSeq.current === id) setToast(null); }, 4000); };
+  const errCode = (e) => (e?.response?.status ? String(e.response.status) : (e?.code || t.networkErr || "연결 실패"));
+  const guard = (label, fn) => async (...a) => { try { return await fn(...a); } catch (e) { popToast(`${label}: ${errCode(e)}`); } };
 
   const refresh = async () => {
     const data = await plansApi.listBoards();
@@ -62,28 +69,28 @@ export default function PlansHome({ onOpenMap }) {
     return () => el.removeEventListener("scroll", onScroll);
   }, [selectedBoard, loaded]);
 
-  // ── 보드 액션 ──
-  const addBoard = async () => {
+  // ── 보드 액션 (모두 guard 로 감싸 실패 시 토스트) ──
+  const addBoard = guard(t.createBoardFailed, async () => {
     const b = await plansApi.createBoard(t.newBoard);
     await refresh();
     setSelectedId(b.id);
     setEditingBoard(b.id); setEditName(b.name);
-  };
-  const commitRename = async (id) => {
+  });
+  const commitRename = guard(t.updateFailed, async (id) => {
     const name = editName.trim();
     setEditingBoard(null);
     if (name && boards.find((b) => b.id === id)?.name !== name) {
       await plansApi.updateBoard(id, { name });
       await refresh();
     }
-  };
-  const doDeleteBoard = async (id) => {
+  });
+  const doDeleteBoard = guard(t.deleteFailed, async (id) => {
     setConfirmBoard(null);
     await plansApi.deleteBoard(id);
     const data = await refresh();
     if (selectedId === id) setSelectedId(data[0]?.id || null);
-  };
-  const reorderBoards = async (from, to) => {
+  });
+  const reorderBoards = guard(t.orderFailed, async (from, to) => {
     if (from === to) return;
     const arr = [...boards];
     const [moved] = arr.splice(from, 1);
@@ -91,14 +98,14 @@ export default function PlansHome({ onOpenMap }) {
     setBoards(arr.map((b, i) => ({ ...b, sort_order: i + 1 }))); // 낙관적
     await Promise.all(arr.map((b, i) => (b.sort_order !== i + 1 ? plansApi.updateBoard(b.id, { sort_order: i + 1 }) : null)).filter(Boolean));
     await refresh();
-  };
+  });
 
-  // ── 맵 액션 ──
-  const addMap = async (mapId) => { await plansApi.createMap(selectedBoard.id, mapId); await refresh(); };
-  const dupMap = async (id) => { await plansApi.duplicateMap(id); await refresh(); };
-  const moveMap = async (id, toBoard) => { setMoveMenu(null); setKebab(null); await plansApi.updateMap(id, { board_id: toBoard }); await refresh(); };
-  const delMap = async (id) => { setKebab(null); await plansApi.deleteMap(id); await refresh(); };
-  const reorderMaps = async (from, to) => {
+  // ── 맵 액션 (실패 시 토스트) ──
+  const addMap = guard(t.addMapFailed, async (mapId) => { await plansApi.createMap(selectedBoard.id, mapId); await refresh(); });
+  const dupMap = guard(t.dupFailed, async (id) => { await plansApi.duplicateMap(id); await refresh(); });
+  const moveMap = guard(t.moveFailed, async (id, toBoard) => { setMoveMenu(null); setKebab(null); await plansApi.updateMap(id, { board_id: toBoard }); await refresh(); });
+  const delMap = guard(t.deleteFailed, async (id) => { setKebab(null); await plansApi.deleteMap(id); await refresh(); });
+  const reorderMaps = guard(t.orderFailed, async (from, to) => {
     if (from === to || !selectedBoard) return;
     const maps = [...selectedBoard.maps];
     const [moved] = maps.splice(from, 1);
@@ -106,7 +113,7 @@ export default function PlansHome({ onOpenMap }) {
     setBoards((bs) => bs.map((b) => b.id === selectedBoard.id ? { ...b, maps: maps.map((m, i) => ({ ...m, sort_order: i + 1 })) } : b));
     await Promise.all(maps.map((m, i) => (m.sort_order !== i + 1 ? plansApi.updateMap(m.id, { sort_order: i + 1 }) : null)).filter(Boolean));
     await refresh();
-  };
+  });
 
   const maps = selectedBoard?.maps || [];
   const existingIds = useMemo(() => new Set(maps.map((m) => m.map_id)), [maps]);
@@ -259,6 +266,8 @@ export default function PlansHome({ onOpenMap }) {
           </div>
         </div>
       )}
+
+      {toast && <div className="plan-toast" role="status">{toast}</div>}
     </div>
   );
 }

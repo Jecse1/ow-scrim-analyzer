@@ -135,6 +135,9 @@
 .plan-empty-card { cursor: pointer; }
 .plan-empty-card:hover { border-color: var(--pl-primary); color: var(--pl-text); }
 
+/* ── 토스트(API 실패 알림) ── */
+.plan-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 80; background: var(--pl-danger); color: #fff; font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+
 /* ── 모달 ── */
 .plan-modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .plan-modal { background: var(--pl-surface); border: 1px solid var(--pl-border2); border-radius: 16px; width: 100%; max-width: 620px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; }
