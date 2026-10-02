@@ -8,6 +8,7 @@ const VERSION = 1;
 const HISTORY_MAX = 10;
 const SAVE_DEBOUNCE = 1500;
 const LS_KEY = (id) => `plans.canvas.backup.${id}`;
+const SEEN_KEY = (id) => `plans.canvas.seen.${id}`;
 
 const serialize = (nodes, edges) => JSON.stringify({ version: VERSION, nodes, edges });
 
@@ -19,6 +20,7 @@ export function useCanvasDoc(planMapId) {
   const [savedAt, setSavedAt] = useState(null);
   const [serverUpdatedAt, setServerUpdatedAt] = useState(null);
   const [hasBackup, setHasBackup] = useState(false);
+  const [serverNewer, setServerNewer] = useState(false);
 
   const lastSavedRef = useRef("");       // 마지막으로 서버에 저장된 직렬화 문자열
   const loadedRef = useRef(false);
@@ -42,6 +44,12 @@ export function useCanvasDoc(planMapId) {
       setServerUpdatedAt(res.updated_at || null);
       lastSavedRef.current = serialize(c.nodes || [], c.edges || []);
       setSaveStatus("saved"); setSavedAt(Date.now());
+      // S2: 마지막으로 본 서버 updated_at 보다 새로우면 "다른 편집으로 갱신됨" 배너
+      try {
+        const seen = localStorage.getItem(SEEN_KEY(planMapId));
+        setServerNewer(!!(res.updated_at && seen && res.updated_at > seen));
+        localStorage.setItem(SEEN_KEY(planMapId), res.updated_at || "");
+      } catch { /* ignore */ }
       try { setHasBackup(!!localStorage.getItem(LS_KEY(planMapId))); } catch { /* ignore */ }
       setLoaded(true);
       requestAnimationFrame(() => { loadedRef.current = true; });
@@ -59,6 +67,7 @@ export function useCanvasDoc(planMapId) {
       lastSavedRef.current = payload;
       setServerUpdatedAt(res.updated_at || null);
       setSaveStatus("saved"); setSavedAt(Date.now());
+      try { localStorage.setItem(SEEN_KEY(planMapId), res.updated_at || ""); } catch { /* ignore */ }
       try { localStorage.removeItem(LS_KEY(planMapId)); } catch { /* ignore */ }
       setHasBackup(false);
     } catch {
@@ -141,6 +150,7 @@ export function useCanvasDoc(planMapId) {
     pushHistory, undo, redo, canUndo, canRedo,
     flush, retrySave,
     hasBackup, applyBackup, discardBackup,
+    serverNewer, dismissServerNewer: () => setServerNewer(false),
     nodesRef, edgesRef,
   };
 }

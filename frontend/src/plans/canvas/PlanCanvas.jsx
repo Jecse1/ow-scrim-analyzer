@@ -21,6 +21,9 @@ import TextNode from "./nodes/TextNode";
 import GroupNode from "./nodes/GroupNode";
 import LabeledEdge from "./edges/LabeledEdge";
 import { COND_ORDER, COND_TYPES, NODE_KINDS, SLOT_ROLES } from "./constants";
+import { applyTemplate, TEMPLATE_KINDS } from "./templates";
+import { exportCanvasPng, pngFilename } from "./pngExport";
+import { formatRelative } from "../api";
 
 const nodeTypes = { condition: ConditionNode, hero: HeroNode, comp: CompNode, text: TextNode, group: GroupNode };
 const edgeTypes = { labeled: LabeledEdge };
@@ -46,11 +49,36 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
   const [kindPopup, setKindPopup] = useState(null); // {x,y,flow,connect?}
   const [picker, setPicker] = useState(null);        // {nodeId, slotIndex?, role?}
   const [condEdit, setCondEdit] = useState(null);    // {nodeId}
+  const [tplOpen, setTplOpen] = useState(false);     // 템플릿 선택(S4)
+  const [exportOpen, setExportOpen] = useState(false);
+  const [transparent, setTransparent] = useState(false);
+  const [mobile, setMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
+  const [mobileDetail, setMobileDetail] = useState(null); // 모바일 노드 탭 내용
   const wrapRef = useRef(null);
   const arrowTs = useRef(0);
 
+  useEffect(() => { const h = () => setMobile(window.innerWidth < 768); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+
   // 이탈 시 flush (S3)
   useEffect(() => () => { doc.flush(); }, []); // eslint-disable-line
+
+  // 새 맵(노드 0) 첫 진입 → 템플릿 선택(S4). 맵별 1회(localStorage).
+  const tplKey = `plans.canvas.tpl.${planMapId}`;
+  useEffect(() => {
+    if (!doc.loaded) return;
+    let chosen = false; try { chosen = !!localStorage.getItem(tplKey); } catch { /* ignore */ }
+    if (doc.nodes.length === 0 && !chosen) setTplOpen(true);
+  }, [doc.loaded]); // eslint-disable-line
+  const chooseTemplate = (type) => {
+    try { localStorage.setItem(tplKey, type); } catch { /* ignore */ }
+    setTplOpen(false);
+    if (type === "ban") { pushHistory(); const { nodes: tn, edges: te } = applyTemplate("ban", language); setNodes(tn); setEdges(te); }
+  };
+
+  const onExport = async () => {
+    setExportOpen(false);
+    await exportCanvasPng({ nodes: doc.nodesRef.current, filename: pngFilename(boardName, mapRow ? mapRow.map_id : "map"), transparent });
+  };
 
   // ── 노드 데이터/엣지 수정 ──
   const updateNodeData = useCallback((id, patch, record = false) => {
@@ -97,14 +125,16 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
 
   // ── 더블클릭 빈 곳 → 노드 종류 팝업 ──
   const onPaneDblClick = useCallback((e) => {
+    if (mobile) return;
     if (!(e.target.classList?.contains("react-flow__pane"))) return;
     const flow = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     setKindPopup({ x: e.clientX, y: e.clientY, flow });
-  }, [rf]);
+  }, [rf, mobile]);
 
   // ── 도구로 클릭 배치 ──
   const onPaneClick = useCallback((e) => {
     setKindPopup(null); setCondEdit(null);
+    if (mobile) return;
     if (["condition", "hero", "comp", "text", "group"].includes(tool)) {
       const flow = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
       addNodeAt(tool, flow);
@@ -113,6 +143,17 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
   }, [tool, rf, addNodeAt]);
 
   const pickKind = (type) => { if (!kindPopup) return; addNodeAt(type, kindPopup.flow, kindPopup.connect); setKindPopup(null); };
+  // C2: 노드 종류 팝업 열렸을 때 키 1~4로 선택, Esc 닫기
+  useEffect(() => {
+    if (!kindPopup) return;
+    const onKey = (e) => {
+      const i = ["1", "2", "3", "4"].indexOf(e.key);
+      if (i >= 0) { e.preventDefault(); pickKind(NODE_KINDS[i].type); }
+      else if (e.key === "Escape") setKindPopup(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [kindPopup]); // eslint-disable-line
 
   // ── 그룹 소속(드래그로 그룹 안/밖) ──
   const onNodeDragStart = useCallback(() => { pushHistory(); }, [pushHistory]);
@@ -181,7 +222,7 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
     setPicker(null);
   };
 
-  const showMinimap = extras?.minimap && nodes.length >= 20;
+  const showMinimap = nodes.length >= 20; // C5: 노드 ≥20일 때만
   const empty = doc.loaded && nodes.length === 0;
 
   return (
@@ -189,20 +230,35 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
       <TopBar boardName={boardName} mapRow={mapRow} onBack={onBack}
         saveStatus={doc.saveStatus} savedAt={doc.savedAt} onRetry={doc.retrySave}
         undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo}
-        snap={snap} setSnap={setSnap} onExport={extras?.onExport} lang={language} />
+        snap={snap} setSnap={setSnap} onExport={() => setExportOpen(true)} lang={language} />
       {strip}
-      {extras?.banner}
+      {doc.serverNewer && (
+        <div className="pl-banner warn">
+          <span>{t.updatedElsewhere(doc.serverUpdatedAt ? formatRelative(doc.serverUpdatedAt, language) : "")}</span>
+          <button className="pl-banner-btn" onClick={doc.dismissServerNewer}>{t.done}</button>
+        </div>
+      )}
+      {doc.hasBackup && (
+        <div className="pl-banner">
+          <span>{t.recoverTitle}</span>
+          <button className="pl-banner-btn" onClick={doc.applyBackup}>{t.recover}</button>
+          <button className="pl-banner-btn" onClick={doc.discardBackup}>{t.discard}</button>
+        </div>
+      )}
       <div className="pl-canvas-area" ref={wrapRef} onDoubleClick={onPaneDblClick}>
-        <Toolbar tool={tool} setTool={setTool} lang={language} />
+        {!mobile && <Toolbar tool={tool} setTool={setTool} lang={language} />}
         <ReactFlow
           nodes={nodes} edges={edges}
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes} edgeTypes={edgeTypes} defaultEdgeOptions={EDGE_OPTS}
           onConnect={onConnect} onConnectEnd={onConnectEnd}
           onPaneClick={onPaneClick} onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
+          onNodeClick={mobile ? ((_e, n) => setMobileDetail(n)) : undefined}
+          nodesDraggable={!mobile} nodesConnectable={!mobile} elementsSelectable={!mobile}
           snapToGrid={snap} snapGrid={[8, 8]}
-          panOnDrag={tool === "hand" ? true : [1, 2]} selectionOnDrag={tool === "select"}
+          panOnDrag={mobile ? true : (tool === "hand" ? true : [1, 2])} selectionOnDrag={!mobile && tool === "select"}
           panActivationKeyCode="Space" multiSelectionKeyCode="Shift" deleteKeyCode={null}
+          zoomOnDoubleClick={false}
           fitView minZoom={0.2} maxZoom={2} proOptions={{ hideAttribution: true }}
           data-testid="rf" className={"pl-rf" + (tool === "hand" ? " hand" : "")}
         >
@@ -211,21 +267,42 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
           {showMinimap && <MiniMap pannable zoomable nodeColor="#3f3f46" maskColor="rgba(0,0,0,.5)" />}
         </ReactFlow>
 
-        {empty && !extras?.templateOpen && (
+        {empty && !tplOpen && (
           <div className="pl-empty-overlay"><div className="pl-empty-card"><b>{t.emptyTitle}</b><div>{t.emptyHint}</div></div></div>
         )}
 
-        {kindPopup && (
+        {kindPopup && !mobile && (
           <div className="pl-kind-popup" style={{ left: kindPopup.x, top: kindPopup.y }} onMouseLeave={() => setKindPopup(null)}>
             {NODE_KINDS.map((k) => (
               <button key={k.type} onClick={() => pickKind(k.type)}><kbd>{k.key}</kbd> {k.label[language]}</button>
             ))}
           </div>
         )}
+        {mobile && <div className="pl-mobile-note">{t.mobileView}</div>}
       </div>
 
       {picker && (
         <HeroPicker lang={language} defaultRole={picker.role} onPick={onPickHero} onClose={() => setPicker(null)} />
+      )}
+      {mobileDetail && (
+        <div className="plan-modal-backdrop" onClick={() => setMobileDetail(null)}>
+          <div className="plan-modal sm" onClick={(e) => e.stopPropagation()}>
+            <div className="plan-modal-head">{t[mobileDetail.type] || mobileDetail.type}
+              <button className="plan-modal-close" onClick={() => setMobileDetail(null)}>✕</button>
+            </div>
+            <div className="plan-modal-body" style={{ fontSize: 14 }}>
+              {mobileDetail.type === "text" ? (
+                <><b>{mobileDetail.data?.title}</b><div style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{mobileDetail.data?.body}</div></>
+              ) : mobileDetail.type === "condition" ? (
+                <>{COND_TYPES[mobileDetail.data?.condType]?.label[language]} — {mobileDetail.data?.heroId || mobileDetail.data?.text || "—"}</>
+              ) : mobileDetail.type === "comp" ? (
+                (mobileDetail.data?.slots || []).map((s, i) => s || "·").join(" / ")
+              ) : (
+                mobileDetail.data?.heroId || mobileDetail.data?.label || "—"
+              )}
+            </div>
+          </div>
+        </div>
       )}
       {condEdit && (() => {
         const node = nodes.find((n) => n.id === condEdit.nodeId); if (!node) return null;
@@ -235,7 +312,36 @@ function Flow({ planMapId, boardName, mapRow, onBack, strip, extras }) {
           onHero={() => { setCondEdit(null); setPicker({ nodeId: node.id }); }}
           onClose={() => setCondEdit(null)} />;
       })()}
-      {extras?.template}
+      {tplOpen && (
+        <div className="plan-modal-backdrop" onClick={() => chooseTemplate("empty")}>
+          <div className="plan-modal sm" onClick={(e) => e.stopPropagation()}>
+            <div className="plan-modal-head">{t.tplTitle}</div>
+            <div className="plan-modal-body">
+              {TEMPLATE_KINDS.map((k) => (
+                <button key={k.id} className="plan-btn" style={{ width: "100%", textAlign: "left", marginBottom: 8, display: "block" }} onClick={() => chooseTemplate(k.id)}>
+                  <b>{t[k.labelKey]}</b>{k.descKey && <div style={{ fontSize: 12, opacity: .7, marginTop: 2 }}>{t[k.descKey]}</div>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {exportOpen && (
+        <div className="plan-modal-backdrop" onClick={() => setExportOpen(false)}>
+          <div className="plan-modal sm" onClick={(e) => e.stopPropagation()}>
+            <div className="plan-modal-head">{t.exportTitle}</div>
+            <div className="plan-modal-body">
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                <input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} /> {t.transparentBg}
+              </label>
+            </div>
+            <div className="plan-modal-foot">
+              <button className="plan-btn" onClick={() => setExportOpen(false)}>{t.cancel}</button>
+              <button className="plan-btn primary" onClick={onExport}>{t.exportPng}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </CanvasCtx.Provider>
   );
 }
