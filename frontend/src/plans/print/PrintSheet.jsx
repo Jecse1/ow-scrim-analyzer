@@ -1,27 +1,35 @@
-// PrintSheet.jsx — 대회장 인쇄용 치트시트(view "plan-print"). 옵션 패널 + 미리보기(실제 인쇄 CSS 동일) + window.print.
+// PrintSheet.jsx — 대회장 인쇄용 치트시트(view "plan-print"). 그림 전용: 조건·밴·픽 타일만.
+// 글자는 두 곳뿐(상단 보드명+날짜, 맵 이미지 아래 맵명). 영웅명은 토글(기본 OFF).
 import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, Printer } from "lucide-react";
 import { useLanguage } from "../../LanguageContext";
 import { useTheme } from "../../ThemeContext";
-import { getMapDisplayName, BANPICK_MAPS } from "../../gameData";
-import { HeroThumb, MapThumb, MapTypeBadge } from "../../shared/heroMapAssets";
+import { getMapDisplayName } from "../../gameData";
+import { HeroThumb, MapThumb, RoleIcon } from "../../shared/heroMapAssets";
 import { plansApi } from "../api";
 import { planT } from "../i18n";
-import { COND_TYPES, SLOT_ROLES } from "../canvas/constants";
+import { SLOT_ROLES } from "../canvas/constants";
 import { heroName } from "../canvas/heroUtil";
 import { extractSheet } from "./extract";
 import "../plans.css";
 import "./print.css";
 
-const COND_ABBR = { enemy_ban: "상밴", our_ban: "우밴", enemy_pick: "상픽", our_pick: "우픽", etc: "기타" };
-const mapTypeOf = (mapId) => (BANPICK_MAPS.find((m) => m.id === mapId) || {}).type || "Control";
+const COND_KIND = { enemy_ban: "pp-c-eban", our_ban: "pp-c-oban", enemy_pick: "pp-c-epick", our_pick: "pp-c-opick", etc: "pp-c-etc" };
+const COND_BAN = { enemy_ban: "red", our_ban: "orange" };
+const EMPTY5 = [null, null, null, null, null];
 
-// A4 세로 가용 높이(297 - 여백 20) ≈ 277mm 기준 블록 높이 합으로 페이지 수 근사.
-function estimatePages(blocks, density) {
-  const rowH = density === "dense" ? 10 : 14;
-  const headH = 10, gap = 4, topH = 10;
-  let h = topH;
-  for (const b of blocks) h += headH + b.rows.length * rowH + gap;
+// A4 가용 높이 ≈ 277mm. 블록 높이(맵 이미지 vs 행 묶음 중 큰 값) 합으로 페이지 수 근사(CSS 간격과 일치).
+function estimatePages(blocks, dense) {
+  const tile = dense ? 10 : 14;
+  const rowGap = dense ? 0.8 : 2;
+  const blockOver = dense ? 2 : 7; // 블록 margin+padding
+  const top = dense ? 5 : 8;       // 상단 영역
+  const mapH = (36 * 9) / 16 + 5;  // 16:9 이미지 + 맵명 ≈ 25.25mm
+  let h = top;
+  for (const b of blocks) {
+    const visualRows = b.rows.reduce((s, r) => s + 1 + (r.comps && r.comps[1] ? 1 : 0), 0);
+    h += Math.max(mapH, visualRows * (tile + rowGap)) + blockOver;
+  }
   return Math.max(1, Math.ceil(h / 277));
 }
 
@@ -30,8 +38,8 @@ export default function PrintSheet({ boardId, onBack }) {
   const { isDarkMode: dark } = useTheme();
   const t = planT(language);
   const [board, setBoard] = useState(null);
-  const [blocks, setBlocks] = useState([]); // [{mapRow, rows, excludedCount}]
-  const [opts, setOpts] = useState({ maps: null, density: "normal", portraits: true, memo: true, mono: false, team: "" });
+  const [blocks, setBlocks] = useState([]); // [{mapRow, rows}]
+  const [opts, setOpts] = useState({ maps: null, density: "normal", names: false, mono: false });
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -47,8 +55,8 @@ export default function PrintSheet({ boardId, onBack }) {
         try {
           const cv = await plansApi.getCanvas(m.id);
           const ex = extractSheet(cv.canvas || {});
-          data.push({ mapRow: m, rows: ex.rows, excludedCount: ex.excludedCount });
-        } catch { data.push({ mapRow: m, rows: [], excludedCount: 0 }); }
+          data.push({ mapRow: m, rows: ex.rows });
+        } catch { data.push({ mapRow: m, rows: [] }); }
       }
       if (!alive) return;
       setBlocks(data);
@@ -59,28 +67,71 @@ export default function PrintSheet({ boardId, onBack }) {
   }, [boardId]);
 
   const selected = useMemo(() => blocks.filter((b) => opts.maps && opts.maps[b.mapRow.id]), [blocks, opts.maps]);
-  const mono = opts.mono, showPortrait = opts.portraits, dense = opts.density === "dense";
+  const { names, mono } = opts, dense = opts.density === "dense";
   const today = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }, []);
-  const pages = useMemo(() => estimatePages(selected, opts.density), [selected, opts.density]);
+  const pages = useMemo(() => estimatePages(selected, dense), [selected, dense]);
 
-  const Portrait = ({ heroId, ban }) => (
-    <span className="pp-port">
-      {showPortrait ? <span className="pp-port-img"><HeroThumb id={heroId} />{ban && (mono ? <span className="pp-x">✕</span> : <span className="pp-ban" />)}</span> : null}
-      <span className="pp-port-name">{heroName(heroId, language)}</span>
+  // 파일명 <보드명>_<YYMMDD>: 인쇄 시 브라우저 저장 기본값에 반영
+  const printSheet = () => {
+    const prev = document.title;
+    if (board) { const d = new Date(); const yy = String(d.getFullYear()).slice(2); document.title = `${board.name}_${yy}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`; }
+    window.print();
+    setTimeout(() => { document.title = prev; }, 500);
+  };
+
+  // 영웅/빈칸 타일
+  const Tile = ({ heroId, kindClass, ban, q, roleIdx }) => (
+    <span className={"pp-tile" + (kindClass ? " " + kindClass : "") + (heroId ? "" : " empty")}>
+      {heroId ? <HeroThumb id={heroId} /> : q ? <span className="pp-q">?</span> : roleIdx != null ? <span className="pp-roleicon"><RoleIcon role={SLOT_ROLES[roleIdx]} lang={language} /></span> : null}
+      {ban && (mono ? <span className="pp-xmark">✕</span> : <span className={"pp-slash " + ban} />)}
     </span>
   );
 
-  const CondCell = ({ row }) => {
-    if (row.kind === "base") return <span className="pp-cond"><b>{t.basePlan || "기본안"}</b></span>;
-    const ct = COND_TYPES[row.condType] || COND_TYPES.etc;
+  // 픽 타일(영웅명 토글 시 아래 이름)
+  const Pick = ({ heroId, roleIdx }) => (
+    names
+      ? <span className="pp-cell"><Tile heroId={heroId} roleIdx={roleIdx} />{heroId && <span className="pp-name">{heroName(heroId, language)}</span>}</span>
+      : <Tile heroId={heroId} roleIdx={roleIdx} />
+  );
+
+  const Arrow = () => (
+    <span className="pp-arrow" aria-hidden="true">
+      <svg viewBox="0 0 60 16" preserveAspectRatio="none"><line x1="2" y1="8" x2="50" y2="8" stroke="currentColor" strokeWidth="1.2" /><polyline points="46,4 52,8 46,12" fill="none" stroke="currentColor" strokeWidth="1.2" /></svg>
+    </span>
+  );
+
+  const Picks = ({ slots }) => <span className="pp-picks">{(slots || EMPTY5).map((h, i) => <Pick key={i} heroId={h} roleIdx={i} />)}</span>;
+
+  const Row = ({ row }) => {
+    const primary = row.comps && row.comps[0];
+    const alt = row.comps && row.comps[1];
+    if (row.kind === "base") {
+      return (
+        <div className="pp-row">
+          <span className="pp-lead-cond" /><Arrow />
+          <Picks slots={primary && primary.slots} />
+        </div>
+      );
+    }
+    const kindClass = COND_KIND[row.condType] || COND_KIND.etc;
+    const condBan = COND_BAN[row.condType] || null;
+    const ourBan = row.ourBans && row.ourBans[0];
     return (
-      <span className="pp-cond">
-        {mono ? <span className="pp-tag">[{COND_ABBR[row.condType] || "기타"}]</span> : <span className="pp-strip" style={{ background: ct.color }} />}
-        <span className="pp-cond-body">
-          {!mono && <span className="pp-cond-type" style={{ color: ct.color }}>{ct.label[language]}</span>}
-          {row.heroId ? <Portrait heroId={row.heroId} /> : <span className="pp-text">{row.text}</span>}
-        </span>
-      </span>
+      <>
+        <div className="pp-row">
+          <Tile heroId={row.heroId} kindClass={kindClass} ban={condBan} q={!row.heroId} />
+          <Arrow />
+          {ourBan ? <Tile heroId={ourBan.heroId} kindClass="pp-c-oban" ban="orange" q={!ourBan.heroId} /> : <span className="pp-blank" />}
+          <Arrow />
+          <Picks slots={primary && primary.slots} />
+        </div>
+        {alt && (
+          <div className="pp-row pp-altrow">
+            <span className="pp-lead-full" />
+            <Picks slots={alt.slots} />
+          </div>
+        )}
+      </>
     );
   };
 
@@ -88,7 +139,7 @@ export default function PrintSheet({ boardId, onBack }) {
     <div className={"plan-root plan-print-root " + (dark ? "" : "light")}>
       <div className="pp-toolbar noprint">
         <button className="pp-back" onClick={onBack}><ChevronLeft size={16} />{board ? board.name : (t.back || "")}</button>
-        <button className="pp-print" onClick={() => window.print()}><Printer size={15} /> {t.print || "인쇄"}</button>
+        <button className="pp-print" onClick={printSheet}><Printer size={15} /> {t.print || "인쇄"}</button>
       </div>
 
       <div className="pp-options noprint">
@@ -104,49 +155,30 @@ export default function PrintSheet({ boardId, onBack }) {
           <label className="pp-check"><input type="radio" name="den" checked={dense} onChange={() => setOpts((o) => ({ ...o, density: "dense" }))} /> {t.dense || "조밀"}</label>
         </div>
         <div className="pp-opt-group">
-          <label className="pp-check"><input type="checkbox" checked={showPortrait} onChange={(e) => setOpts((o) => ({ ...o, portraits: e.target.checked }))} /> {t.portraits || "초상화"}</label>
-          <label className="pp-check"><input type="checkbox" checked={opts.memo} onChange={(e) => setOpts((o) => ({ ...o, memo: e.target.checked }))} /> {t.memoCol || "메모"}</label>
+          <label className="pp-check"><input type="checkbox" checked={names} onChange={(e) => setOpts((o) => ({ ...o, names: e.target.checked }))} /> {t.heroNames || "영웅명"}</label>
           <label className="pp-check"><input type="checkbox" checked={mono} onChange={(e) => setOpts((o) => ({ ...o, mono: e.target.checked }))} /> {t.mono || "흑백 친화"}</label>
-        </div>
-        <div className="pp-opt-group">
-          <span className="pp-opt-label">{t.team || "팀"}</span>
-          <input className="pp-team-input" value={opts.team} placeholder={t.team || "팀"} onChange={(e) => setOpts((o) => ({ ...o, team: e.target.value }))} />
         </div>
       </div>
 
+      {loaded && (
+        <div className="pp-pageinfo noprint">{t.estPages ? t.estPages(pages) : `예상 ${pages}장`}</div>
+      )}
       {loaded && pages > 2 && <div className="pp-warn noprint">{(t.pageWarn ? t.pageWarn(pages) : `${pages}장`)} — {t.pageWarnHint || "조밀 모드 또는 맵 수 줄이기"}</div>}
 
       <div className={"pp-sheet" + (dense ? " dense" : "") + (mono ? " mono" : "")}>
-        <div className="pp-top">{[board && board.name, opts.team, today].filter(Boolean).join(" · ")}</div>
+        <div className="pp-top">
+          <span className="pp-top-name">{board ? board.name : ""}</span>
+          <span className="pp-top-date">{today}</span>
+        </div>
         {selected.map((b) => (
-          <div className="pp-mapblock" key={b.mapRow.id}>
-            <div className="pp-maphead">
-              {!mono && <span className="pp-maphead-thumb"><MapThumb id={b.mapRow.map_id} /></span>}
-              <MapTypeBadge type={mapTypeOf(b.mapRow.map_id)} lang={language} />
-              <b>{getMapDisplayName(b.mapRow.map_id, language)}</b>
+          <div className="pp-block" key={b.mapRow.id}>
+            <div className="pp-mapcol">
+              <div className="pp-maptile"><MapThumb id={b.mapRow.map_id} /></div>
+              <div className="pp-mapname">{getMapDisplayName(b.mapRow.map_id, language)}</div>
             </div>
-            <table className="pp-table">
-              <colgroup><col style={{ width: "22%" }} /><col style={{ width: "18%" }} /><col style={{ width: "40%" }} />{opts.memo && <col style={{ width: "20%" }} />}</colgroup>
-              <thead><tr><th>{t.colCond || "조건"}</th><th>{t.colOurBan || "우리 밴"}</th><th>{t.colComp || "조합"}</th>{opts.memo && <th>{t.colMemo || "메모"}</th>}</tr></thead>
-              <tbody>
-                {b.rows.map((row, i) => (
-                  <tr key={i}>
-                    <td><CondCell row={row} /></td>
-                    <td>{row.ourBans.map((x, k) => <span key={k} className="pp-ourban">{x.heroId ? <Portrait heroId={x.heroId} ban /> : <span className="pp-text">{x.text}</span>}</span>)}</td>
-                    <td>
-                      {row.comps.map((c, k) => (
-                        <div key={k} className="pp-comp">
-                          <span className="pp-comp-mark">{c.tag === "priority" ? (mono ? "★" : <span className="pp-dot" style={{ background: "#22c55e" }} />) : c.alt ? (mono ? "○" : <span className="pp-dot" style={{ background: "#3b82f6" }} />) : ""}{c.alt && (t.altLabel || "대안")}</span>
-                          <span className="pp-comp-slots">{c.slots.map((hid, s) => <span key={s} className="pp-slot">{hid ? <Portrait heroId={hid} /> : <span className="pp-slot-empty">{SLOT_ROLES[s][0]}</span>}</span>)}</span>
-                        </div>
-                      ))}
-                    </td>
-                    {opts.memo && <td>{row.memos.map((m, k) => <div key={k} className="pp-memo"><b>{m.title}</b>{m.body && <div className="pp-memo-body">{m.body}</div>}</div>)}</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {b.excludedCount > 0 && <div className="pp-excluded noprint">{t.excluded ? t.excluded(b.excludedCount) : `미포함 ${b.excludedCount}개`}</div>}
+            <div className="pp-rows">
+              {b.rows.map((row, i) => <Row key={i} row={row} />)}
+            </div>
           </div>
         ))}
       </div>

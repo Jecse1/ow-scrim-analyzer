@@ -33,6 +33,7 @@ const STR = {
     print: "인쇄", density: "밀도", normal: "보통", dense: "조밀", portraits: "초상화", memoCol: "메모", mono: "흑백 친화", team: "팀",
     basePlan: "기본안", altLabel: "대안", colCond: "조건", colOurBan: "우리 밴", colComp: "조합", colMemo: "메모",
     pageWarn: (n) => `${n}장`, pageWarnHint: "조밀 모드 또는 맵 수 줄이기", excluded: (n) => `미포함 ${n}개`,
+    maps: "맵", heroNames: "영웅명", estPages: (n) => `예상 ${n}장`,
     disconnectAll: "연결 모두 끊기", colorTag: "색 태그", delEdge: "연결 삭제",
   },
   en: {
@@ -66,6 +67,7 @@ const STR = {
     print: "Print", density: "Density", normal: "Normal", dense: "Dense", portraits: "Portraits", memoCol: "Memo", mono: "B&W friendly", team: "Team",
     basePlan: "Default", altLabel: "Alt", colCond: "Condition", colOurBan: "Our ban", colComp: "Comp", colMemo: "Memo",
     pageWarn: (n) => `${n} pages`, pageWarnHint: "use dense mode or fewer maps", excluded: (n) => `${n} excluded`,
+    maps: "Maps", heroNames: "Hero names", estPages: (n) => `~${n} page(s)`,
     disconnectAll: "Disconnect all", colorTag: "Color tag", delEdge: "Delete edge",
   },
   zh: {
@@ -99,6 +101,7 @@ const STR = {
     print: "打印", density: "密度", normal: "标准", dense: "紧凑", portraits: "头像", memoCol: "备注", mono: "黑白友好", team: "队伍",
     basePlan: "默认方案", altLabel: "备选", colCond: "条件", colOurBan: "我方禁用", colComp: "阵容", colMemo: "备注",
     pageWarn: (n) => `${n} 页`, pageWarnHint: "使用紧凑模式或减少地图", excluded: (n) => `未包含 ${n} 个`,
+    maps: "地图", heroNames: "英雄名", estPages: (n) => `预计 ${n} 页`,
     disconnectAll: "断开所有连接", colorTag: "颜色标签", delEdge: "删除连线",
   },
 };
