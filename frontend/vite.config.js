@@ -11,6 +11,8 @@ export default defineConfig({
     alias: {
       '@gamedata': GAME_DATA_DIR,
     },
+    // React 단일화(중복 방지). @xyflow/react(zustand) 등과의 안정성.
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     host: '0.0.0.0', // 외부 접속 허용
