@@ -80,6 +80,10 @@
 .pl-text { padding: 9px 11px; min-width: 200px; }
 .pl-text-title { width: 100%; background: transparent; border: none; outline: none; color: var(--pl-text); font-size: 14px; font-weight: 800; margin-bottom: 5px; }
 .pl-text-body { width: 100%; background: transparent; border: none; outline: none; color: var(--pl-text); font-size: 13px; line-height: 1.45; resize: none; overflow: hidden; }
+/* 표시 모드(드래그 가능): 편집 입력과 동일 서식의 일반 div */
+.pl-text-title-view { font-size: 14px; font-weight: 800; margin-bottom: 5px; color: var(--pl-text); white-space: pre-wrap; word-break: break-word; }
+.pl-text-body-view { font-size: 13px; line-height: 1.45; color: var(--pl-text); white-space: pre-wrap; word-break: break-word; }
+.pl-text-title-view.ph, .pl-text-body-view.ph { color: var(--pl-textsub); opacity: .65; }
 
 /* 그룹 노드 */
 .pl-group { background: rgba(99,102,241,.07); border: 1.5px dashed var(--pl-border2); border-radius: 12px; }
