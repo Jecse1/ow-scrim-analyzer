@@ -26,9 +26,11 @@
   --pl-textsub: #52525b;
 }
 .plan-root * { box-sizing: border-box; }
+.plan-root button { font: inherit; color: inherit; cursor: pointer; }
 /* 전역 button { padding:0.6em 1.2em; border:1px } 리셋 — 고정 크기 아이콘 버튼이 꽉 채워져
-   콘텐츠(svg) 폭이 0으로 붕괴(빈 사각형)되는 문제 방지. 패딩/테두리 필요한 버튼은 각자 재지정. */
-.plan-root button { font: inherit; color: inherit; cursor: pointer; padding: 0; border: none; background: none; border-radius: 0; }
+   콘텐츠(svg) 폭이 0으로 붕괴되는 문제 방지. :where()로 특이성 0,0,1 → 전역 button(동일 특이성·뒤 선언)은
+   이기고, .plan-* 버튼 클래스(0,1,0)에는 져서 각 버튼의 패딩/테두리/배경이 보존된다(칩·모달·툴바 전부). */
+:where(.plan-root) button { padding: 0; border: none; background: none; border-radius: 0; }
 
 /* [STEP3-fix] shared/heroMapAssets(HeroThumb·MapThumb·BanSlashOverlay·배지)가 쓰는 Tailwind 동등
    유틸리티 — 밴픽(.bp-root)에만 있던 규칙을 .plan-root 로 복제. 없으면 img 가 미배치·원본비율로
@@ -153,7 +155,7 @@
 
 /* 맵 추가 모달 */
 .plan-modetabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.plan-modetab { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--pl-border2); font-size: 12px; background: transparent; }
+.plan-modetab { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--pl-border2); font-size: 12px; background: transparent; }
 .plan-modetab.active { background: var(--pl-green); border-color: var(--pl-green); color: #052e16; font-weight: 700; }
 .plan-search { width: 100%; background: var(--pl-bg); color: var(--pl-text); border: 1px solid var(--pl-border2); border-radius: 9px; padding: 8px 12px; font-size: 13px; outline: none; margin-bottom: 12px; }
 .plan-pool-head { font-size: 12px; font-weight: 700; color: var(--pl-textsub); margin: 10px 0 8px; display: flex; align-items: center; gap: 6px; }
