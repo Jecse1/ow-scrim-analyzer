@@ -99,8 +99,10 @@
 .plan-main { min-width: 0; }
 .plan-main-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .plan-main-title { font-size: 18px; font-weight: 800; color: var(--pl-text); }
-.plan-add-map { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 9px; background: var(--pl-primary); color: #fff; font-size: 13px; font-weight: 600; border: none; }
+.plan-add-map { margin-left: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 9px; background: var(--pl-primary); color: #fff; font-size: 13px; font-weight: 600; border: none; }
 .plan-add-map:hover { filter: brightness(1.08); }
+.plan-print-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 9px; background: var(--pl-surface2); color: var(--pl-text); font-size: 13px; font-weight: 600; border: 1px solid var(--pl-border2); }
+.plan-print-btn:hover { background: var(--pl-surface3); }
 
 .plan-map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 @media (max-width: 767px) { .plan-map-grid { grid-template-columns: 1fr; } }

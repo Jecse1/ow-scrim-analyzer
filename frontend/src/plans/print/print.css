@@ -1,0 +1,75 @@
+/* print.css — 인쇄 치트시트. 화면 미리보기 = 실제 인쇄 CSS 동일(WYSIWYG). A4 세로, 흰 배경/검정 글자. */
+.plan-print-root { min-height: calc(100vh - 56px); padding: 16px; }
+
+/* 상단 컨트롤(인쇄 시 숨김) */
+.pp-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pp-back { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--pl-textsub); background: none; border: none; }
+.pp-back:hover { color: var(--pl-text); }
+.pp-print { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9px; background: var(--pl-primary); color: #fff; font-size: 13px; font-weight: 600; border: none; }
+.pp-print:hover { filter: brightness(1.08); }
+.pp-options { display: flex; flex-wrap: wrap; gap: 18px; background: var(--pl-surface); border: 1px solid var(--pl-border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
+.pp-opt-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pp-opt-label { font-weight: 700; color: var(--pl-textsub); }
+.pp-check { display: inline-flex; align-items: center; gap: 4px; }
+.pp-team-input { background: var(--pl-bg); color: var(--pl-text); border: 1px solid var(--pl-border2); border-radius: 7px; padding: 4px 8px; font-size: 13px; outline: none; width: 140px; }
+.pp-warn { background: rgba(245,158,11,.15); color: #f59e0b; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+.pp-excluded { font-size: 11px; color: var(--pl-textsub); margin-top: 3px; }
+
+/* 종이(WYSIWYG): 흰 배경 검정 글자, A4 폭 */
+.pp-sheet { background: #fff; color: #111; width: 210mm; max-width: 100%; margin: 0 auto; padding: 10mm; box-shadow: 0 2px 16px rgba(0,0,0,.4); font-size: 11pt; line-height: 1.25; }
+.pp-top { font-weight: 800; font-size: 12pt; border-bottom: 1.5px solid #111; padding-bottom: 4px; margin-bottom: 8px; }
+.pp-mapblock { break-inside: avoid; page-break-inside: avoid; margin-bottom: 10px; }
+.pp-maphead { display: flex; align-items: center; gap: 6px; font-size: 12pt; font-weight: 800; margin: 6px 0 3px; color: #111; }
+.pp-maphead-thumb { position: relative; width: 24px; height: 14px; border-radius: 3px; overflow: hidden; display: inline-block; flex: 0 0 24px; background: #eee; }
+.pp-sheet .bp-mapicon { width: 14px; height: 14px; filter: brightness(0); opacity: .85; }
+
+.pp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pp-table th { background: #eee; color: #111; font-size: 9pt; text-align: left; border: 1px solid #999; padding: 2px 5px; }
+.pp-table td { border: 1px solid #bbb; padding: 3px 5px; vertical-align: top; height: 14mm; }
+.pp-sheet.dense .pp-table td { height: 10mm; }
+
+/* 조건 */
+.pp-cond { display: flex; gap: 5px; align-items: flex-start; }
+.pp-strip { width: 5px; align-self: stretch; min-height: 11mm; border-radius: 2px; flex: 0 0 5px; }
+.pp-sheet.dense .pp-strip { min-height: 8mm; }
+.pp-tag { font-size: 8pt; font-weight: 800; border: 1.5px solid #111; border-radius: 3px; padding: 0 3px; flex: 0 0 auto; }
+.pp-cond-type { font-size: 8pt; font-weight: 700; display: block; }
+.pp-cond-body { min-width: 0; }
+.pp-text { font-size: 9pt; }
+
+/* 초상화 */
+.pp-port { display: inline-flex; flex-direction: column; align-items: center; margin: 1px; }
+.pp-port-img { position: relative; width: 10mm; height: 10mm; border-radius: 3px; overflow: hidden; display: inline-block; background: #eee; }
+.pp-sheet.dense .pp-port-img { width: 7mm; height: 7mm; }
+.pp-port-name { font-size: 6pt; max-width: 13mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111; }
+.pp-x { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #d00; font-weight: 900; font-size: 12pt; }
+.pp-ban { position: absolute; inset: 0; background: linear-gradient(to top right, transparent 45%, rgba(220,0,0,.9) 45%, rgba(220,0,0,.9) 55%, transparent 55%); }
+
+/* 우리 밴 */
+.pp-ourban { display: inline-block; margin-right: 4px; }
+
+/* 조합 */
+.pp-comp { display: flex; align-items: center; gap: 4px; margin: 1px 0; }
+.pp-comp-mark { font-size: 8pt; min-width: 16px; display: inline-flex; align-items: center; gap: 2px; }
+.pp-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
+.pp-comp-slots { display: flex; gap: 2px; flex-wrap: nowrap; }
+.pp-slot { display: inline-flex; flex-direction: column; align-items: center; }
+.pp-slot-empty { width: 10mm; height: 10mm; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 3px; font-size: 8pt; color: #999; }
+.pp-sheet.dense .pp-slot-empty { width: 7mm; height: 7mm; }
+
+/* 메모 */
+.pp-memo { font-size: 8pt; color: #111; }
+.pp-memo-body { font-size: 7pt; color: #555; }
+
+/* 흑백 친화: 색 요소 최소화(태그·X·★/○는 JS에서 처리) */
+.pp-sheet.mono .pp-dot { display: none; }
+
+/* 인쇄 */
+@page { size: A4 portrait; margin: 10mm; }
+@media print {
+  body * { visibility: hidden; }
+  .pp-sheet, .pp-sheet * { visibility: visible; }
+  .pp-sheet { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+  .noprint { display: none !important; }
+  html, body { background: #fff; }
+}

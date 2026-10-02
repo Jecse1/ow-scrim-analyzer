@@ -3,7 +3,7 @@
 // 선택 보드·스크롤 위치는 sessionStorage 보존. 모바일(≤767): 보드 드롭다운 + 1열 + ⋯ 메뉴.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Plus, GripVertical, Trash2, Copy, FolderInput, ExternalLink, MoreVertical, X,
+  Plus, GripVertical, Trash2, Copy, FolderInput, ExternalLink, MoreVertical, X, Printer,
 } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
 import { useTheme } from "../ThemeContext";
@@ -18,7 +18,7 @@ const SS_BOARD = "plans.selectedBoard";
 const SS_SCROLL = "plans.scrollTop";
 const mapType = (mapId) => (BANPICK_MAPS.find((m) => m.id === mapId) || {}).type || "Control";
 
-export default function PlansHome({ onOpenMap }) {
+export default function PlansHome({ onOpenMap, onPrint }) {
   const { language } = useLanguage();
   const { isDarkMode: dark } = useTheme();
   const t = planT(language);
@@ -229,6 +229,7 @@ export default function PlansHome({ onOpenMap }) {
             <>
               <div className="plan-main-head">
                 <div className="plan-main-title">{selectedBoard?.name}</div>
+                <button className="plan-print-btn" onClick={() => onPrint && onPrint(selectedBoard.id)}><Printer size={15} />{t.print}</button>
                 <button className="plan-add-map" onClick={() => setShowAdd(true)}><Plus size={15} />{t.addMap}</button>
               </div>
               {maps.length === 0 ? (

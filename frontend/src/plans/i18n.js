@@ -30,6 +30,9 @@ const STR = {
     createBoardFailed: "보드 생성 실패", updateFailed: "저장 실패", deleteFailed: "삭제 실패",
     addMapFailed: "맵 추가 실패", dupFailed: "복제 실패", moveFailed: "이동 실패", orderFailed: "순서 변경 실패",
     networkErr: "연결 실패(서버 확인)",
+    print: "인쇄", density: "밀도", normal: "보통", dense: "조밀", portraits: "초상화", memoCol: "메모", mono: "흑백 친화", team: "팀",
+    basePlan: "기본안", altLabel: "대안", colCond: "조건", colOurBan: "우리 밴", colComp: "조합", colMemo: "메모",
+    pageWarn: (n) => `${n}장`, pageWarnHint: "조밀 모드 또는 맵 수 줄이기", excluded: (n) => `미포함 ${n}개`,
   },
   en: {
     title: "Draft Plans", boards: "Boards", newBoard: "New board", boardNamePh: "Board name",
@@ -59,6 +62,9 @@ const STR = {
     createBoardFailed: "Create board failed", updateFailed: "Save failed", deleteFailed: "Delete failed",
     addMapFailed: "Add map failed", dupFailed: "Duplicate failed", moveFailed: "Move failed", orderFailed: "Reorder failed",
     networkErr: "Connection failed (check server)",
+    print: "Print", density: "Density", normal: "Normal", dense: "Dense", portraits: "Portraits", memoCol: "Memo", mono: "B&W friendly", team: "Team",
+    basePlan: "Default", altLabel: "Alt", colCond: "Condition", colOurBan: "Our ban", colComp: "Comp", colMemo: "Memo",
+    pageWarn: (n) => `${n} pages`, pageWarnHint: "use dense mode or fewer maps", excluded: (n) => `${n} excluded`,
   },
   zh: {
     title: "草案计划", boards: "看板", newBoard: "新建看板", boardNamePh: "看板名称",
@@ -88,6 +94,9 @@ const STR = {
     createBoardFailed: "创建看板失败", updateFailed: "保存失败", deleteFailed: "删除失败",
     addMapFailed: "添加地图失败", dupFailed: "复制失败", moveFailed: "移动失败", orderFailed: "排序失败",
     networkErr: "连接失败(请检查服务器)",
+    print: "打印", density: "密度", normal: "标准", dense: "紧凑", portraits: "头像", memoCol: "备注", mono: "黑白友好", team: "队伍",
+    basePlan: "默认方案", altLabel: "备选", colCond: "条件", colOurBan: "我方禁用", colComp: "阵容", colMemo: "备注",
+    pageWarn: (n) => `${n} 页`, pageWarnHint: "使用紧凑模式或减少地图", excluded: (n) => `未包含 ${n} 个`,
   },
 };
 
