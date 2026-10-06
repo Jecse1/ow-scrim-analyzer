@@ -82,6 +82,63 @@ node frontend/scripts/screenshot.mjs
 
 ---
 
+## 5. 영웅 역할 변경(패치로 role 이 바뀐 기존 영웅)
+
+영웅의 역할은 heroes.json 에 **두 곳**(독립)에 있다.
+- 최상위 `role`(소문자 `tank`/`damage`/`support`) — 통계·한타·라인업 집계용(`HERO_ROLE_DATA`/`TANK_HEROES`/`SUPPORT_HEROES` 파생)
+- `banpick.role`(대문자 `Tank`/`Damage`/`Support`) — 밴픽·드래프트 플랜용
+
+**`role` 과 `banpick.role` 두 필드를 함께 바꾼다.** 하나만 바꾸면 통계와 밴픽의 역할이 어긋난다.
+변경 즉시 **과거 매치도 새 역할로 재분류된다(소급)** — 역할 분류는 날짜 개념 없이 현재 `role` 만 본다.
+과거 데이터를 이전 역할로 보존하는 기능은 없다(필요하면 과거 데이터를 버리거나 별도 설계).
+
+- 예) 솜브라: 2026-10-06 패치로 딜러→지원. `role` 을 `"support"`, `banpick.role` 을 `"Support"` 로 바꾸면
+  전 기간(과거 포함) 솜브라가 지원으로 집계·표시된다.
+
+---
+
+## 6. 신규 맵 추가 절차(SSOT)
+
+맵 정본은 `backend/game_data/maps.json` 1곳. 프론트/백엔드가 `@gamedata` 별칭으로 **같은 파일**을 공유한다.
+
+### 6-1. `maps.json` 에 엔트리 추가(호위맵 예 — 지브롤터 구조와 동일)
+```json
+{
+  "id": "grimsvotn",
+  "ko": "감시 기지: 그림스뵈튼",
+  "en": "Watchpoint: Grimsvötn",
+  "zh": "Watchpoint: Grimsvötn",
+  "type": "escort",
+  "typeLabelKo": "화물",
+  "modeLabelKo": "호위",
+  "aliases": ["그림스뵈튼", "감시기지 그림스뵈튼", "감시기지: 그림스뵈튼", "Watchpoint: Grimsvotn"],
+  "controlKeyword": false,
+  "mapTypeData": { "감시 기지: 그림스뵈튼": "화물", "그림스뵈튼": "화물", "Watchpoint: Grimsvötn": "Escort" },
+  "controlKeywords": [],
+  "en2ko": { "Watchpoint: Grimsvötn": "감시 기지: 그림스뵈튼", "Watchpoint: Grimsvotn": "감시 기지: 그림스뵈튼" },
+  "banpick": { "id": "grimsvotn", "name": "감시기지 그림스뵈튼", "type": "Escort", "order": 15 }
+}
+```
+| 필드 | 설명 |
+|---|---|
+| `ko` | **정본 = 로그가 기록하는 한국어 표기**(조회 기준). 로그 실표기 미확인 시 선례 공백 규칙(`감시 기지: XXX`)을 따르고 첫 실로그로 검증 |
+| `en` / `zh` | 영/중 표기. 출처 없으면 임시로 en 문자열 기입(보고에 표기) |
+| `type` | `control`/`escort`/`hybrid`/`push`/`flashpoint`/`clash` (소문자). drift·아이콘은 **모드 기준 자동** — 추가 설정 불필요 |
+| `aliases` | 로그·화면에 나올 수 있는 모든 이형(콜론 유무·공백 변형·ASCII 대체 등) |
+| `en2ko` | 로그에 **영어 맵명이 나올 때** 한국어로 치환(`MAP_EN2KO`). 로그가 한국어면 비워도 됨 |
+| `banpick` | 밴픽 그리드 항목. `name` 은 **밴픽 헤더 배경 이미지 파일명과 바이트 단위로 일치**해야 함(아래 6-2). `order` 는 보통 같은 모드 묶음의 마지막+1 |
+
+### 6-2. 맵 이미지
+- `frontend/public/maps/{banpick.name}.webp` 추가(예: `감시기지 그림스뵈튼.webp`).
+- 밴픽 헤더 배경은 `BanpickApp.tsx` 가 `/maps/${banpick.name}.webp` 로 직접 참조하므로 **`banpick.name` 과 파일명(확장자 제외)이 바이트 단위로 동일**해야 한다(콜론/공백 포함).
+- 규격: 기존 맵 webp 는 **폭 1000px, WEBP**(호위맵 높이 ~562–563). `check_image_fields.mjs` 는 **맵을 검사하지 않으니** 아래로 수동 확인:
+  ```bash
+  node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('backend/game_data/maps.json','utf8')).maps.find(x=>x.id==='grimsvotn');console.log(fs.existsSync('frontend/public/maps/'+m.banpick.name+'.webp'))"
+  ```
+- `banpick` 필드가 없는 맵은 밴픽 그리드에 안 뜬다(`gameData.js` 의 `.filter(m=>m.banpick)`).
+
+---
+
 ## 미결 TODO
 
 - **독트린(doctrine, order 53)**: `en` 공란·초상화 이미지 없음 상태로 등록됨.

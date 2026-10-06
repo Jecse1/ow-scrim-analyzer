@@ -283,7 +283,7 @@
       "image": "로드호그",
       "aliases": [],
       "skills": {
-        "Ability 1": "갈고리 사슬",
+        "Ability 1": "사슬 갈고리",
         "Ability 2": "숨 돌리기",
         "Ultimate": "돼재앙"
       },
@@ -1021,22 +1021,22 @@
       "en": "Sombra",
       "ko": "솜브라",
       "zh": "黑影",
-      "role": "damage",
+      "role": "support",
       "image": "솜브라",
       "aliases": [],
       "skills": {
-        "Ability 1": "은신",
-        "Ability 2": "바이러스",
+        "Ability 1": "사이버 스페이스",
+        "Ability 2": "위치변환기",
         "Ultimate": "EMP"
       },
       "skillsEn": {
-        "Ability 1": "Stealth",
-        "Ability 2": "Virus",
+        "Ability 1": "Cyber Space",
+        "Ability 2": "Translocator",
         "Ultimate": "EMP"
       },
       "skillsZh": {
-        "Ability 1": "潜行",
-        "Ability 2": "病毒",
+        "Ability 1": "Cyber Space",
+        "Ability 2": "Translocator",
         "Ultimate": "电磁脉冲"
       },
       "koreanHeroMap": {
@@ -1049,7 +1049,7 @@
       "banpick": {
         "id": "sombra",
         "name": "솜브라",
-        "role": "Damage",
+        "role": "Support",
         "order": 22
       }
     },
