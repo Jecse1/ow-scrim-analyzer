@@ -90,6 +90,12 @@ class MatchPatchInput(BaseModel):
     video_start_sec: Optional[int] = Field(default=None, alias="videoStartSec")
     video_end_sec: Optional[int] = Field(default=None, alias="videoEndSec")
     match_index: Optional[int] = None
+    # 1팀명·2팀명 정정(값 치환). 세션 편집과 달리 BASE_TEAM도 변경 가능(매치 단위 교정 용도).
+    # 준 값이 현재 슬롯명과 다를 때만 치환. 두 값이 같거나 상대 슬롯명과 교차되면 422(→ swap_teams 사용).
+    team1_name: Optional[str] = Field(default=None, alias="team1Name")
+    team2_name: Optional[str] = Field(default=None, alias="team2Name")
+    # 1팀↔2팀 자리 바꾸기(슬롯 교환). team1↔team2 이름·슬롯 숫자쌍 교환, 이름값 컬럼 불변.
+    swap_teams: bool = Field(default=False, alias="swapTeams")
     # 라운드별 VOD 보정(로그 매치 전용). 준 라운드만 반영, null = 자동으로 되돌림.
     rounds_delta: Optional[List[RoundDeltaInput]] = Field(default=None, alias="roundsDelta")
     # 퍼즈 구간 전체 치환(로그 매치 전용). [] = 전부 삭제. None = 무변경.

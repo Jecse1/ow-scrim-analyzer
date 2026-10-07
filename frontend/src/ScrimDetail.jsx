@@ -113,14 +113,29 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
   };
 
   const saveMatch = async () => {
+    const em = editMatch;
+    // 팀명 정정·자리 바꾸기 — 최종 슬롯 이름(↔ 반영) 그대로 전송, swap 홀수 토글이면 교환.
+    const t1 = (em.team1_name || "").trim();
+    const t2 = (em.team2_name || "").trim();
+    const teamChanged = t1 !== em.origTeam1 || t2 !== em.origTeam2 || em.swapPending;
+    if (teamChanged) {
+      if (!t1 || !t2) { alert(t.sdTeamEmptyWarn); return; }
+      if (t1 === t2) { alert(t.sdTeamSameWarn); return; }
+      // 두 팀 모두 기준 팀이 아니면 우리 팀 집계에서 제외됨 — 저장 전 확인
+      if (t1 !== BASE_TEAM && t2 !== BASE_TEAM && !window.confirm(t.sdTeamNoBaseConfirm)) return;
+    }
     setBusy(true);
     try {
-      const em = editMatch;
       const body = {
         map_name: em.map_name,
         video_url: em.video_url,
         match_index: Number(em.match_index) || undefined,
       };
+      if (teamChanged) {
+        body.team1_name = t1;
+        body.team2_name = t2;
+        if (em.swapPending) body.swap_teams = true;
+      }
       if (em.source === "manual") {
         body.winner = em.winner || "";
         body.score_t1 = Number(em.score_t1) || 0;
@@ -144,12 +159,13 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
           }));
         }
       }
-      await axios.patch(`${API_BASE}/api/matches/${em.id}`, body);
+      const res = await axios.patch(`${API_BASE}/api/matches/${em.id}`, body);
       // 승패 보정(로그 매치) — 원본 winner 무변경, 기존 winner-override 엔드포인트 재사용(meta 동기화 포함)
       if (em.source !== "manual" && em.winnerOverride !== em.origWinnerOverride) {
         await axios.patch(`${API_BASE}/api/matches/${em.id}/winner-override`,
           { winnerOverride: em.winnerOverride || null });
       }
+      if (res?.data?.warning === "base_team_missing") alert(t.sdTeamNoBaseWarn);
       invalidateApiCache();
       setEditMatch(null);
       await fetchScrim();
@@ -478,6 +494,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                           winnerOverride: m.winner_override || "", origWinnerOverride: m.winner_override || "",
                           score_t1: m.score_t1, score_t2: m.score_t2, match_index: m.match_index,
                           team1_name: m.team1_name, team2_name: m.team2_name,
+                          origTeam1: m.team1_name, origTeam2: m.team2_name, swapPending: false,
                         });
                       }}
                       style={{ background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, color: theme.text, padding: "8px 10px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}
@@ -506,6 +523,17 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       <input style={inp} value={em.map_name} onChange={e => upd("map_name", e.target.value)} /></div>
                     <div><span style={lbl}>{t.sdOrder}</span>
                       <input style={{ ...inp, width: 60 }} type="number" min="1" value={em.match_index} onChange={e => upd("match_index", e.target.value)} /></div>
+                    {/* 1팀명 ↔ 2팀명 — ↔ 버튼은 두 입력값(수기 매치는 스코어도)을 즉시 교환하고 저장 시 슬롯 교환 */}
+                    <div style={{ flexBasis: "100%", display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                      <div><span style={lbl}>{t.sdTeam1Name}</span>
+                        <input style={inp} value={em.team1_name} onChange={e => upd("team1_name", e.target.value)} /></div>
+                      <button type="button" title={t.sdSwapTeams}
+                        onClick={() => setEditMatch(prev => ({ ...prev, team1_name: prev.team2_name, team2_name: prev.team1_name, score_t1: prev.score_t2, score_t2: prev.score_t1, swapPending: !prev.swapPending }))}
+                        style={{ background: em.swapPending ? theme.primary : theme.surfaceHighlight, color: em.swapPending ? "#fff" : theme.text, border: `1px solid ${theme.borderHighlight}`, borderRadius: 8, cursor: "pointer", fontWeight: 900, fontSize: 15, padding: "8px 12px", height: 37 }}>⇄</button>
+                      <div><span style={lbl}>{t.sdTeam2Name}</span>
+                        <input style={inp} value={em.team2_name} onChange={e => upd("team2_name", e.target.value)} /></div>
+                      {em.swapPending && <span style={{ fontSize: 11, color: theme.primary, fontWeight: 700, alignSelf: "center" }}>{t.sdSwapPending}</span>}
+                    </div>
                     <div style={{ flexBasis: "100%", maxWidth: 480 }}><span style={lbl}>{t.smYoutubeLink}</span>
                       <input style={{ ...inp, width: "100%", boxSizing: "border-box" }} value={em.video_url} onChange={e => upd("video_url", e.target.value)} /></div>
                     {em.source === "manual" ? (

@@ -158,6 +158,93 @@ def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value) -> bool:
     return True
 
 
+# ── 팀명 치환·자리 바꾸기 공용 헬퍼(세션 편집·매치 편집·rebuild 공유) ──────────────
+async def _rename_team_in_match_db(db, match, old: str, new: str):
+    """한 매치 범위에서 '팀명 문자열' 컬럼을 old→new 로 값 치환(DB만, meta는 호출자 담당).
+    슬롯 순서와 무관한 값 기반 치환이라 자리 바꾸기 상태에서도 안전하다.
+    대상: matches.team1_name/team2_name/winner/winner_override/result(부분문자열),
+          rounds.winner, player_stats.team_name,
+          events.player_team/target_team/winner/attacker/capturing_team/team.
+    슬롯 숫자쌍(score_t1/t2 등)은 이름이 아니므로 건드리지 않는다."""
+    from sqlalchemy import update as sa_update
+    if match.team1_name == old: match.team1_name = new
+    if match.team2_name == old: match.team2_name = new
+    if (match.winner or "") == old: match.winner = new
+    if (match.winner_override or "") == old: match.winner_override = new
+    if match.result and old in match.result: match.result = match.result.replace(old, new)
+    await db.execute(sa_update(DBRound)
+                     .where(DBRound.match_id == match.id, DBRound.winner == old)
+                     .values(winner=new))
+    await db.execute(sa_update(DBPlayerStat)
+                     .where(DBPlayerStat.match_id == match.id, DBPlayerStat.team_name == old)
+                     .values(team_name=new))
+    for col in (DBEvent.player_team, DBEvent.target_team, DBEvent.winner,
+                DBEvent.capturing_team, DBEvent.team, DBEvent.attacker):
+        await db.execute(sa_update(DBEvent)
+                         .where(DBEvent.match_id == match.id, col == old)
+                         .values(**{col.key: new}))
+
+
+async def _swap_team_slots_db(db, match):
+    """1팀↔2팀 슬롯 교환(DB만). 이름 슬롯·슬롯 숫자쌍만 맞바꾸고 '이름값' 컬럼은 불변.
+    교환: matches.team1_name↔team2_name, score_t1↔score_t2, total_final_blows_t1↔t2,
+          rounds.final_blows_t1↔t2, events.score_t1↔score_t2.
+    불변: player_stats.team_name, events.player_team/winner/attacker 등(선수의 소속 팀명은 자리와 무관).
+    SQL 한 문장 내 a=b,b=a 는 원본값 기준으로 평가되어 정상 교환된다(SQLite/표준 SQL)."""
+    from sqlalchemy import update as sa_update
+    # result 원문 문자열의 선두 "(score_t1 : score_t2" 점수부도 슬롯과 함께 교환한다.
+    # (로그 매치·winner_override 없음 경로는 serializer가 이 DB result 원문을 그대로 쓰므로 필요.
+    #  승자명·타이브레이크 주석은 승/패 기준이라 교환하지 않고 보존.) 교환 전 점수로 치환.
+    if match.result:
+        _old = f"({match.score_t1 or 0} : {match.score_t2 or 0}"
+        _new = f"({match.score_t2 or 0} : {match.score_t1 or 0}"
+        if _old != _new and _old in match.result:
+            match.result = match.result.replace(_old, _new, 1)
+    match.team1_name, match.team2_name = match.team2_name, match.team1_name
+    match.score_t1, match.score_t2 = match.score_t2, match.score_t1
+    match.total_final_blows_t1, match.total_final_blows_t2 = (
+        match.total_final_blows_t2, match.total_final_blows_t1)
+    await db.execute(sa_update(DBRound).where(DBRound.match_id == match.id)
+                     .values(final_blows_t1=DBRound.final_blows_t2,
+                             final_blows_t2=DBRound.final_blows_t1))
+    await db.execute(sa_update(DBEvent).where(DBEvent.match_id == match.id)
+                     .values(score_t1=DBEvent.score_t2, score_t2=DBEvent.score_t1))
+
+
+def _rename_team_in_meta_match(scrim_id: str, match_id: str, old: str, new: str) -> bool:
+    """meta.json의 해당 매치에서 팀명 값 old→new 치환(값 기반, 슬롯 무관).
+    meta는 로그 원본 순서(natural)를 유지하므로 old 값이 어느 슬롯에 있든 잡힌다."""
+    def mutate(meta):
+        changed = False
+        for m in meta.get("matches", []):
+            if m.get("id") != match_id:
+                continue
+            for k in ("team1_name", "team2_name", "team_1_name", "team_2_name",
+                      "winner", "winner_override"):
+                if m.get(k) == old:
+                    m[k] = new; changed = True
+            if m.get("result") and old in m["result"]:
+                m["result"] = m["result"].replace(old, new); changed = True
+            # 로그 매치 meta는 rounds를 저장하지 않지만(rebuild가 재생성), 있으면 winner 동일 규칙 적용.
+            for rnd in m.get("rounds", []):
+                if rnd.get("winner") == old:
+                    rnd["winner"] = new; changed = True
+        return changed
+    return _update_meta_json(scrim_id, mutate)
+
+
+def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
+    """meta.json의 해당 매치 teams_swapped 플래그 토글. meta 팀명은 로그 원본 순서로 두고
+    이 플래그로만 표시 방향을 기록한다 — rebuild가 재파싱(원본 순서) 후 _swap_team_slots_db 재적용."""
+    def mutate(meta):
+        for m in meta.get("matches", []):
+            if m.get("id") == match_id:
+                m["teams_swapped"] = not bool(m.get("teams_swapped", False))
+                return True
+        return False
+    return _update_meta_json(scrim_id, mutate)
+
+
 @router.post("/api/scrim/manual-register")
 async def register_scrim_manual(request: Request):
     if not _DB_AVAILABLE:
@@ -579,6 +666,7 @@ async def rebuild_database():
             await db.execute(sa_delete(DBSession))
             await db.flush()
 
+            swapped_matches = []   # teams_swapped=true 매치 — 삽입·flush 후 일괄 슬롯 교환
             for scrim_obj in new_scrims:
                 scrim_id = scrim_obj["id"]
                 db.add(DBSession(
@@ -592,7 +680,7 @@ async def rebuild_database():
 
                 for m in scrim_obj.get("matches", []):
                     match_id_val = m.get("id") or str(uuid.uuid4())
-                    db.add(DBMatch(
+                    dbm = DBMatch(
                         id=match_id_val,
                         session_id=scrim_id,
                         match_index=m.get("match_index", 0),
@@ -613,7 +701,12 @@ async def rebuild_database():
                         duration_sec=m.get("timeline", {}).get("duration_sec", 0),
                         total_final_blows_t1=m.get("total_final_blows_t1", 0),
                         total_final_blows_t2=m.get("total_final_blows_t2", 0),
-                    ))
+                    )
+                    db.add(dbm)
+                    # 자리 바꾸기 복원: meta는 로그 원본 순서 → 재파싱으로 선수 소속이 정확히 복원된 뒤
+                    # 이 매치만 라이브와 동일한 _swap_team_slots_db 를 재적용(이름+슬롯 숫자쌍 교환).
+                    if m.get("teams_swapped"):
+                        swapped_matches.append(dbm)
                     for p in m.get("pauses", []):
                         db.add(DBPause(
                             match_id=match_id_val,
@@ -678,6 +771,13 @@ async def rebuild_database():
                                 team=ev.get("team"),
                             ))
                             total_events += 1
+
+            # 모든 삽입(이름·winner_override 복원 포함) 후 자리 바꾸기 매치만 슬롯 교환 재적용.
+            # rounds/events UPDATE 가 방금 삽입분을 대상으로 동작하도록 먼저 flush.
+            if swapped_matches:
+                await db.flush()
+                for dbm in swapped_matches:
+                    await _swap_team_slots_db(db, dbm)
 
             await db.commit()
             print(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
@@ -822,7 +922,6 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
             raise HTTPException(status_code=422, detail=f"상대팀명을 기준 팀({BASE_TEAM})으로 바꿀 수 없습니다")
 
     try:
-        from sqlalchemy import update as sa_update
         from sqlalchemy.orm import selectinload as _sil
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -840,26 +939,15 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
 
             renamed_match_ids = []
             if rn_from:
-                match_ids = [m.id for m in (s.matches or []) if m.deleted_at is None]
+                # 세션 내 각 매치에 공용 치환 헬퍼 적용(매치 편집과 동일 로직 공유).
+                # 값 기반이라 결과는 기존 일괄 UPDATE와 동일 — 회귀 검증 대상.
                 for m in (s.matches or []):
                     if m.deleted_at is not None:
                         continue
-                    hit = False
-                    if m.team1_name == rn_from: m.team1_name = rn_to; hit = True
-                    if m.team2_name == rn_from: m.team2_name = rn_to; hit = True
-                    if (m.winner or "") == rn_from: m.winner = rn_to; hit = True
-                    if (m.winner_override or "") == rn_from: m.winner_override = rn_to; hit = True
-                    if m.result and rn_from in m.result: m.result = m.result.replace(rn_from, rn_to); hit = True
-                    if hit: renamed_match_ids.append(m.id)
-                if match_ids:
-                    await db.execute(sa_update(DBPlayerStat)
-                                     .where(DBPlayerStat.match_id.in_(match_ids), DBPlayerStat.team_name == rn_from)
-                                     .values(team_name=rn_to))
-                    for col in (DBEvent.player_team, DBEvent.target_team, DBEvent.winner,
-                                DBEvent.capturing_team, DBEvent.team, DBEvent.attacker):
-                        await db.execute(sa_update(DBEvent)
-                                         .where(DBEvent.match_id.in_(match_ids), col == rn_from)
-                                         .values(**{col.key: rn_to}))
+                    before = (m.team1_name, m.team2_name, m.winner, m.winner_override, m.result)
+                    await _rename_team_in_match_db(db, m, rn_from, rn_to)
+                    if before != (m.team1_name, m.team2_name, m.winner, m.winner_override, m.result):
+                        renamed_match_ids.append(m.id)
             await db.commit()
     except HTTPException:
         raise
@@ -910,6 +998,39 @@ async def patch_match(match_id: str, body: MatchPatchInput):
             if (body.winner is not None or body.score_t1 is not None or body.score_t2 is not None) and not is_manual:
                 raise HTTPException(status_code=422,
                                     detail="로그 매치의 승패·스코어는 직접 수정할 수 없습니다 — winner-override를 사용하세요")
+
+            # ── 팀명 정정·자리 바꾸기 ── (winner/score 검증이 최종 팀명을 쓰므로 먼저 처리)
+            # 세션 편집과 달리 BASE_TEAM도 변경 허용. 처리 순서: ① swap ② rename.
+            # 입력 team1/team2 는 (swap 반영 뒤) 각 슬롯의 최종 희망 이름.
+            team_warning = None
+            did_swap = bool(body.swap_teams)
+            i1 = body.team1_name.strip() if body.team1_name is not None else None
+            i2 = body.team2_name.strip() if body.team2_name is not None else None
+            p1 = p2 = None
+            changed1 = changed2 = False
+            if did_swap or i1 is not None or i2 is not None:
+                c1, c2 = m.team1_name, m.team2_name
+                p1, p2 = (c2, c1) if did_swap else (c1, c2)   # swap 후 각 슬롯 현재 이름
+                f1 = i1 if i1 is not None else p1              # 최종 1팀명
+                f2 = i2 if i2 is not None else p2              # 최종 2팀명
+                changed1 = (i1 is not None and i1 != p1)
+                changed2 = (i2 is not None and i2 != p2)
+                if not f1 or not f2:
+                    raise HTTPException(status_code=422, detail="팀명은 비울 수 없습니다")
+                if f1 == f2:
+                    raise HTTPException(status_code=422, detail="1팀명과 2팀명이 같을 수 없습니다")
+                # 이름 입력으로 자리 교차(= 상대 슬롯명과 맞교환) 시도는 거부 — ↔ 버튼 사용 유도
+                if (changed1 and i1 == p2) or (changed2 and i2 == p1):
+                    raise HTTPException(status_code=422,
+                                        detail="두 팀의 자리를 바꾸려면 ↔ 자리 바꾸기 버튼을 사용하세요")
+                if did_swap:
+                    await _swap_team_slots_db(db, m)          # 슬롯 교환(이름+숫자쌍)
+                if changed1:
+                    await _rename_team_in_match_db(db, m, p1, i1)
+                if changed2:
+                    await _rename_team_in_match_db(db, m, p2, i2)
+                if BASE_TEAM not in (f1, f2):
+                    team_warning = "base_team_missing"
 
             meta_fields = {}
             if body.map_name is not None and body.map_name.strip():
@@ -1008,9 +1129,21 @@ async def patch_match(match_id: str, body: MatchPatchInput):
         _update_match_fields_in_meta(scrim_id, match_id, meta_fields)
     if swapped:
         _update_match_fields_in_meta(scrim_id, swapped, {"match_index": old_idx})
+    # 팀명 변경·자리 바꾸기 meta 동기화(rebuild 소스). meta 팀명은 로그 원본 순서를 유지하고
+    # 자리 바꾸기는 teams_swapped 플래그만 토글 — 값 기반 rename은 슬롯 무관하게 적용된다.
+    if did_swap:
+        _toggle_swap_in_meta_match(scrim_id, match_id)
+    if changed1:
+        _rename_team_in_meta_match(scrim_id, match_id, p1, i1)
+    if changed2:
+        _rename_team_in_meta_match(scrim_id, match_id, p2, i2)
     _invalidate_response_cache()
-    return {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
-            "swapped_with": swapped}
+    resp = {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
+            "swapped_with": swapped, "teams_swapped": did_swap,
+            "renamed_teams": bool(changed1 or changed2)}
+    if team_warning:
+        resp["warning"] = team_warning
+    return resp
 
 
 # ── 세션 단건 삭제 ─────────────────────────────────────────────
