@@ -211,6 +211,21 @@ async def _swap_team_slots_db(db, match):
                      .values(score_t1=DBEvent.score_t2, score_t2=DBEvent.score_t1))
 
 
+async def _exchange_team_names_in_match_db(db, match, a: str, b: str):
+    """한 매치에서 팀명 문자열 a↔b 를 '동시에' 맞교환(DB만, meta는 호출자 담당).
+    슬롯 순서·슬롯 숫자쌍(score_t1/2 등)은 불변 — 값 기반 치환이므로 자리와 무관.
+    등록 시 1팀·2팀명을 반대로 입력한 실수 교정용(자리 바꾸기 ↔ 와 다름: 슬롯·점수 보존,
+    선수 소속·승자 등 '이름값'만 교환되어 집계의 our_side 기준이 뒤집힌다).
+    구현: 임시 토큰을 거쳐 a→tmp, b→a, tmp→b 로 _rename_team_in_match_db 를 3회 재사용.
+    tmp 는 실제 팀명과 충돌하지 않는 널 센티넬."""
+    if a == b:
+        return
+    tmp = "\u0000swap\u0000"
+    await _rename_team_in_match_db(db, match, a, tmp)
+    await _rename_team_in_match_db(db, match, b, a)
+    await _rename_team_in_match_db(db, match, tmp, b)
+
+
 def _rename_team_in_meta_match(scrim_id: str, match_id: str, old: str, new: str) -> bool:
     """meta.json의 해당 매치에서 팀명 값 old→new 치환(값 기반, 슬롯 무관).
     meta는 로그 원본 순서(natural)를 유지하므로 old 값이 어느 슬롯에 있든 잡힌다."""
@@ -231,6 +246,20 @@ def _rename_team_in_meta_match(scrim_id: str, match_id: str, old: str, new: str)
                     rnd["winner"] = new; changed = True
         return changed
     return _update_meta_json(scrim_id, mutate)
+
+
+def _exchange_team_names_in_meta_match(scrim_id: str, match_id: str, a: str, b: str) -> bool:
+    """meta.json의 해당 매치에서 팀명 a↔b 동시 교환(값 기반, 슬롯 무관).
+    DB 쪽 _exchange_team_names_in_match_db 와 동일한 임시 토큰 3단 치환으로
+    _rename_team_in_meta_match 를 재사용. 교환은 메타 팀명 값 자체를 바꾸므로
+    rebuild 는 별도 플래그 없이 재파싱(custom_t1/t2 = 메타 값)만으로 복원된다."""
+    if a == b:
+        return False
+    tmp = "\u0000swap\u0000"
+    r1 = _rename_team_in_meta_match(scrim_id, match_id, a, tmp)
+    r2 = _rename_team_in_meta_match(scrim_id, match_id, b, a)
+    r3 = _rename_team_in_meta_match(scrim_id, match_id, tmp, b)
+    return r1 or r2 or r3
 
 
 def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
@@ -1004,6 +1033,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
             # 입력 team1/team2 는 (swap 반영 뒤) 각 슬롯의 최종 희망 이름.
             team_warning = None
             did_swap = bool(body.swap_teams)
+            did_exchange = False
             i1 = body.team1_name.strip() if body.team1_name is not None else None
             i2 = body.team2_name.strip() if body.team2_name is not None else None
             p1 = p2 = None
@@ -1019,16 +1049,27 @@ async def patch_match(match_id: str, body: MatchPatchInput):
                     raise HTTPException(status_code=422, detail="팀명은 비울 수 없습니다")
                 if f1 == f2:
                     raise HTTPException(status_code=422, detail="1팀명과 2팀명이 같을 수 없습니다")
-                # 이름 입력으로 자리 교차(= 상대 슬롯명과 맞교환) 시도는 거부 — ↔ 버튼 사용 유도
-                if (changed1 and i1 == p2) or (changed2 and i2 == p1):
-                    raise HTTPException(status_code=422,
-                                        detail="두 팀의 자리를 바꾸려면 ↔ 자리 바꾸기 버튼을 사용하세요")
-                if did_swap:
-                    await _swap_team_slots_db(db, m)          # 슬롯 교환(이름+숫자쌍)
-                if changed1:
-                    await _rename_team_in_match_db(db, m, p1, i1)
-                if changed2:
-                    await _rename_team_in_match_db(db, m, p2, i2)
+                # 이름 교환 감지: 자리 바꾸기가 아니면서 두 입력이 현재 두 슬롯명과 정확히 교차
+                # (i1==현재 team2, i2==현재 team1). 등록 시 1팀·2팀명을 반대로 입력한 실수를
+                # 슬롯은 그대로 두고 이름 문자열만 A↔B 동시 치환으로 교정한다. swap_teams=true가
+                # 함께 오면 swap 뒤 p1/p2 기준으로 재판정되어 changed1/2=0 → 이 분기에 안 들어옴.
+                is_exchange = (not did_swap and i1 is not None and i2 is not None
+                               and i1 == c2 and i2 == c1)
+                if is_exchange:
+                    await _exchange_team_names_in_match_db(db, m, c1, c2)
+                    did_exchange = True
+                    changed1 = changed2 = False   # rename 경로 비활성(이미 교환으로 처리)
+                else:
+                    # 한쪽만 자리 교차시킨 애매한 입력은 여전히 거부 — ↔ 버튼 사용 유도
+                    if (changed1 and i1 == p2) or (changed2 and i2 == p1):
+                        raise HTTPException(status_code=422,
+                                            detail="두 팀의 자리를 바꾸려면 ↔ 자리 바꾸기 버튼을 사용하세요")
+                    if did_swap:
+                        await _swap_team_slots_db(db, m)      # 슬롯 교환(이름+숫자쌍)
+                    if changed1:
+                        await _rename_team_in_match_db(db, m, p1, i1)
+                    if changed2:
+                        await _rename_team_in_match_db(db, m, p2, i2)
                 if BASE_TEAM not in (f1, f2):
                     team_warning = "base_team_missing"
 
@@ -1129,8 +1170,11 @@ async def patch_match(match_id: str, body: MatchPatchInput):
         _update_match_fields_in_meta(scrim_id, match_id, meta_fields)
     if swapped:
         _update_match_fields_in_meta(scrim_id, swapped, {"match_index": old_idx})
-    # 팀명 변경·자리 바꾸기 meta 동기화(rebuild 소스). meta 팀명은 로그 원본 순서를 유지하고
-    # 자리 바꾸기는 teams_swapped 플래그만 토글 — 값 기반 rename은 슬롯 무관하게 적용된다.
+    # 팀명 변경·자리 바꾸기·이름 교환 meta 동기화(rebuild 소스). meta 팀명은 로그 원본 순서를
+    # 유지하고 자리 바꾸기는 teams_swapped 플래그만 토글 — 값 기반 rename/교환은 슬롯 무관하게 적용.
+    # 이름 교환은 메타 팀명 값 자체를 A↔B 로 바꾸므로 rebuild 가 플래그 없이 재파싱만으로 복원된다.
+    if did_exchange:
+        _exchange_team_names_in_meta_match(scrim_id, match_id, p1, p2)   # p1=c1, p2=c2
     if did_swap:
         _toggle_swap_in_meta_match(scrim_id, match_id)
     if changed1:
@@ -1140,6 +1184,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     _invalidate_response_cache()
     resp = {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
             "swapped_with": swapped, "teams_swapped": did_swap,
+            "exchanged_teams": did_exchange,
             "renamed_teams": bool(changed1 or changed2)}
     if team_warning:
         resp["warning"] = team_warning

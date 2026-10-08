@@ -118,9 +118,14 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
     const t1 = (em.team1_name || "").trim();
     const t2 = (em.team2_name || "").trim();
     const teamChanged = t1 !== em.origTeam1 || t2 !== em.origTeam2 || em.swapPending;
+    // 이름 교환(교차 입력): ⇄ 를 누르지 않고 두 입력을 서로 맞바꿔 쓴 경우 — 슬롯은 그대로 두고
+    // 팀명 문자열만 A↔B 동시 치환(선수 소속·승자 포함). 백엔드 교차 판정과 동일한 조건.
+    const crossInput = !em.swapPending && em.origTeam1 !== em.origTeam2
+      && t1 === em.origTeam2 && t2 === em.origTeam1;
     if (teamChanged) {
       if (!t1 || !t2) { alert(t.sdTeamEmptyWarn); return; }
       if (t1 === t2) { alert(t.sdTeamSameWarn); return; }
+      if (crossInput && !window.confirm(t.sdExchangeConfirm)) return;
       // 두 팀 모두 기준 팀이 아니면 우리 팀 집계에서 제외됨 — 저장 전 확인
       if (t1 !== BASE_TEAM && t2 !== BASE_TEAM && !window.confirm(t.sdTeamNoBaseConfirm)) return;
     }
@@ -515,6 +520,10 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
               {editMatch?.id === m.id && (() => {
                 const em = editMatch;
                 const upd = (k, v) => setEditMatch({ ...em, [k]: v });
+                // 교차 입력(이름 교환) 안내용 — ⇄ 아님 + 두 입력이 원래 두 슬롯명과 정확히 교차
+                const _et1 = (em.team1_name || "").trim(), _et2 = (em.team2_name || "").trim();
+                const crossPending = !em.swapPending && em.origTeam1 !== em.origTeam2
+                  && _et1 === em.origTeam2 && _et2 === em.origTeam1;
                 const inp = { padding: "9px 11px", background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, borderRadius: 8, color: theme.text, fontSize: 13, outline: "none", width: 150 };
                 const lbl = { fontSize: 11, color: theme.textSub, fontWeight: 700, display: "block", marginBottom: 4 };
                 return (
@@ -532,7 +541,9 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                         style={{ background: em.swapPending ? theme.primary : theme.surfaceHighlight, color: em.swapPending ? "#fff" : theme.text, border: `1px solid ${theme.borderHighlight}`, borderRadius: 8, cursor: "pointer", fontWeight: 900, fontSize: 15, padding: "8px 12px", height: 37 }}>⇄</button>
                       <div><span style={lbl}>{t.sdTeam2Name}</span>
                         <input style={inp} value={em.team2_name} onChange={e => upd("team2_name", e.target.value)} /></div>
-                      {em.swapPending && <span style={{ fontSize: 11, color: theme.primary, fontWeight: 700, alignSelf: "center" }}>{t.sdSwapPending}</span>}
+                      {em.swapPending
+                        ? <span style={{ fontSize: 11, color: theme.primary, fontWeight: 700, alignSelf: "center" }}>{t.sdSwapPending}</span>
+                        : crossPending && <span style={{ fontSize: 11, color: theme.warning || "#d97706", fontWeight: 700, alignSelf: "center" }}>{t.sdExchangePending}</span>}
                     </div>
                     <div style={{ flexBasis: "100%", maxWidth: 480 }}><span style={lbl}>{t.smYoutubeLink}</span>
                       <input style={{ ...inp, width: "100%", boxSizing: "border-box" }} value={em.video_url} onChange={e => upd("video_url", e.target.value)} /></div>
