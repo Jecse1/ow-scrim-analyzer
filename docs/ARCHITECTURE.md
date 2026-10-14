@@ -22,7 +22,7 @@ services/discord_webhook.py 웹후크 비동기 발송(asyncio.create_task, 예�
 game_data/__init__.py      게임데이터 파생 + canonical_map_name(프론트 gameData.js canonicalMapName 과 동일 규칙)
 routers/stats.py           GET scrims · full-events · first-fights · fight-records · player-fight-stats
 routers/scrims.py          등록/업로드/삭제/rebuild/상세(scrims·matches) · 등록 전 명단(/api/logs/roster) · 세션 완료 알림(/complete) + 파일 I/O 헬퍼
-routers/summary.py         GET /api/summary/{maps,opponents,period,ults} (읽기 전용, 캐시 없음) — 계약: docs/SUMMARY_API.md
+routers/summary.py         GET /api/summary/{maps,opponents,period,ults} (읽기 전용, /api/fight-records 응답 캐시 재사용 — 같은 키·같은 무효화) — 계약: docs/SUMMARY_API.md
 db/ (기존)          database.py(엔진·세션) · models.py(ORM)
 scripts/api_snapshot.py    기존 조회 API 응답 바이트·openapi 스냅샷/비교(리팩토링 회귀 증명, DB 사본으로 기동)
 ```

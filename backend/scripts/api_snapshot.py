@@ -2,7 +2,8 @@
 """scripts/api_snapshot.py — 기존 조회 API 응답 바이트 스냅샷(리팩토링 회귀 증명용).
 
 GET /api/scrims · /api/fight-records · /api/first-fights · /api/scrims/full-events ·
-/api/player-fight-stats 응답 바이트의 sha256 과, /openapi.json 을 키 정렬 정규화한 sha256
+/api/player-fight-stats 응답 바이트의 sha256, /api/summary/{maps,opponents,period,ults}(기본 인자) 응답의
+sha256(meta.generated_at 만 고정값으로 바꾼 뒤 같은 직렬화로 — 그 외 바이트 그대로) 과, /openapi.json 을 키 정렬 정규화한 sha256
 (전체 + 경로별 + 컴포넌트 스키마별)을 JSON 으로 저장하고, --compare 로 기준과 비교한다.
 
 운영 DB 보호: --db 를 주면 그 파일을 임시 디렉터리로 "복사"한 뒤 SCRIM_DB_PATH /
@@ -14,7 +15,7 @@ SCRIM_ROWDATA_DIR 를 그 사본으로 지정해 uvicorn 을 직접 띄우고, �
   python scripts/api_snapshot.py --db <scrim.db 경로> --compare base.json
   python scripts/api_snapshot.py --base-url http://127.0.0.1:8000 --out base.json
 
-비교 통과 조건: 5개 응답 sha256 동일 · openapi 의 기존 경로/스키마 동일(추가 경로·스키마만 허용).
+비교 통과 조건: 5개 응답 + summary 4종 sha256 동일 · openapi 의 기존 경로/스키마 동일(추가 경로·스키마만 허용).
 종료 코드: 0 = 통과, 1 = 차이 있음.
 """
 import argparse
@@ -38,6 +39,16 @@ ENDPOINTS = [
     "/api/player-fight-stats",
 ]
 
+# summary 는 기존 5개보다 먼저 요청한다 — 첫 요청이 fight-records 캐시 미스(생성·저장), 나머지는 히트,
+# 그 뒤 /api/fight-records 는 summary 가 채운 캐시로 응답하므로 두 경로가 모두 비교에 들어간다.
+# 기본 기간(to = 오늘, Asia/Seoul)을 쓰므로 기준·비교 스냅샷은 같은 날 만든다.
+SUMMARY_ENDPOINTS = [
+    "/api/summary/maps",
+    "/api/summary/opponents",
+    "/api/summary/period",
+    "/api/summary/ults",
+]
+
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -58,8 +69,19 @@ def _get(base_url: str, path: str) -> bytes:
         return r.read()
 
 
+def _summary_body(body: bytes) -> bytes:
+    """meta.generated_at(초 단위 생성 시각)만 고정값으로 바꾼 뒤 응답과 같은 옵션으로 다시 직렬화."""
+    obj = json.loads(body)
+    if isinstance(obj.get("meta"), dict) and "generated_at" in obj["meta"]:
+        obj["meta"]["generated_at"] = "<generated_at>"
+    return json.dumps(obj, ensure_ascii=False, allow_nan=False, indent=None, separators=(",", ":")).encode("utf-8")
+
+
 def take_snapshot(base_url: str) -> dict:
     endpoints = {}
+    for p in SUMMARY_ENDPOINTS:
+        body = _summary_body(_get(base_url, p))
+        endpoints[p] = {"sha256": _sha(body), "bytes": len(body)}
     for p in ENDPOINTS:
         body = _get(base_url, p)
         endpoints[p] = {"sha256": _sha(body), "bytes": len(body)}

@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """routers/summary.py — 봇·외부 조회용 집계 API(GET, 읽기 전용). 집계 정의는 services/summary.py.
 
-records·match_summaries 는 /api/fight-records 와 같은 함수(services/fight_records.py)로 매 요청 계산하고,
-세션 목록은 /api/scrims 와 같은 직렬화(serializers._db_match_to_dict, full=False)로 만든다.
-summary 자체 캐시는 두지 않는다(fight-records 응답 캐시와도 무관 — 매 요청 DB 조회).
+records·match_summaries 는 /api/fight-records 의 응답 캐시(cache.py, 키 "fight-records:{base_team}")를 그대로 재사용한다.
+캐시가 없으면 같은 함수(services/fight_records.py)로 만들어 같은 키·같은 형식(JSON bytes)으로 저장한다 — 이후
+/api/fight-records 도 그 캐시를 쓴다. 무효화는 기존대로 DB 변경 API 의 _invalidate_response_cache() 하나뿐(새 키·새 지점 없음).
+요청마다 전 라운드 compute_fights 를 다시 돌리던 비용(FLC 서버 실측 약 10초)을 없애기 위함.
+세션 목록은 /api/scrims 와 같은 직렬화(serializers._db_match_to_dict, full=False)로 매 요청 DB 에서 만든다.
 services/routers → main import 금지. DB 가용성 가드는 자체 판정.
 """
+import json
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -23,6 +26,7 @@ except Exception as _e:
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
 from config import BASE_TEAM
+from cache import _response_cache_get, _response_cache_store
 from serializers import _db_match_to_dict
 from services.fight_records import _build_fight_records_payload
 from services.summary import (
@@ -75,23 +79,38 @@ def _meta(base_team: str, frm: str, to: str, population: str) -> dict:
 
 
 async def _load(base_team: str) -> tuple[dict, list]:
-    """(fight-records payload, /api/scrims 형식 세션 목록). 조회 조건·정렬은 두 기존 엔드포인트와 동일."""
+    """(fight-records payload, /api/scrims 형식 세션 목록). 조회 조건·정렬은 두 기존 엔드포인트와 동일.
+    payload 는 항상 캐시에 저장된 JSON bytes 를 디코드한 값을 쓴다(히트·미스 결과가 같도록)."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
+    cache_key = f"fight-records:{base_team}"  # routers/stats.py get_fight_records 와 같은 키
+    cached = _response_cache_get(cache_key)
     try:
         from sqlalchemy.orm import selectinload
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
-                .options(
-                    selectinload(DBSession.matches).selectinload(DBMatch.rounds).selectinload(DBRound.events),
-                    selectinload(DBSession.matches).selectinload(DBMatch.pauses),
+            if cached is not None:
+                # 캐시 히트: 세션 목록용으로 매치·퍼즈만 읽는다(라운드·이벤트 불필요).
+                result = await db.execute(
+                    select(DBSession)
+                    .where(DBSession.deleted_at.is_(None))
+                    .options(selectinload(DBSession.matches).selectinload(DBMatch.pauses))
+                    .order_by(DBSession.date.desc(), DBSession.id.desc())
                 )
-                .order_by(DBSession.date.desc(), DBSession.id.desc())
-            )
-            sessions = result.scalars().all()
-            payload = _build_fight_records_payload(sessions, base_team)
+                sessions = result.scalars().all()
+                body = cached.body
+            else:
+                result = await db.execute(
+                    select(DBSession)
+                    .where(DBSession.deleted_at.is_(None))
+                    .options(
+                        selectinload(DBSession.matches).selectinload(DBMatch.rounds).selectinload(DBRound.events),
+                        selectinload(DBSession.matches).selectinload(DBMatch.pauses),
+                    )
+                    .order_by(DBSession.date.desc(), DBSession.id.desc())
+                )
+                sessions = result.scalars().all()
+                body = _response_cache_store(cache_key, _build_fight_records_payload(sessions, base_team)).body
+            payload = json.loads(body)
             scrims = [{
                 "id": s.id, "scrim_name": s.scrim_name, "date": s.date,
                 "start_time": s.start_time or "", "end_time": s.end_time or "",
