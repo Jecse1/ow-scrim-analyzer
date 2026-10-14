@@ -37,6 +37,7 @@ from services.fight_analysis import compute_fights
 from services.summary import summarize_session, format_session_message
 from services.discord_webhook import schedule_webhook
 from schemas_summary import SessionCompleteResponse
+from schemas_roster import RosterResponse
 
 _json_lock = threading.Lock()
 router = APIRouter()
@@ -432,6 +433,14 @@ async def register_scrim_manual(request: Request):
     return {"status": "success", "scrim_id": new_scrim_id}
 
 
+def _decode_log_bytes(content: bytes):
+    """업로드 로그 바이트 → (텍스트, cp949 대체 여부). UTF-8 실패 시 cp949(errors=ignore)."""
+    try:
+        return content.decode("utf-8"), False
+    except:
+        return content.decode("cp949", errors="ignore"), True
+
+
 @router.post("/api/matches/upload")
 async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(...), file: UploadFile = File(...),
                            dry_run: str = Form(None), adopt: str = Form(None)):
@@ -443,12 +452,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
         raise HTTPException(status_code=503, detail="Database not available")
 
     content = await file.read()
-    enc_fallback = False
-    try:
-        log_text = content.decode("utf-8")
-    except:
-        log_text = content.decode("cp949", errors="ignore")
-        enc_fallback = True
+    log_text, enc_fallback = _decode_log_bytes(content)
 
     is_dry = (dry_run or "").strip() in ("1", "true", "yes")
     if not is_dry:
@@ -599,6 +603,81 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+
+# 명단 추출용 임시 팀명. 로그 필드는 ',' 로 나뉘므로 ',' 를 포함한 값은 어떤 원시 팀 라벨·선수명과도 같을 수 없다.
+_ROSTER_PLACEHOLDER = {1: "__roster,team1__", 2: "__roster,team2__"}
+
+
+def _first_match_start_labels(log_text: str):
+    """파서(log_parser.py:97-108)와 같은 규칙으로 첫 match_start 의 원시 팀 라벨 2개를 읽는다(없으면 1팀/2팀)."""
+    t1, t2 = "1팀", "2팀"
+    for line in log_text.splitlines():
+        if ",match_start," in line:
+            parts = line.strip().split(',')
+            try:
+                base_idx = parts.index("match_start")
+                t1 = parts[base_idx + 4].strip()
+                t2 = parts[base_idx + 5].strip()
+            except: pass
+            break
+    return t1, t2
+
+
+@router.post("/api/logs/roster", response_model=RosterResponse)
+async def extract_log_roster(file: UploadFile = File(...)):
+    """등록 전 로그 1개의 팀별 선수·영웅 명단(등록 모달 "우리 팀" 선택용). DB·파일 쓰기 없음.
+
+    파서는 upload 와 같은 인자(custom_t1/custom_t2)로 호출하되 팀명은 임시값을 넘기고,
+    응답 label 은 원시 라벨로 되돌린다. slot 1 = 첫 match_start 의 첫 팀 = 등록 시 team1_name 자리.
+    선수 기록이 하나도 없으면(빈 파일·로그 아님) 422.
+    """
+    content = await file.read()
+    log_text, enc_fallback = _decode_log_bytes(content)
+    pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
+    warnings = list(pre["warnings"])
+    warning_count = pre["warning_count"]
+
+    try:
+        parsed = parse_overwatch_log(log_text, custom_t1=_ROSTER_PLACEHOLDER[1], custom_t2=_ROSTER_PLACEHOLDER[2])
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"로그 파싱 실패({type(e).__name__})")
+
+    slot_of = {v: k for k, v in _ROSTER_PLACEHOLDER.items()}
+    # (slot, 선수) → {"slot_index", "heroes": {영웅: 최대 플레이 시간}}
+    players = {1: {}, 2: {}}
+    extra_labels = set()
+    for stats in (parsed.get("rounds_stats") or {}).values():
+        for (team, name, hero), st in stats.items():
+            slot = slot_of.get(team)
+            if slot is None:
+                extra_labels.add(team)
+                continue
+            p = players[slot].setdefault(name, {"slot_index": st.get("slot_index", 99), "heroes": {}})
+            p["slot_index"] = min(p["slot_index"], st.get("slot_index", 99))
+            t = st.get("hero_time_played") or 0
+            if t >= p["heroes"].get(hero, -1):
+                p["heroes"][hero] = t
+
+    if not players[1] and not players[2]:
+        raise HTTPException(status_code=422, detail="선수 기록(player_stat)이 없습니다 — 오버워치 워크숍 로그 파일인지 확인하세요")
+
+    for label in sorted(extra_labels):
+        warning_count += 1
+        warnings.append({"code": "roster_extra_team", "line": None, "event": "player_stat",
+                         "message": f"첫 match_start 의 두 팀 외 팀 라벨 — 명단에서 제외 ({label})"})
+
+    labels = _first_match_start_labels(log_text)
+    teams = []
+    for slot in (1, 2):
+        rows = sorted(players[slot].items(), key=lambda kv: (kv[1]["slot_index"], kv[0]))
+        teams.append({
+            "slot": slot,
+            "label": labels[slot - 1],
+            "players": [{"name": n, "heroes": [h for h, _ in sorted(p["heroes"].items(), key=lambda hv: -hv[1])]}
+                        for n, p in rows],
+        })
+    return {"teams": teams, "warnings": warnings, "warning_count": warning_count}
 
 
 @router.get("/api/admin/db-status")
