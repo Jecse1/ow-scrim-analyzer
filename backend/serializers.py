@@ -139,6 +139,8 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
         "winner": (m.winner_override or m.winner) or "",
         "winner_original": m.winner or "",
         "winner_override": m.winner_override or "",
+        # 승자 출처(override/manual/draw/score/progress, null=미정) — services/winner_source 참조
+        "winner_source": getattr(m, "winner_source", None),
         "score_t1": m.score_t1 or 0,
         "score_t2": m.score_t2 or 0,
         # result도 유효 승자 기준: 보정이 있으면 "{팀} 승 (a : b)" (calculate_pure_stats와 동일 형식).

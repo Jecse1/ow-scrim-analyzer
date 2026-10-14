@@ -23,6 +23,8 @@ _COLUMN_PATCHES = [
     ("matches", "video_end_sec", "ALTER TABLE matches ADD COLUMN video_end_sec INTEGER"),
     # alembic 리비전(e5f6a7b8c9d0)과 동일 정의 — 라운드별 VOD 보정값
     ("rounds", "video_delta_sec", "ALTER TABLE rounds ADD COLUMN video_delta_sec INTEGER"),
+    # alembic 리비전(f6a7b8c9d0e1)과 동일 정의 — 승자 출처
+    ("matches", "winner_source", "ALTER TABLE matches ADD COLUMN winner_source VARCHAR"),
 ]
 
 
@@ -37,12 +39,31 @@ def _apply_column_patches(sync_conn):
     print(f"[DB] schema check: {'added columns ' + str(added) if added else 'ok'}")
 
 
+def _backfill_winner_source(sync_conn):
+    """winner_source IS NULL 인 매치를 파생 규칙으로 채운다(멱등 — 이미 값이 있는 행은 건드리지 않음).
+    승자가 빈 매치는 파생값도 NULL 이라 그대로 남는다(다음 기동에도 다시 계산될 뿐 결과 동일)."""
+    from sqlalchemy import text
+    from services.winner_source import derive_winner_source
+    rows = sync_conn.execute(text(
+        "SELECT id, winner, winner_override, source, score_t1, score_t2 "
+        "FROM matches WHERE winner_source IS NULL")).mappings().all()
+    n = 0
+    for r in rows:
+        ws = derive_winner_source(dict(r))
+        if ws:
+            sync_conn.execute(text("UPDATE matches SET winner_source = :ws WHERE id = :id"),
+                              {"ws": ws, "id": r["id"]})
+            n += 1
+    print(f"[DB] winner_source backfill: {n} rows" + (f" ({len(rows) - n} left NULL: no winner)" if len(rows) > n else ""))
+
+
 async def init_db():
     os.makedirs(_DB_DIR, exist_ok=True)
     async with engine.begin() as conn:
         from db import models  # noqa: F401 — ensure models are imported before create_all
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_apply_column_patches)
+        await conn.run_sync(_backfill_winner_source)
 
 
 async def get_db():

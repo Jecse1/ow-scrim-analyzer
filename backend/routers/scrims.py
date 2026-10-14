@@ -30,6 +30,7 @@ from cache import _invalidate_response_cache
 from serializers import _db_match_to_dict, _db_session_to_dict
 from parsers.log_parser import parse_overwatch_log, parse_log_timestamp, time_str_to_seconds
 from parsers.log_precheck import precheck_log_text, precheck_summary
+from services.winner_source import derive_winner_source
 from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
 
@@ -127,7 +128,7 @@ def _update_match_fields_in_meta(scrim_id: str, match_id: str, fields: dict) -> 
     return _update_meta_json(scrim_id, mutate)
 
 
-def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value) -> bool:
+def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value, winner_source=None) -> bool:
     """meta.json(rebuild 소스)의 해당 매치 winner_override 를 동기화한다.
     등록 경로(register_scrim_manual)와 동일 필드명·표현("" = 미보정)을 쓴다 —
     rebuild 복원 코드(_wo_snapshot.get(id) or m.get("winner_override") or None)와 정합.
@@ -142,6 +143,7 @@ def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value) -> bool:
         for m in meta.get("matches", []):
             if m.get("id") == match_id:
                 m["winner_override"] = wo_value or ""
+                m["winner_source"] = winner_source
                 changed = True
                 break
         if not changed:
@@ -365,6 +367,7 @@ async def register_scrim_manual(request: Request):
             "rounds": [], "stats": [],
             "fights": [], "fight_metrics": {}
         })
+        processed_matches[-1]["winner_source"] = derive_winner_source(processed_matches[-1])
 
     new_scrim = {
         "id": new_scrim_id,
@@ -401,6 +404,7 @@ async def register_scrim_manual(request: Request):
                     winner_override=m.get("winner_override") or None,
                     source=m.get("source") or "log",
                     winner=m.get("winner") or "",
+                    winner_source=m.get("winner_source"),
                     score_t1=m.get("score_t1") or 0,
                     score_t2=m.get("score_t2") or 0,
                     video_url=m["video_url"],
@@ -505,6 +509,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             db_match.duration_sec = target_match.get("timeline", {}).get("duration_sec", 0)
             db_match.total_final_blows_t1 = target_match.get("total_final_blows_t1", 0)
             db_match.total_final_blows_t2 = target_match.get("total_final_blows_t2", 0)
+            db_match.winner_source = derive_winner_source(db_match)
 
             # 신규 방식: setup_complete의 real_timestamp 추출 → game_setup_sec 저장
             # -2 보정 없이 real_ts 그대로 저장. events.timestamp는 이미 (real_ts - 2)이므로
@@ -580,6 +585,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 "source": "log",
                 "map_name": db_match.map_name,
                 "winner_override": db_match.winner_override or "",
+                "winner_source": db_match.winner_source,
                 "precheck": {"warning_count": pre["warning_count"],
                              "codes": sorted(pre["counts"]["by_code"])},
             })
@@ -741,6 +747,8 @@ async def rebuild_database():
                         total_final_blows_t1=m.get("total_final_blows_t1", 0),
                         total_final_blows_t2=m.get("total_final_blows_t2", 0),
                     )
+                    # 승자 출처: meta 기록값 우선, 없으면(옛 meta) 복원된 override 까지 반영해 파생
+                    dbm.winner_source = m.get("winner_source") or derive_winner_source(dbm)
                     db.add(dbm)
                     # 자리 바꾸기 복원: meta는 로그 원본 순서 → 재파싱으로 선수 소속이 정확히 복원된 뒤
                     # 이 매치만 라이브와 동일한 _swap_team_slots_db 를 재적용(이름+슬롯 숫자쌍 교환).
@@ -927,6 +935,8 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
                     detail=f"winner_override must be one of ['{m.team1_name}', '{m.team2_name}', 'Draw'] or null",
                 )
             m.winner_override = wo  # 원본 winner 무변경
+            m.winner_source = derive_winner_source(m)  # 해제(null)면 원본 기준으로 재파생
+            ws = m.winner_source
             scrim_id = m.session_id
             await db.commit()
             print(f"[DB] winner_override 갱신: match={match_id} → {wo!r}")
@@ -935,7 +945,7 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
-    _update_match_wo_in_meta(scrim_id, match_id, wo)
+    _update_match_wo_in_meta(scrim_id, match_id, wo, ws)
     _invalidate_response_cache()
     return {"success": True, "match_id": match_id, "winner_override": wo or ""}
 
@@ -1106,6 +1116,9 @@ async def patch_match(match_id: str, body: MatchPatchInput):
                 elif s1 > 0:
                     m.winner = "Draw"
                 meta_fields["winner"] = m.winner
+            _ws = derive_winner_source(m)
+            if _ws != m.winner_source:
+                m.winner_source = _ws; meta_fields["winner_source"] = _ws
             if body.video_url is not None:
                 m.video_url = body.video_url.strip(); meta_fields["video_url"] = m.video_url
             if body.video_offset is not None:

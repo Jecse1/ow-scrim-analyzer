@@ -11,6 +11,9 @@ import WinnerOverrideControl from "./WinnerOverrideControl";
 import { precheckLine } from "./utils/precheckText";
 
 const API_BASE = import.meta.env.PROD ? "" : "";
+// 승자 출처 → 배지 i18n 키. 목록에 없는 값(score·manual·null)은 배지 없음
+// (manual 은 제목 줄의 '수기' 배지가 이미 표시).
+const WS_BADGE_KEYS = { override: "wsOverride", progress: "wsProgress", draw: "wsDraw" };
 
 // "MM:SS"/"HH:MM:SS" → 초 (빈값/불가 = null), 초 → "MM:SS"
 const mmssToSec = (s) => {
@@ -474,6 +477,9 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       {t.sdResult}: {m.source === "manual"
                         ? (m.result || `${m.score_t1} : ${m.score_t2}`)
                         : (m.result || t.sdUnknown)}
+                      {WS_BADGE_KEYS[m.winner_source] && (
+                        <span title={t.wsTitle} style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: theme.textSub, background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, borderRadius: 6, padding: "0px 6px", verticalAlign: "1px" }}>{t[WS_BADGE_KEYS[m.winner_source]]}</span>
+                      )}
                     </div>
                     {!isSelectMode && m.source !== "manual" && <WinnerOverrideControl match={m} onChanged={() => fetchScrim()} />}
                   </div>
