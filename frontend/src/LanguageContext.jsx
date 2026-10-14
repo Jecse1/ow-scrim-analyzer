@@ -137,6 +137,7 @@ export const translations = {
     smManualHint: "로그 없이 맵·승패·스코어만 기록합니다. 로그 표본 지표(한타·궁·선수 통계)에는 포함되지 않으며, 나중에 로그를 추가할 수 있습니다.",
     smWinnerLabel: "승리 팀", smWinnerUndecided: "미정", smWinnerAutoHint: "미정이면 스코어로 자동 판정(동점 = 무승부)",
     smScoreLabel: "스코어 (1팀 : 2팀)", smVodStart: "영상 시작 (MM:SS)", smVodEnd: "영상 끝 (MM:SS, 선택)",
+    addMatch: "경기 추가", hasPause: "퍼즈 있음", yes: "예", no: "아니오",
     // ScrimModal — 우리 팀 선택(로그 명단) · 등록 완료 알림
     smOurTeamLabel: "우리 팀", smOpponentLabel: "상대팀 이름", smOpponentRequired: "상대팀 이름을 입력해주세요.",
     smOpponentSameAsBase: "상대팀 이름이 우리 팀 이름과 같습니다.", smScoreLabelTpl: "스코어 ({us} : {them})",
@@ -536,6 +537,7 @@ export const translations = {
     smManualHint: "Records map/result/score without a log. Excluded from log-based metrics (fights, ults, player stats); you can attach a log later.",
     smWinnerLabel: "Winner", smWinnerUndecided: "Undecided", smWinnerAutoHint: "If undecided, auto-judged from score (tie = draw)",
     smScoreLabel: "Score (Team 1 : Team 2)", smVodStart: "VOD start (MM:SS)", smVodEnd: "VOD end (MM:SS, optional)",
+    addMatch: "Add Match", hasPause: "Has Pause", yes: "Yes", no: "No",
     // ScrimModal — our-team pick (log roster) · registration-complete notice
     smOurTeamLabel: "Our team", smOpponentLabel: "Opponent name", smOpponentRequired: "Please enter the opponent name.",
     smOpponentSameAsBase: "Opponent name is the same as our team name.", smScoreLabelTpl: "Score ({us} : {them})",
@@ -935,6 +937,7 @@ export const translations = {
     smManualHint: "无日志，仅记录地图/胜负/比分。不计入日志样本指标（团战、大招、选手数据），之后可补传日志。",
     smWinnerLabel: "获胜队伍", smWinnerUndecided: "未定", smWinnerAutoHint: "未定时按比分自动判定（平分 = 平局）",
     smScoreLabel: "比分（1队 : 2队）", smVodStart: "视频开始 (MM:SS)", smVodEnd: "视频结束 (MM:SS，可选)",
+    addMatch: "添加对局", hasPause: "有暂停", yes: "是", no: "否",
     // ScrimModal — 选择我方队伍（日志名单）· 登记完成通知
     smOurTeamLabel: "我方队伍", smOpponentLabel: "对手队伍名称", smOpponentRequired: "请输入对手队伍名称。",
     smOpponentSameAsBase: "对手队伍名称与我方队伍名称相同。", smScoreLabelTpl: "比分（{us} : {them}）",

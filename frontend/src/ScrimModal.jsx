@@ -273,8 +273,8 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
             const assigned = match.ourSlot ? (chosen ? BASE_TEAM : opp) : null;
             return (
               <label key={team.slot} style={{ display: 'block', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px',
-                border: `${chosen ? 2 : 1}px solid ${chosen ? theme.success : theme.borderHighlight}`,
-                background: chosen ? `${theme.success}12` : theme.surfaceHighlight }}>
+                border: `${chosen ? 2 : 1}px solid ${chosen ? theme.primary : theme.borderHighlight}`,
+                background: chosen ? `${theme.primary}1f` : theme.surfaceHighlight }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '14px' }}>
                     <input type="radio" name={`our-team-${match.uid}`} checked={chosen} onChange={() => pickOurSlot(idx, team.slot)} />
@@ -547,7 +547,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                     <label style={{ ...labelStyle, display: 'block', marginBottom: '12px' }}>{t.logFile}</label>
                     <div style={{ position: 'relative' }}>
                         <input type="file" accept=".txt" id={`file-${match.uid}`} onChange={e => { handleFileChange(idx, e.target.files[0]); e.target.value = ''; }} style={{ display: 'none' }} />
-                        <label htmlFor={`file-${match.uid}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '20px', border: `1px dashed ${theme.borderHighlight}`, borderRadius: '12px', cursor: 'pointer', color: scrimData.files[idx] ? theme.success : theme.textSub, fontSize: '15px', transition: 'all 0.2s', backgroundColor: scrimData.files[idx] ? `${theme.success}10` : 'transparent' }}>
+                        <label htmlFor={`file-${match.uid}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '20px', border: `1px dashed ${theme.borderHighlight}`, borderRadius: '12px', cursor: 'pointer', color: scrimData.files[idx] ? theme.primary : theme.textSub, fontSize: '15px', transition: 'all 0.2s', backgroundColor: scrimData.files[idx] ? `${theme.primary}10` : 'transparent' }}>
                             <Upload size={20} /> {scrimData.files[idx] ? scrimData.files[idx].name : t.uploadLog}
                         </label>
                     </div>

@@ -16,6 +16,7 @@ export const themes = {
     textSub: '#a1a1aa',      // 보조 텍스트 (회색)
     primary: '#3b82f6',      // 강조색 (파랑)
     danger: '#ef4444',       // 에러/삭제 (빨강)
+    warning: '#f59e0b',      // 경고/주의 (앰버 — MatchStats 의 기존 대체값과 동일)
   },
   light: {
     mode: 'light',
@@ -28,6 +29,7 @@ export const themes = {
     textSub: '#71717a',      // 보조 텍스트 (진한 회색)
     primary: '#2563eb',      // 강조색 (진한 파랑)
     danger: '#dc2626',       // 에러/삭제 (진한 빨강)
+    warning: '#d97706',      // 경고/주의 (진한 앰버)
   }
 };
 
