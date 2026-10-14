@@ -4,6 +4,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 _DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 _DB_PATH = os.path.join(_DB_DIR, "scrim.db")
+# 테스트·로컬 사본 검증용 경로 재지정(SCRIM_DB_PATH). 미설정 시 기존 경로 그대로.
+if os.environ.get("SCRIM_DB_PATH"):
+    _DB_PATH = os.path.abspath(os.environ["SCRIM_DB_PATH"])
+    _DB_DIR = os.path.dirname(_DB_PATH)
 
 DATABASE_URL = f"sqlite+aiosqlite:///{_DB_PATH}"
 

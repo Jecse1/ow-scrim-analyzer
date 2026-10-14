@@ -1,5 +1,7 @@
 # Scrim Analyzer
 
+[![CI](https://github.com/Jecse1/ow-scrim-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/Jecse1/ow-scrim-analyzer/actions/workflows/ci.yml)
+
 Overwatch scrim analysis toolkit — turn raw Workshop match logs into fight-level
 win-rate analytics, ultimate economy breakdowns, per-player stats, and a
 real-time draft (ban/pick) board with head-to-head rooms.

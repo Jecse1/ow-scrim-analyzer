@@ -45,7 +45,8 @@ FIGHT_QUIET_GAP_SEC = 20
 # CONTROL_MAP_KEYWORDS 는 game_data 로더에서 파생(위 import 참조).
 
 DATA_FILE = "scrim_data.json"
-ROW_DATA_DIR = "scrim_rowdata_log"
+# 테스트는 SCRIM_ROWDATA_DIR 로 임시 디렉터리를 지정(운영 경로를 만들지 않게). 기본값은 기존과 동일.
+ROW_DATA_DIR = os.environ.get("SCRIM_ROWDATA_DIR") or "scrim_rowdata_log"
 
 if not os.path.exists(ROW_DATA_DIR):
     os.makedirs(ROW_DATA_DIR)
