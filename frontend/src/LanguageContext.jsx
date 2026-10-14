@@ -138,6 +138,9 @@ export const translations = {
     smWinnerLabel: "승리 팀", smWinnerUndecided: "미정", smWinnerAutoHint: "미정이면 스코어로 자동 판정(동점 = 무승부)",
     smScoreLabel: "스코어 (1팀 : 2팀)", smVodStart: "영상 시작 (MM:SS)", smVodEnd: "영상 끝 (MM:SS, 선택)",
     addMatch: "경기 추가", hasPause: "퍼즈 있음", yes: "예", no: "아니오",
+    step2Title: "경기(맵) 입력", step2Desc: "맵마다 경기 정보를 입력하고 로그 파일을 골라주세요.", mapName: "맵 이름",
+    pauseAlert: "영상 기준 퍼즈 시작·종료 시각(MM:SS)을 입력하세요. 영상 링크 시점 보정에 쓰입니다.", addPause: "퍼즈 구간 추가",
+    logFile: "로그 파일 (.txt)", uploadLog: "로그 파일 선택",
     // ScrimModal — 우리 팀 선택(로그 명단) · 등록 완료 알림
     smOurTeamLabel: "우리 팀", smOpponentLabel: "상대팀 이름", smOpponentRequired: "상대팀 이름을 입력해주세요.",
     smOpponentSameAsBase: "상대팀 이름이 우리 팀 이름과 같습니다.", smScoreLabelTpl: "스코어 ({us} : {them})",
@@ -538,6 +541,9 @@ export const translations = {
     smWinnerLabel: "Winner", smWinnerUndecided: "Undecided", smWinnerAutoHint: "If undecided, auto-judged from score (tie = draw)",
     smScoreLabel: "Score (Team 1 : Team 2)", smVodStart: "VOD start (MM:SS)", smVodEnd: "VOD end (MM:SS, optional)",
     addMatch: "Add Match", hasPause: "Has Pause", yes: "Yes", no: "No",
+    step2Title: "Match Details", step2Desc: "Enter each map's details and choose its log file.", mapName: "Map Name",
+    pauseAlert: "Enter pause start/end in VOD time (MM:SS). Used to keep video links in sync.", addPause: "Add Pause",
+    logFile: "Log File (.txt)", uploadLog: "Choose log file",
     // ScrimModal — our-team pick (log roster) · registration-complete notice
     smOurTeamLabel: "Our team", smOpponentLabel: "Opponent name", smOpponentRequired: "Please enter the opponent name.",
     smOpponentSameAsBase: "Opponent name is the same as our team name.", smScoreLabelTpl: "Score ({us} : {them})",
@@ -938,6 +944,9 @@ export const translations = {
     smWinnerLabel: "获胜队伍", smWinnerUndecided: "未定", smWinnerAutoHint: "未定时按比分自动判定（平分 = 平局）",
     smScoreLabel: "比分（1队 : 2队）", smVodStart: "视频开始 (MM:SS)", smVodEnd: "视频结束 (MM:SS，可选)",
     addMatch: "添加对局", hasPause: "有暂停", yes: "是", no: "否",
+    step2Title: "对局信息", step2Desc: "请为每张地图填写对局信息并选择日志文件。", mapName: "地图名称",
+    pauseAlert: "请按视频时间填写暂停开始/结束（MM:SS），用于校正视频链接时间点。", addPause: "添加暂停区间",
+    logFile: "日志文件（.txt）", uploadLog: "选择日志文件",
     // ScrimModal — 选择我方队伍（日志名单）· 登记完成通知
     smOurTeamLabel: "我方队伍", smOpponentLabel: "对手队伍名称", smOpponentRequired: "请输入对手队伍名称。",
     smOpponentSameAsBase: "对手队伍名称与我方队伍名称相同。", smScoreLabelTpl: "比分（{us} : {them}）",
