@@ -6,7 +6,7 @@ import {
   BarChart, Bar, AreaChart, Area, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine
 } from 'recharts';
 
-import { useTheme } from "./ThemeContext";
+import { useTheme, FIXED_COLORS } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
 import { useVod } from "./VodPlayerContext";
@@ -17,9 +17,9 @@ import WinnerOverrideControl from "./WinnerOverrideControl";
 import { precheckLine } from "./utils/precheckText";
 
 // --- 색상 및 상수 ---
-const COLOR_TEAM1 = '#60a5fa'; 
-const COLOR_TEAM2 = '#f87171'; 
-const NEON_GREEN = '#39FF14'; 
+const COLOR_TEAM1 = FIXED_COLORS.team1;
+const COLOR_TEAM2 = FIXED_COLORS.team2;
+const NEON_GREEN = FIXED_COLORS.neonAccent;
 
 const normalizeName = (name) => (name ? name.trim() : "");
 
@@ -36,10 +36,10 @@ const checkIsTeam2 = (teamName, t2Name) => {
 };
 
 const resolveTeamColor = (teamName, t1Name, t2Name) => {
-    if (!teamName) return '#9ca3af'; 
+    if (!teamName) return FIXED_COLORS.teamUnknown;
     if (checkIsTeam1(teamName, t1Name)) return COLOR_TEAM1;
     if (checkIsTeam2(teamName, t2Name)) return COLOR_TEAM2;
-    return '#9ca3af';
+    return FIXED_COLORS.teamUnknown;
 };
 
 
@@ -820,7 +820,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger || '#ef4444' }}></div>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger }}></div>
                                     {t.msWinRateAfterLoss} <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msLossToWin}</span>
                                 </div>
                                 <div style={{ fontSize: '11px', color: theme.textSub, marginTop: '4px', marginLeft: '14px' }}>{t.msComeback} ({momentumData.t1AfterLossWon}/{momentumData.t1AfterLossTotal}{t.timesUnit})</div>
@@ -848,7 +848,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger || '#ef4444' }}></div>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger }}></div>
                                     {t.msWinRateAfterLoss} <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msLossToWin}</span>
                                 </div>
                                 <div style={{ fontSize: '11px', color: theme.textSub, marginTop: '4px', marginLeft: '14px' }}>{t.msComeback} ({momentumData.t2AfterLossWon}/{momentumData.t2AfterLossTotal}{t.timesUnit})</div>
@@ -988,17 +988,17 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                             <div key={idx}>
                                 <div style={{ fontSize:'13px', fontWeight:'bold', marginBottom:'6px', color: idx === 0 ? COLOR_TEAM1 : COLOR_TEAM2 }}>{name}</div>
                                 <div style={{ height:'30px', background: theme.surfaceHighlight, borderRadius:'6px', overflow:'hidden', display:'flex' }}>
-                                    <div style={{ width: `${(data.init/total)*100}%`, background: '#4ade80' }} title={t.msPhaseEarly}/>
-                                    <div style={{ width: `${(data.mid/total)*100}%`, background: '#fbbf24' }} title={t.msPhaseMid}/>
-                                    <div style={{ width: `${(data.late/total)*100}%`, background: '#f87171' }} title={t.msPhaseLate}/>
+                                    <div style={{ width: `${(data.init/total)*100}%`, background: theme.phaseEarly }} title={t.msPhaseEarly}/>
+                                    <div style={{ width: `${(data.mid/total)*100}%`, background: theme.phaseMid }} title={t.msPhaseMid}/>
+                                    <div style={{ width: `${(data.late/total)*100}%`, background: theme.phaseLate }} title={t.msPhaseLate}/>
                                 </div>
                             </div>
                         );
                     })}
                     <div style={{ display:'flex', gap:'12px', fontSize:'11px', color: theme.textSub, marginTop:'8px' }}>
-                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:'#4ade80'}}/> {t.msPhaseEarly}</span>
-                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:'#fbbf24'}}/> {t.msPhaseMid}</span>
-                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:'#f87171'}}/> {t.msPhaseLate}</span>
+                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:theme.phaseEarly}}/> {t.msPhaseEarly}</span>
+                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:theme.phaseMid}}/> {t.msPhaseMid}</span>
+                        <span style={{display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:8, height:8, background:theme.phaseLate}}/> {t.msPhaseLate}</span>
                     </div>
                 </div>
             </div>

@@ -93,7 +93,7 @@ export default function PlayerProfileView({ playersData }) {
                 <div style={{ display: 'flex', gap: '4px', background: theme.surface, padding: '4px', borderRadius: '8px', border: `1px solid ${theme.border}` }}>
                     {['All', '탱크', '딜러', '지원'].map(role => (
                         <button key={role} onClick={() => setSelectedRole(role)}
-                            style={{ flex: 1, padding: '8px 0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', background: selectedRole === role ? '#3b82f6' : 'transparent', color: selectedRole === role ? '#fff' : theme.textSub, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            style={{ flex: 1, padding: '8px 0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', background: selectedRole === role ? theme.primaryFixed : 'transparent', color: selectedRole === role ? '#fff' : theme.textSub, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                             {role !== 'All' && <img src={getRoleIconSrc(role)} alt={role} style={{ width: 14, height: 14, filter: 'invert(1)', opacity: selectedRole === role ? 1 : 0.6 }} />}
                             {role === 'All' ? t.all : roleLabelDisplay(role)}
                         </button>
@@ -105,12 +105,12 @@ export default function PlayerProfileView({ playersData }) {
                         const isActive = p.id === selectedPlayerId;
                         return (
                             <div key={p.id} onClick={() => setSelectedPlayerId(p.id)}
-                                style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', background: isActive ? theme.surfaceHighlight : theme.surface, border: `1px solid ${isActive ? '#3b82f6' : theme.border}`, display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
-                                <div style={{ width: 36, height: 36, borderRadius: '50%', background: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isActive ? '#3b82f6' : theme.textSub }}>
+                                style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', background: isActive ? theme.surfaceHighlight : theme.surface, border: `1px solid ${isActive ? theme.primaryFixed : theme.border}`, display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                                <div style={{ width: 36, height: 36, borderRadius: '50%', background: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isActive ? theme.primaryFixed : theme.textSub }}>
                                     <img src={getRoleIconSrc(p.role)} alt={p.role} style={{ width: 20, height: 20, filter: 'invert(1)', opacity: isActive ? 1 : 0.5 }} />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontWeight: '900', fontSize: '15px', color: isActive ? '#3b82f6' : theme.text }}>{p.name}</span>
+                                    <span style={{ fontWeight: '900', fontSize: '15px', color: isActive ? theme.primaryFixed : theme.text }}>{p.name}</span>
                                     <span style={{ fontSize: '11px', color: theme.textSub }}>{p.team} · {roleLabelDisplay(p.role)}</span>
                                 </div>
                             </div>
@@ -190,7 +190,7 @@ export default function PlayerProfileView({ playersData }) {
                                         contentStyle={{ backgroundColor: theme.surface, border: 'none', borderRadius: '8px', color: theme.text, fontSize:'12px' }}
                                         formatter={(value, name, props) => [`${value} (FB ${props?.payload?.fb ?? '-'} / D ${props?.payload?.deaths ?? '-'})`, 'K/D']}
                                     />
-                                    <Line type="monotone" dataKey="kd" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, fill: theme.surface, strokeWidth: 2 }} activeDot={{ r: 6 }} animationDuration={1000} />
+                                    <Line type="monotone" dataKey="kd" stroke={theme.dangerFixed} strokeWidth={3} dot={{ r: 4, fill: theme.surface, strokeWidth: 2 }} activeDot={{ r: 6 }} animationDuration={1000} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>

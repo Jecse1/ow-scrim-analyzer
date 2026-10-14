@@ -212,7 +212,7 @@ export default function FirstKillStats({ allScrims }) {
                 <div style={{ display: 'flex', gap: '10px' }}>
                     {['All', '탱커', '딜러', '힐러'].map(role => (
                         <button key={role} onClick={() => setSelectedRole(role)}
-                            style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid', borderColor: selectedRole === role ? '#3b82f6' : theme.border, background: selectedRole === role ? '#3b82f620' : theme.surface, color: selectedRole === role ? '#3b82f6' : theme.textSub, cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid', borderColor: selectedRole === role ? theme.primaryFixed : theme.border, background: selectedRole === role ? `${theme.primaryFixed}20` : theme.surface, color: selectedRole === role ? theme.primaryFixed : theme.textSub, cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {role === 'All' ? <Users size={16}/> : <img src={getRoleIconSrc(role)} alt={role} style={{ width: 16, height: 16, filter: 'invert(1)', opacity: selectedRole === role ? 1 : 0.5 }} />}
                             {role === 'All' ? t.allPositions : roleLabelDisplay(role)}
                         </button>

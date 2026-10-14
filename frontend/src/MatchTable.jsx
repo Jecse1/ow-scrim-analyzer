@@ -107,7 +107,7 @@ const MatchTable = ({ stats }) => {
             const isTeamChange = idx > 0 && (row.team_name || "") !== (sortedStats[idx-1]?.team_name || "");
 
             // 팀 색상 (파랑/빨강)은 테마와 무관하게 고정 (게임 관습)
-            const teamColor = row.team_name === (sortedStats[0]?.team_name) ? '#60a5fa' : '#f87171';
+            const teamColor = row.team_name === (sortedStats[0]?.team_name) ? theme.team1 : theme.team2;
 
             return (
               <React.Fragment key={idx}>

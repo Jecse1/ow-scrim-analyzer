@@ -45,7 +45,7 @@ export default function WinnerOverrideControl({ match, onChanged }) {
     }
   };
 
-  const badgeColor = isOverridden ? (theme.success || "#22c55e") : (theme.warning || "#f59e0b");
+  const badgeColor = isOverridden ? theme.overrideBadge : (theme.warning || "#f59e0b");
   const badgeText = isOverridden ? `${t.woBadgeOverridden}: ${wo}` : t.woBadgeDraw;
 
   return (
@@ -88,7 +88,7 @@ export default function WinnerOverrideControl({ match, onChanged }) {
       )}
 
       {err && (
-        <span style={{ fontSize: 11, color: theme.danger || "#ef4444" }}>
+        <span style={{ fontSize: 11, color: theme.danger }}>
           <AlertCircle size={11} style={{ verticalAlign: "-2px" }} /> {err}
         </span>
       )}

@@ -171,9 +171,8 @@ const ScrimSessions = ({ onSelectScrim }) => {
 
   // 승/패/무 칩 색 — 은은한 톤(다크·라이트 모두 가독). 원색 금지.
   const outcomeChip = (outcome) => {
-    const dark = theme.mode === 'dark';
-    if (outcome === 'win') return { bg: 'rgba(34,197,94,0.14)', bd: 'rgba(34,197,94,0.42)', fg: dark ? '#4ade80' : '#15803d' };
-    if (outcome === 'loss') return { bg: 'rgba(239,68,68,0.13)', bd: 'rgba(239,68,68,0.40)', fg: dark ? '#f87171' : '#b91c1c' };
+    if (outcome === 'win') return { bg: 'rgba(34,197,94,0.14)', bd: 'rgba(34,197,94,0.42)', fg: theme.winText };
+    if (outcome === 'loss') return { bg: 'rgba(239,68,68,0.13)', bd: 'rgba(239,68,68,0.40)', fg: theme.lossText };
     return { bg: theme.surfaceHighlight, bd: theme.border, fg: theme.textSub }; // 무/판정불가 = 중립
   };
 
@@ -281,7 +280,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
             <>
               <button
                 onClick={enterSelectMode}
-                style={{ background: theme.surface, border: `1px solid ${theme.border}`, color: theme.danger || '#ef4444', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600' }}
+                style={{ background: theme.surface, border: `1px solid ${theme.border}`, color: theme.danger, padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600' }}
               >
                 <Trash2 size={15} /> {t.delete}
               </button>
@@ -313,7 +312,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
           <button
             onClick={handleDeleteSelected}
             disabled={selectedIds.size === 0 || deleting}
-            style={{ background: selectedIds.size > 0 ? (theme.danger || '#ef4444') : theme.surfaceHighlight, border: 'none', color: selectedIds.size > 0 ? '#fff' : theme.textSub, padding: '6px 16px', borderRadius: '6px', cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '700', opacity: deleting ? 0.6 : 1 }}
+            style={{ background: selectedIds.size > 0 ? theme.danger : theme.surfaceHighlight, border: 'none', color: selectedIds.size > 0 ? '#fff' : theme.textSub, padding: '6px 16px', borderRadius: '6px', cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: '700', opacity: deleting ? 0.6 : 1 }}
           >
             {deleting ? t.deleting : t.deleteSelected}
           </button>
@@ -353,7 +352,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
           {/* 요일 헤더 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: isMobile ? '4px' : '8px', marginBottom: '8px' }}>
             {DOW.map((w, i) => (
-              <div key={w} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', color: i === 0 ? (theme.danger || '#ef4444') : theme.textSub }}>{w}</div>
+              <div key={w} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', color: i === 0 ? theme.danger : theme.textSub }}>{w}</div>
             ))}
           </div>
 
@@ -501,8 +500,8 @@ const ScrimSessions = ({ onSelectScrim }) => {
                     key={scrim.id}
                     onClick={() => isSelectMode ? toggleSelect(scrim.id) : onSelectScrim(scrim.id)}
                     style={{
-                      background: isChecked ? `${theme.danger || '#ef4444'}12` : theme.surface,
-                      border: `1px solid ${isChecked ? (theme.danger || '#ef4444') : theme.border}`,
+                      background: isChecked ? `${theme.danger}12` : theme.surface,
+                      border: `1px solid ${isChecked ? theme.danger : theme.border}`,
                       borderRadius: '12px', padding: '24px', cursor: 'pointer',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       transition: 'background 0.15s, border-color 0.15s',
@@ -515,7 +514,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                           checked={isChecked}
                           onChange={() => toggleSelect(scrim.id)}
                           onClick={e => e.stopPropagation()}
-                          style={{ width: '18px', height: '18px', accentColor: theme.danger || '#ef4444', cursor: 'pointer', flexShrink: 0 }}
+                          style={{ width: '18px', height: '18px', accentColor: theme.danger, cursor: 'pointer', flexShrink: 0 }}
                         />
                       )}
                       <div>

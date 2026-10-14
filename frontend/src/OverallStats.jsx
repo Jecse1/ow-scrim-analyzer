@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
 import { ChevronLeft, RefreshCw, Search, X, Youtube, Zap, Skull, Trophy, Map as MapIcon, User, Filter, Calendar, Users, Sword, AlertOctagon, TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from "recharts";
-import { useTheme } from "./ThemeContext";
+import { useTheme, FIXED_COLORS } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile, ScrollX } from "./utils/responsive";
 import { tpl } from "./FightLabStats";
@@ -21,8 +21,8 @@ const EVENT_KEYWORDS = { "궁극기": "ultimate_start", "궁": "ultimate_start",
 const RESULT_KEYWORDS = { "승리": "win", "승": "win", "win": "win", "패배": "loss", "패": "loss", "loss": "loss", "lose": "loss", "무승부": "draw", "무": "draw", "draw": "draw" };
 const KNOWN_HEROES = [ '디바', '둠피스트', '정커퀸', '마우가', '오리사', '라마트라', '라인하르트', '로드호그', '시그마', '윈스턴', '레킹볼', '자리야', '해저드', '애쉬', '바스티온', '캐서디', '에코', '겐지', '한조', '정크랫', '메이', '파라', '리퍼', '소전', '솔저76', '솜브라', '시메트라', '토르비욘', '트레이서', '위도우메이커', '벤처', '벤데타', '프레야', '시온', '아나', '바티스트', '브리기테', '일리아리', '주노', '키리코', '라이프위버', '루시우', '메르시', '모이라', '젠야타', '우양', '제트팩 캣', '미즈키', '엠레', '디몬', 'D.Mon' ];
 
-const COLOR_TEAM1 = '#60a5fa';
-const COLOR_TEAM2 = '#f87171';
+const COLOR_TEAM1 = FIXED_COLORS.team1;
+const COLOR_TEAM2 = FIXED_COLORS.team2;
 
 // 하이라이트 카드 렌더 상한. 이벤트가 1만+개면 전량 렌더 시 DOM이 폭발해
 // 필터 타이핑 리렌더마다 탭이 메모리 초과로 죽는다. 상위 N개만 그린다.
@@ -666,7 +666,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
           case KEYWORD_TYPES.HERO: return theme.primary;
           case KEYWORD_TYPES.EVENT: return theme.warning;
           case KEYWORD_TYPES.RESULT: return theme.danger;
-          case KEYWORD_TYPES.PLAYER: return '#8b5cf6';
+          case KEYWORD_TYPES.PLAYER: return theme.keywordPlayer;
           default: return theme.textSub;
       }
   };
@@ -873,7 +873,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                                                 <Cell key={idx} fill={
                                                     entry.winRate >= 70 ? (theme.success || '#10b981') :
                                                     entry.winRate >= 40 ? '#60a5fa' :
-                                                    (theme.danger || '#ef4444')
+                                                    theme.danger
                                                 } />
                                             ))}
                                         </Bar>
@@ -900,7 +900,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                 const cardStyle = { background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '16px', padding: '24px', marginBottom: '24px' };
                 const titleStyle = { color: theme.text, fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' };
                 const teamLabel = baseTeam === 'All' ? t.osAllAvg : baseTeam;
-                const accentColor = baseTeam === 'All' ? (theme.primary || '#a78bfa') : COLOR_TEAM1;
+                const accentColor = baseTeam === 'All' ? theme.primary : COLOR_TEAM1;
 
                 if (!fs) {
                     return (
@@ -916,7 +916,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                         {(() => {
                             const maxFD = fs.firstDeathRanking[0]?.count || 1;
                             const maxCarry = fs.carryRanking[0]?.avgKills || 1;
-                            const rankBadgeColor = (i) => i === 0 ? '#fbbf24' : i === 1 ? '#9ca3af' : i === 2 ? '#cd7c2f' : theme.textSub;
+                            const rankBadgeColor = (i) => i === 0 ? theme.rankGold : i === 1 ? theme.rankSilver : i === 2 ? theme.rankBronze : theme.textSub;
                             const RankRow = ({ idx, hero, name, teamName, mainVal, mainSuffix, subVal, barPct, barColor }) => (
                                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px', overflow: 'hidden', marginBottom: '4px' }}>
                                     <div style={{ position: 'absolute', inset: 0, width: `${barPct}%`, background: `${barColor}18`, borderRadius: '8px', pointerEvents: 'none' }} />
@@ -995,7 +995,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                         {/* B. 한타 모멘텀 */}
                         <div style={cardStyle}>
                             <div style={titleStyle}>
-                                <Sword size={18} color={theme.primary || '#a78bfa'} />
+                                <Sword size={18} color={theme.primary} />
                                 {t.msMomentumTitle}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '12px' : '24px' }}>
@@ -1016,9 +1016,9 @@ export default function OverallStats({ onBack, onGoSessions }) {
                                 </div>
 
                                 {/* 패배 후 역전 승률 */}
-                                <div style={{ background: theme.bg, padding: '20px', borderRadius: '12px', border: `1px solid ${theme.danger || '#ef4444'}40` }}>
+                                <div style={{ background: theme.bg, padding: '20px', borderRadius: '12px', border: `1px solid ${theme.danger}40` }}>
                                     <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger || '#ef4444', flexShrink: 0 }} />
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.danger, flexShrink: 0 }} />
                                         {t.msWinRateAfterLoss}
                                         <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msLossToWin}</span>
                                     </div>

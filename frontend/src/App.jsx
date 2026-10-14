@@ -4,7 +4,7 @@ import {
   LayoutDashboard, History, Users, BarChart3, Moon, Sun, Upload, AlertCircle, Globe, User, Zap, Skull, Crosshair, Swords, Map as MapIcon, ChevronDown, Ban, Menu, X, Network
 } from "lucide-react";
 
-import { ThemeProvider, useTheme } from "./ThemeContext";
+import { ThemeProvider, useTheme, themes, FIXED_COLORS } from "./ThemeContext";
 import { LanguageProvider, useLanguage } from "./LanguageContext";
 import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
@@ -44,11 +44,11 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto", color: "#ef4444" }}>
+        <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto", color: FIXED_COLORS.dangerFixed }}>
           <div style={{ border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", padding: "14px 16px", borderRadius: 12 }}>
             <div style={{ fontWeight: 900, marginBottom: 6 }}>System Error (Render Failed)</div>
             <div style={{ fontSize: 13, lineHeight: 1.5 }}>{String(this.state.error)}</div>
-            <button onClick={() => window.location.reload()} style={{ marginTop: 12, background: "#27272a", border: "1px solid #3f3f46", color: "#fff", padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontWeight: 800 }}>Reload Page</button>
+            <button onClick={() => window.location.reload()} style={{ marginTop: 12, background: themes.dark.surfaceHighlight, border: `1px solid ${themes.dark.borderHighlight}`, color: themes.dark.text, padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontWeight: 800 }}>Reload Page</button>
           </div>
         </div>
       );
@@ -670,7 +670,7 @@ function MainApp() {
                 <h2 style={{ marginBottom: "16px", fontSize: "32px", fontWeight: "800", color: theme.text }}>{t.title}</h2>
                 <p style={{ color: theme.textSub, marginBottom: "40px", fontSize: "16px", lineHeight: "1.6" }}>{t.desc}<br />{t.desc2}</p>
                 <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "12px" : "16px", justifyContent: "center", alignItems: "center" }}>
-                  <button onClick={() => setIsModalOpen(true)} disabled={uploading} style={{ background: isDarkMode ? "#fff" : "#09090b", color: isDarkMode ? "#09090b" : "#fff", border: "none", padding: "14px 32px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", fontSize: "15px", fontWeight: "700", width: isMobile ? "100%" : "auto" }}>
+                  <button onClick={() => setIsModalOpen(true)} disabled={uploading} style={{ background: theme.text, color: theme.bg, border: "none", padding: "14px 32px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", fontSize: "15px", fontWeight: "700", width: isMobile ? "100%" : "auto" }}>
                     {uploading ? t.uploading : <><Upload size={20} /> {t.createScrim}</>}
                   </button>
                   <button onClick={goSessions} style={{ background: theme.surfaceHighlight, color: theme.text, border: `1px solid ${theme.borderHighlight}`, padding: "14px 32px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", fontSize: "15px", fontWeight: "600", width: isMobile ? "100%" : "auto" }}>

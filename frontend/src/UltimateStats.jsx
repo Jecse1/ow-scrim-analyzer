@@ -126,10 +126,10 @@ export default function UltimateStats({ allScrims }) {
             const data = payload[0].payload; 
             return (
                 <div style={{ 
-                    backgroundColor: theme.surfaceHighlight || '#2A2A2A', 
+                    backgroundColor: theme.surfaceHighlight, 
                     padding: '12px', 
                     borderRadius: '8px', 
-                    border: `1px solid ${theme.border || '#444'}`,
+                    border: `1px solid ${theme.border}`,
                     color: '#ffffff', // 글자색 하얀색 고정
                     boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                 }}>

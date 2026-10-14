@@ -361,7 +361,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
               </button>
               <button
                 onClick={enterSelectMode}
-                style={{ background: theme.surface, border: `1px solid ${theme.border}`, color: theme.danger || '#ef4444', padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontWeight: 800, display: "inline-flex", gap: 8, alignItems: "center" }}
+                style={{ background: theme.surface, border: `1px solid ${theme.border}`, color: theme.danger, padding: "10px 14px", borderRadius: 10, cursor: "pointer", fontWeight: 800, display: "inline-flex", gap: 8, alignItems: "center" }}
               >
                 <Trash2 size={15} /> {t.delete}
               </button>
@@ -433,7 +433,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.size === 0 || deleting}
-                style={{ background: selectedIds.size > 0 ? (theme.danger || '#ef4444') : theme.surfaceHighlight, border: 'none', color: selectedIds.size > 0 ? '#fff' : theme.textSub, padding: '5px 14px', borderRadius: '6px', cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: '700', opacity: deleting ? 0.6 : 1 }}
+                style={{ background: selectedIds.size > 0 ? theme.danger : theme.surfaceHighlight, border: 'none', color: selectedIds.size > 0 ? '#fff' : theme.textSub, padding: '5px 14px', borderRadius: '6px', cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: '700', opacity: deleting ? 0.6 : 1 }}
               >
                 {deleting ? t.deleting : t.deleteSelected}
               </button>
@@ -449,8 +449,8 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
               <div
                 onClick={() => isSelectMode ? toggleSelect(m.id) : onSelectMatch?.(m.id)}
                 style={{
-                  border: `1px solid ${isChecked ? (theme.danger || '#ef4444') : theme.border}`,
-                  background: isChecked ? `${theme.danger || '#ef4444'}12` : theme.bg,
+                  border: `1px solid ${isChecked ? theme.danger : theme.border}`,
+                  background: isChecked ? `${theme.danger}12` : theme.bg,
                   borderRadius: 12, padding: 14,
                   display: "flex", justifyContent: "space-between", gap: 12,
                   cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
@@ -463,7 +463,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                       checked={isChecked}
                       onChange={() => toggleSelect(m.id)}
                       onClick={e => e.stopPropagation()}
-                      style={{ width: '16px', height: '16px', accentColor: theme.danger || '#ef4444', cursor: 'pointer', flexShrink: 0 }}
+                      style={{ width: '16px', height: '16px', accentColor: theme.danger, cursor: 'pointer', flexShrink: 0 }}
                     />
                   )}
                   <div>
@@ -610,7 +610,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                                 <input style={{ ...inp, width: 70 }} value={p.endStr} placeholder="MM:SS" onChange={e => updRow("endStr", e.target.value)} />
                                 <span style={{ fontSize: 11, color: theme.textSub }}>{t.sdPauseLen}: {len != null ? `${len}${t.sdDeltaSecUnit}` : "-"}</span>
                                 <button type="button" onClick={() => upd("pauseRows", em.pauseRows.filter((_, i) => i !== pi))}
-                                  style={{ background: "transparent", border: "none", color: theme.danger || "#ef4444", cursor: "pointer", padding: 2, display: "inline-flex" }}>
+                                  style={{ background: "transparent", border: "none", color: theme.danger, cursor: "pointer", padding: 2, display: "inline-flex" }}>
                                   <Trash2 size={14} />
                                 </button>
                               </div>
