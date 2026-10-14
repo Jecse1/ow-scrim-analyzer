@@ -1,0 +1,14 @@
+# 줄끝 정규화: 저장소에는 LF로 저장(Windows autocrlf 환경에서도 diff가 줄끝 노이즈로 부풀지 않게)
+* text=auto eol=lf
+
+# 바이너리 — 줄끝 변환·diff 금지
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.webp -text
+*.gif -text
+*.ico -text
+*.woff -text
+*.woff2 -text
+*.db -text
+*.sqlite -text

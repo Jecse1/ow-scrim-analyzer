@@ -14,6 +14,7 @@ import { getDisplayName, HERO_SKILL_MAP, getSkillName, getMapDisplayName, getHer
 import NoVideoModal from "./NoVideoModal";
 import { computeFights } from './utils/fightAnalysis';
 import WinnerOverrideControl from "./WinnerOverrideControl";
+import { precheckLine } from "./utils/precheckText";
 
 // --- 색상 및 상수 ---
 const COLOR_TEAM1 = '#60a5fa'; 
@@ -1685,10 +1686,10 @@ const MatchStats = ({ matchId, onBack, matchData: initialMatchData }) => {
         const diff = dry.data?.diff || {};
         if (Object.keys(diff).length > 0) {
           const lines = Object.entries(diff).map(([k, v]) => `- ${k}: ${v.manual} → ${v.parsed}`).join("\n");
-          adopt = window.confirm(`${t.sdDiffTitle}\n${lines}\n\n${t.sdDiffAdopt}`) ? "parsed" : "keep";
+          adopt = window.confirm(`${t.sdDiffTitle}\n${lines}${precheckLine(dry.data, t)}\n\n${t.sdDiffAdopt}`) ? "parsed" : "keep";
         }
-        await axios.post(`/api/matches/upload`, fd({ adopt }));
-        alert(t.sdUploadDone);
+        const res = await axios.post(`/api/matches/upload`, fd({ adopt }));
+        alert(t.sdUploadDone + precheckLine(res.data, t));
         refetchMatch();
       } catch (err) {
         alert(t.sdEditFail + (err.response?.data?.detail || err.message));

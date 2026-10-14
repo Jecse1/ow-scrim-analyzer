@@ -10,6 +10,7 @@ import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
 import { APP_NAME } from "./config";
+import { precheckLine } from "./utils/precheckText";
 
 import ScrimSessions from "./ScrimSessions";
 import ScrimDetail from "./ScrimDetail";
@@ -386,6 +387,7 @@ function MainApp() {
       const createRes = await axios.post(`${API_BASE}/api/scrim/manual-register`, payload);
       const newScrimId = createRes.data.scrim_id;
 
+      let warnText = "";   // 매치별 로그 사전 검사 경고(있을 때만) — 완료 alert에 덧붙임
       if (scrimData.files && scrimData.files.length > 0) {
         for (let i = 0; i < scrimData.files.length; i++) {
           const file = scrimData.files[i];
@@ -394,14 +396,16 @@ function MainApp() {
           formData.append("scrim_id", newScrimId);
           formData.append("match_index", i + 1);
           formData.append("file", file);
-          await axios.post(`${API_BASE}/api/matches/upload`, formData, {
+          const res = await axios.post(`${API_BASE}/api/matches/upload`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
+          const w = precheckLine(res.data, t);
+          if (w) warnText += `\n#${i + 1} ${w.trim()}`;
         }
       }
       invalidateApiCache(); // 등록 성공 → 공유 fetch 캐시 무효화 (다음 접근부터 재요청)
       setAllScrims([]); // 이미 로드된 full-events 상태도 초기화 (소비 탭 재진입 시 새로 로드)
-      alert(t.success);
+      alert(t.success + warnText);
       goSessions();
     } catch (err) {
       let errMsg = err.message;

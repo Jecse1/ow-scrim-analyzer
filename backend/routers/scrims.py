@@ -29,6 +29,7 @@ from schemas import ScrimManualInput, BatchDeleteRequest, WinnerOverrideInput, S
 from cache import _invalidate_response_cache
 from serializers import _db_match_to_dict, _db_session_to_dict
 from parsers.log_parser import parse_overwatch_log, parse_log_timestamp, time_str_to_seconds
+from parsers.log_precheck import precheck_log_text, precheck_summary
 from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
 
@@ -434,10 +435,12 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
         raise HTTPException(status_code=503, detail="Database not available")
 
     content = await file.read()
+    enc_fallback = False
     try:
         log_text = content.decode("utf-8")
     except:
         log_text = content.decode("cp949", errors="ignore")
+        enc_fallback = True
 
     is_dry = (dry_run or "").strip() in ("1", "true", "yes")
     if not is_dry:
@@ -461,6 +464,11 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             c_t1 = db_match.team1_name
             c_t2 = db_match.team2_name
 
+            # 사전 검사(경고 수집 전용 — 거부하지 않음). 파서가 조용히 버릴 줄을 응답·meta·서버 로그에 남긴다.
+            pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
+            print(f"[PRECHECK] {scrim_id} #{match_index}{' (dry_run)' if is_dry else ''}: {precheck_summary(pre)}")
+            pre_resp = {"warnings": pre["warnings"], "warning_count": pre["warning_count"]}
+
             parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
             target_match: dict = {}
             calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
@@ -479,7 +487,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                                      "parsed": f"{target_match.get('score_t1', 0)}:{target_match.get('score_t2', 0)}"}
             if is_dry:
                 # 파싱만 — DB·파일 무변경. 프론트가 diff를 보여주고 adopt를 정해 재호출한다.
-                return {"status": "dry_run", "source": prev_source, "diff": diff}
+                return {"status": "dry_run", "source": prev_source, "diff": diff, **pre_resp}
 
             if prev_source == "manual" and (adopt or "parsed") == "keep":
                 # 수기값 유지: 맵은 수기값 그대로, 수기 winner는 winner_override로 이동(파싱 원본은 winner 컬럼에)
@@ -572,9 +580,11 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 "source": "log",
                 "map_name": db_match.map_name,
                 "winner_override": db_match.winner_override or "",
+                "precheck": {"warning_count": pre["warning_count"],
+                             "codes": sorted(pre["counts"]["by_code"])},
             })
             _invalidate_response_cache()
-            return {"status": "success", "diff": diff}
+            return {"status": "success", "diff": diff, **pre_resp}
     except HTTPException:
         raise
     except Exception as e:

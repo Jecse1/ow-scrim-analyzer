@@ -119,6 +119,7 @@ export const translations = {
     sdDiffTitle: "수기 입력값과 파싱 결과가 다릅니다:",
     sdDiffAdopt: "[확인] = 파싱 결과 채택 · [취소] = 수기값 유지(승자는 승패 보정으로 이동)",
     sdManualBadge: "수기", sdEditFail: "수정 실패: ", sdUploadDone: "로그가 반영되었습니다.",
+    pcWarnPrefix: "로그 형식 경고", pcWarnUnit: "건",
     // Common (buttons / delete dialogs)
     delete: "삭제", reset: "초기화", cancelSelection: "선택 취소", selectAll: "전체 선택", deselectAll: "전체 해제",
     selectedCount: "선택됨", deleting: "삭제 중...", deleteSelected: "선택 삭제", deleteConfirmPre: "선택한 ",
@@ -508,6 +509,7 @@ export const translations = {
     sdDiffTitle: "Manual values differ from parsed results:",
     sdDiffAdopt: "[OK] = adopt parsed values · [Cancel] = keep manual values (winner moves to override)",
     sdManualBadge: "Manual", sdEditFail: "Edit failed: ", sdUploadDone: "Log applied.",
+    pcWarnPrefix: "Log format warnings", pcWarnUnit: "",
     // Common (buttons / delete dialogs)
     delete: "Delete", reset: "Reset", cancelSelection: "Cancel", selectAll: "Select All", deselectAll: "Deselect All",
     selectedCount: "selected", deleting: "Deleting...", deleteSelected: "Delete Selected", deleteConfirmPre: "Delete ",
@@ -897,6 +899,7 @@ export const translations = {
     sdDiffTitle: "手动输入与解析结果不一致：",
     sdDiffAdopt: "[确定] = 采用解析结果 · [取消] = 保留手动值（胜者移入胜负修正）",
     sdManualBadge: "手动", sdEditFail: "编辑失败：", sdUploadDone: "日志已应用。",
+    pcWarnPrefix: "日志格式警告", pcWarnUnit: "条",
     // Common (buttons / delete dialogs)
     delete: "删除", reset: "重置", cancelSelection: "取消选择", selectAll: "全选", deselectAll: "全部取消",
     selectedCount: "已选", deleting: "删除中...", deleteSelected: "删除所选", deleteConfirmPre: "确定删除所选 ",

@@ -8,6 +8,7 @@ import { useLanguage } from "./LanguageContext";
 import { getMapDisplayName } from "./gameData";
 import { BASE_TEAM } from "./config";
 import WinnerOverrideControl from "./WinnerOverrideControl";
+import { precheckLine } from "./utils/precheckText";
 
 const API_BASE = import.meta.env.PROD ? "" : "";
 
@@ -199,12 +200,12 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
         const diff = dry.data?.diff || {};
         if (Object.keys(diff).length > 0) {
           const lines = Object.entries(diff).map(([k, v]) => `- ${k}: ${v.manual} → ${v.parsed}`).join("\n");
-          adopt = window.confirm(`${t.sdDiffTitle}\n${lines}\n\n${t.sdDiffAdopt}`) ? "parsed" : "keep";
+          adopt = window.confirm(`${t.sdDiffTitle}\n${lines}${precheckLine(dry.data, t)}\n\n${t.sdDiffAdopt}`) ? "parsed" : "keep";
         }
       }
-      await axios.post(`${API_BASE}/api/matches/upload`, fd({ adopt }));
+      const res = await axios.post(`${API_BASE}/api/matches/upload`, fd({ adopt }));
       invalidateApiCache();
-      alert(t.sdUploadDone);
+      alert(t.sdUploadDone + precheckLine(res.data, t));
       await fetchScrim();
     } catch (err) {
       alert(t.sdEditFail + (err.response?.data?.detail || err.message));
