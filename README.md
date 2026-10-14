@@ -227,12 +227,12 @@ step-by-step upload instructions.
 익명화된 한 맵 로그와 업로드 방법은 [`sample_data/`](sample_data/) 를 참고하세요.
 
 Upload flow / 업로드 흐름 (in the "Create scrim" dialog / "스크림 생성하기" 창):
-1. Per map, enter the opponent name and pick the `.txt` log file.
-   맵마다 상대팀 이름을 입력하고 `.txt` 로그 파일을 고릅니다.
+1. Per map, enter the Team 1 and Team 2 names and pick the `.txt` log file.
+   맵마다 1팀 이름·2팀 이름을 입력하고 `.txt` 로그 파일을 고릅니다.
 2. Check the two rosters read from the log (players and heroes per team).
    로그에서 읽은 두 팀 명단(선수·영웅)을 확인합니다.
-3. Mark which side is your team ("Our team"), then save — the session opens with the analysis tabs populated.
-   우리 팀 쪽을 "우리 팀"으로 고른 뒤 저장합니다 — 세션을 열면 분석 탭이 채워집니다.
+3. Make sure each name matches the roster shown under it (the log label is shown for reference), then save — the session opens with the analysis tabs populated.
+   각 이름 칸 아래 명단(로그 라벨 표시)과 입력한 팀명이 맞는지 확인한 뒤 저장합니다 — 세션을 열면 분석 탭이 채워집니다.
 
 ### Related tools / 다른 파서 생태계
 

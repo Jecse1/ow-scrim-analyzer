@@ -29,8 +29,7 @@ scripts/api_snapshot.py    기존 조회 API 응답 바이트·openapi 스냅샷
 
 프론트 등록 흐름(frontend/src, 참고):
 ```
-ScrimModal.jsx             등록 모달 — 상대팀명 1칸 + 로그 선택 시 /api/logs/roster 명단·"우리 팀" 라디오
-utils/teamAssign.js        assembleTeamNames(우리 팀 slot → team1/team2 순서) · inferOurSlot(앞 매치와 같은 명단이면 같은 쪽)
+ScrimModal.jsx             등록 모달 — 1팀명·2팀명 자유 입력 + 로그 선택 시 /api/logs/roster 명단(slot 1 → 1팀명 칸 아래, slot 2 → 2팀명 칸 아래, 로그 라벨 표시)
 App.jsx handleScrimSubmit  manual-register → upload N회 → 전부 성공 시 /api/sessions/{id}/complete 1회
 ```
 

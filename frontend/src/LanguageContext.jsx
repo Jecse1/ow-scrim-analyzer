@@ -141,13 +141,11 @@ export const translations = {
     step2Title: "경기(맵) 입력", step2Desc: "맵마다 경기 정보를 입력하고 로그 파일을 골라주세요.", mapName: "맵 이름",
     pauseAlert: "영상 기준 퍼즈 시작·종료 시각(MM:SS)을 입력하세요. 영상 링크 시점 보정에 쓰입니다.", addPause: "퍼즈 구간 추가",
     logFile: "로그 파일 (.txt)", uploadLog: "로그 파일 선택",
-    // ScrimModal — 우리 팀 선택(로그 명단) · 등록 완료 알림
-    smOurTeamLabel: "우리 팀", smOpponentLabel: "상대팀 이름", smOpponentRequired: "상대팀 이름을 입력해주세요.",
-    smOpponentSameAsBase: "상대팀 이름이 우리 팀 이름과 같습니다.", smScoreLabelTpl: "스코어 ({us} : {them})",
+    // ScrimModal — 1팀명·2팀명 검증 · 로그 명단 표시 · 등록 완료 알림
+    smTeamNameRequired: "1팀 이름과 2팀 이름을 모두 입력해주세요.", smTeamNamesSame: "1팀 이름과 2팀 이름이 같습니다.",
     smRosterLoading: "로그 명단 읽는 중...", smRosterError: "로그 명단을 읽지 못했습니다 — 파일을 다시 선택하거나 수기 매치로 바꾸세요.",
-    smRosterTitle: "로그 명단 — 우리 팀을 고르세요", smRosterPick: "우리 팀", smRosterLogLabel: "로그 라벨",
-    smRosterPrefilled: "앞 매치와 같은 명단이라 같은 쪽을 미리 골랐습니다(바꿀 수 있음).", smRosterWarnTpl: "경고 {n}건",
-    smBlockedLoading: "명단 읽는 중: ", smBlockedRosterErr: "명단 오류(등록 불가): ", smBlockedNoPick: "우리 팀 미선택: ",
+    smRosterTitle: "로그 명단", smRosterLogLabel: "로그 라벨", smRosterWarnTpl: "경고 {n}건",
+    smBlockedLoading: "명단 읽는 중: ", smBlockedRosterErr: "명단 오류(등록 불가): ",
     notifyLabel: "디스코드 알림: ", notifySent: "전송 요청됨", notifyDisabled: "미설정", notifyFailed: "실패", notifyNotSent: "알림 미발송",
     // UltimateStats
     ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",
@@ -544,13 +542,11 @@ export const translations = {
     step2Title: "Match Details", step2Desc: "Enter each map's details and choose its log file.", mapName: "Map Name",
     pauseAlert: "Enter pause start/end in VOD time (MM:SS). Used to keep video links in sync.", addPause: "Add Pause",
     logFile: "Log File (.txt)", uploadLog: "Choose log file",
-    // ScrimModal — our-team pick (log roster) · registration-complete notice
-    smOurTeamLabel: "Our team", smOpponentLabel: "Opponent name", smOpponentRequired: "Please enter the opponent name.",
-    smOpponentSameAsBase: "Opponent name is the same as our team name.", smScoreLabelTpl: "Score ({us} : {them})",
+    // ScrimModal — team 1/2 name checks · log roster display · registration-complete notice
+    smTeamNameRequired: "Please enter both Team 1 and Team 2 names.", smTeamNamesSame: "Team 1 and Team 2 names are the same.",
     smRosterLoading: "Reading log roster...", smRosterError: "Could not read the log roster — pick the file again or switch to a manual match.",
-    smRosterTitle: "Log roster — pick our team", smRosterPick: "Our team", smRosterLogLabel: "Log label",
-    smRosterPrefilled: "Same roster as an earlier match, so the same side was preselected (you can change it).", smRosterWarnTpl: "{n} warning(s)",
-    smBlockedLoading: "Reading roster: ", smBlockedRosterErr: "Roster error (cannot register): ", smBlockedNoPick: "Our team not picked: ",
+    smRosterTitle: "Log roster", smRosterLogLabel: "Log label", smRosterWarnTpl: "{n} warning(s)",
+    smBlockedLoading: "Reading roster: ", smBlockedRosterErr: "Roster error (cannot register): ",
     notifyLabel: "Discord notice: ", notifySent: "requested", notifyDisabled: "not configured", notifyFailed: "failed", notifyNotSent: "notice not sent",
     // UltimateStats
     ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",
@@ -947,13 +943,11 @@ export const translations = {
     step2Title: "对局信息", step2Desc: "请为每张地图填写对局信息并选择日志文件。", mapName: "地图名称",
     pauseAlert: "请按视频时间填写暂停开始/结束（MM:SS），用于校正视频链接时间点。", addPause: "添加暂停区间",
     logFile: "日志文件（.txt）", uploadLog: "选择日志文件",
-    // ScrimModal — 选择我方队伍（日志名单）· 登记完成通知
-    smOurTeamLabel: "我方队伍", smOpponentLabel: "对手队伍名称", smOpponentRequired: "请输入对手队伍名称。",
-    smOpponentSameAsBase: "对手队伍名称与我方队伍名称相同。", smScoreLabelTpl: "比分（{us} : {them}）",
+    // ScrimModal — 1队/2队名称校验 · 日志名单显示 · 登记完成通知
+    smTeamNameRequired: "请填写1队和2队名称。", smTeamNamesSame: "1队和2队名称相同。",
     smRosterLoading: "正在读取日志名单...", smRosterError: "无法读取日志名单 — 请重新选择文件或改为手动登记。",
-    smRosterTitle: "日志名单 — 请选择我方队伍", smRosterPick: "我方队伍", smRosterLogLabel: "日志标签",
-    smRosterPrefilled: "与之前对局名单相同，已预选同一侧（可更改）。", smRosterWarnTpl: "警告 {n} 条",
-    smBlockedLoading: "正在读取名单：", smBlockedRosterErr: "名单错误（无法登记）：", smBlockedNoPick: "未选择我方队伍：",
+    smRosterTitle: "日志名单", smRosterLogLabel: "日志标签", smRosterWarnTpl: "警告 {n} 条",
+    smBlockedLoading: "正在读取名单：", smBlockedRosterErr: "名单错误（无法登记）：",
     notifyLabel: "Discord 通知：", notifySent: "已请求发送", notifyDisabled: "未设置", notifyFailed: "失败", notifyNotSent: "未发送通知",
     // UltimateStats
     ultFivePlus: "5个以上", ultTotal: "总计", ultValue: "价值", ultLowSampleNote: "样本不足（少于5次）· 仅供参考",

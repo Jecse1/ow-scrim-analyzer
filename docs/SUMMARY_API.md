@@ -205,8 +205,8 @@
 ---
 
 ## POST /api/logs/roster
-등록 **전** 로그 1개의 팀별 선수·영웅 명단. 웹 등록 모달이 로그 파일을 고르는 즉시 호출해 "우리 팀"을 고르게 한다
-(팀 라벨 역입력 방지). **DB·파일 쓰기 없음**, 세션·매치가 없어도 호출할 수 있다.
+등록 **전** 로그 1개의 팀별 선수·영웅 명단. 웹 등록 모달이 로그 파일을 고르는 즉시 호출해 1팀명·2팀명 칸 아래에
+각 자리의 명단을 보여 준다(팀명 역입력 방지 — 입력한 이름과 로그 라벨을 대조). **DB·파일 쓰기 없음**, 세션·매치가 없어도 호출할 수 있다.
 
 요청: `multipart/form-data`, 필드 `file`(로그 `.txt` 1개 — `/api/matches/upload`와 같은 필드명·디코드: UTF-8, 실패 시 cp949).
 
@@ -214,7 +214,7 @@
 | 필드 | 설명 |
 |---|---|
 | `teams[]` | 항상 2개, `slot` 1 → 2 순 |
-| `teams[].slot` | `1` = 로그 **첫 `match_start`의 첫 팀** = 등록 시 `team1_name` 자리, `2` = `team2_name` 자리. 파서는 팀명을 위치로만 대응하므로(첫 팀 → team1_name) 프론트는 "우리 팀"으로 고른 slot 자리에 `BASE_TEAM`, 다른 자리에 상대팀명을 넣어 manual-register를 호출한다 |
+| `teams[].slot` | `1` = 로그 **첫 `match_start`의 첫 팀** = 등록 시 `team1_name` 자리, `2` = `team2_name` 자리. 파서는 팀명을 위치로만 대응하므로(첫 팀 → team1_name) 프론트는 1팀명 입력값을 slot 1 자리(`team1Name`), 2팀명을 slot 2 자리(`team2Name`)로 manual-register를 호출한다(이 API는 `BASE_TEAM`과 무관) |
 | `teams[].label` | 로그 원시 팀 라벨(예: `1팀`/`2팀`, `Team 1`/`Team 2`). `match_start`가 없으면 `1팀`/`2팀` |
 | `teams[].players[]` | `{name, heroes[]}` — `name`은 `players.json` 별칭 적용 후 정본명, 순서는 파서 `slot_index`(탱→딜→힐). `heroes`는 라운드 중 최대 플레이 시간 내림차순(0초 영웅 포함) |
 | `warnings[]` | `{code, line, event, message}` — `precheck_log_text` 경고(업로드 응답과 같은 형식, 최대 50건). 두 slot 외 팀 라벨이 `player_stat`에 있으면 `roster_extra_team` 추가(그 팀은 명단에서 제외) |

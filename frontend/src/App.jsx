@@ -9,9 +9,8 @@ import { LanguageProvider, useLanguage } from "./LanguageContext";
 import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
-import { APP_NAME, BASE_TEAM } from "./config";
+import { APP_NAME } from "./config";
 import { precheckLine } from "./utils/precheckText";
-import { assembleTeamNames } from "./utils/teamAssign";
 
 import ScrimSessions from "./ScrimSessions";
 import ScrimDetail from "./ScrimDetail";
@@ -364,10 +363,11 @@ function MainApp() {
         startHour: scrimData.startHour || "00",
         endHour: scrimData.endHour || "00",
         matches: scrimData.matches.map((m) => {
-          // 팀명 순서 = 모달의 "우리 팀" 선택(로그 매치: 고른 slot 자리에 BASE_TEAM) — utils/teamAssign
-          const [team1Name, team2Name] = assembleTeamNames(m);
-          // 모달은 승자·보정을 'us'/'them' 으로 들고 있다 → 팀명으로
-          const sideName = (v) => (v === "us" ? BASE_TEAM : v === "them" ? (m.opponentName || "").trim() : (v || ""));
+          // 1팀명·2팀명 = 모달 자유 입력(로그 매치는 1팀명 자리 = 로그 첫 팀)
+          const team1Name = (m.team1Name || "").trim();
+          const team2Name = (m.team2Name || "").trim();
+          // 모달은 승자·보정을 't1'/'t2' 슬롯으로 들고 있다 → 팀명으로
+          const sideName = (v) => (v === "t1" ? team1Name : v === "t2" ? team2Name : (v || ""));
           return {
             map_name: m.map_name,
             videoUrl: m.videoUrl || "",

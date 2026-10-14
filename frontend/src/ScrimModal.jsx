@@ -4,25 +4,22 @@ import { X, Upload, Plus, Trash2, Calendar, Youtube, Map, Clock, PauseCircle, Al
 // [중요] ThemeContext, LanguageContext 적용
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
-import { BASE_TEAM } from "./config";
 import { useIsMobile } from "./utils/responsive";
-import { assembleTeamNames, inferOurSlot } from "./utils/teamAssign";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 
-// 매치 1개 초기값. 팀명은 우리 팀(BASE_TEAM 고정) + 상대팀명 1개 — team1/team2 순서는
-// 로그 매치는 "우리 팀" 선택(ourSlot), 수기 매치는 우리 팀 = 1팀으로 App 이 조립한다(utils/teamAssign).
-// winner·winner_override 는 'us' | 'them' | 'Draw' | '' 로 들고 있다가 App 이 팀명으로 바꾼다
-// (상대팀명을 나중에 고쳐도 선택이 어긋나지 않게).
+// 매치 1개 초기값. 1팀명·2팀명은 자유 입력 — 로그 매치는 1팀명 = 로그 첫 match_start 의 첫 팀(roster slot 1) 자리.
+// winner·winner_override 는 't1' | 't2' | 'Draw' | '' 로 들고 있다가 App 이 팀명으로 바꾼다
+// (팀명을 나중에 고쳐도 선택이 어긋나지 않게).
 // roster: POST /api/logs/roster 상태 { status: 'loading'|'ok'|'error', file, data?, error? } | null
 let _uidSeq = 0;
-const blankMatch = (opponentName = '') => ({
+const blankMatch = (team1Name = '', team2Name = '') => ({
   uid: ++_uidSeq,
-  map_name: '', videoUrl: '', opponentName, start_time: '', end_time: '', result: '',
+  map_name: '', videoUrl: '', team1Name, team2Name, start_time: '', end_time: '', result: '',
   has_pause: false, pauses: [], winner_override: '',
   // 수기(로그 없는) 매치: source='manual' + winner/score 직접 입력
   source: 'log', winner: '', score_t1: '', score_t2: '',
-  ourSlot: null, ourSlotPrefilled: false, roster: null
+  roster: null
 });
 
 const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
@@ -44,7 +41,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   const isDirty =
     scrimData.scrimName !== '' ||
-    scrimData.matches.some(m => m.map_name !== '' || m.videoUrl !== '' || m.start_time !== '' || m.end_time !== '' || m.opponentName !== '') ||
+    scrimData.matches.some(m => m.map_name !== '' || m.videoUrl !== '' || m.start_time !== '' || m.end_time !== '' || m.team1Name !== '' || m.team2Name !== '') ||
     scrimData.files.some(Boolean);
 
   const handleClose = () => {
@@ -72,12 +69,11 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
-  // 등록 불가 사유(로그 매치만): 명단 읽는 중 / 명단 오류 / 파일은 골랐는데 우리 팀 미선택
+  // 등록 불가 사유(로그 매치만): 명단 읽는 중 / 명단 오류
   const setList = (pred) => scrimData.matches.map((m, i) => (m.source !== 'manual' && pred(m) ? `SET ${i + 1}` : null)).filter(Boolean);
   const blockLoading = setList(m => m.roster?.status === 'loading');
   const blockError = setList(m => m.roster?.status === 'error');
-  const blockNoPick = setList(m => m.roster?.status === 'ok' && !m.ourSlot);
-  const submitBlocked = blockLoading.length + blockError.length + blockNoPick.length > 0;
+  const submitBlocked = blockLoading.length + blockError.length > 0;
 
   const handleNext = () => {
     if (!scrimData.scrimName) return alert(t.smEnterName);
@@ -91,9 +87,10 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
     // 유효성 검사
     for (let i = 0; i < scrimData.matches.length; i++) {
         const m = scrimData.matches[i];
-        const opp = (m.opponentName || '').trim();
-        if (!opp) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smOpponentRequired}`);
-        if (opp === BASE_TEAM) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smOpponentSameAsBase}`);
+        const n1 = (m.team1Name || '').trim();
+        const n2 = (m.team2Name || '').trim();
+        if (!n1 || !n2) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smTeamNameRequired}`);
+        if (n1 === n2) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smTeamNamesSame}`);
         if (m.has_pause) {
             if (!m.pauses || m.pauses.length === 0) {
                 return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smPauseSelectedWarn}`);
@@ -164,27 +161,20 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   const addMatch = () => {
     setScrimData(prev => ({
       ...prev,
-      // 상대팀명은 앞 매치 값을 이어받는다(같은 상대와 여러 맵 — 바꿀 수 있음)
-      matches: [...prev.matches, blankMatch(prev.matches[prev.matches.length - 1]?.opponentName || '')],
+      // 1팀명·2팀명은 앞 매치 값을 이어받는다(같은 상대와 여러 맵 — 바꿀 수 있음)
+      matches: [...prev.matches, blankMatch(prev.matches[prev.matches.length - 1]?.team1Name || '', prev.matches[prev.matches.length - 1]?.team2Name || '')],
       files: [...prev.files, null]
     }));
   };
 
-  // 매치 유형 전환. 수기로 바꾸면 고른 로그 파일·명단·우리 팀 선택을 비운다(남은 파일이 업로드되지 않게).
+  // 매치 유형 전환. 수기로 바꾸면 고른 로그 파일·명단을 비운다(남은 파일이 업로드되지 않게).
   const setSource = (index, source) => {
     setScrimData(prev => ({
       ...prev,
       matches: prev.matches.map((m, i) => i !== index ? m : (source === 'manual'
-        ? { ...m, source, roster: null, ourSlot: null, ourSlotPrefilled: false, winner_override: '' }
+        ? { ...m, source, roster: null, winner_override: '' }
         : { ...m, source })),
       files: source === 'manual' ? prev.files.map((f, i) => (i === index ? null : f)) : prev.files
-    }));
-  };
-
-  const pickOurSlot = (index, slot) => {
-    setScrimData(prev => ({
-      ...prev,
-      matches: prev.matches.map((m, i) => i === index ? { ...m, ourSlot: slot, ourSlotPrefilled: false } : m)
     }));
   };
 
@@ -194,16 +184,13 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
     const apply = (fn) => setScrimData(prev => {
       const i = prev.matches.findIndex(m => m.uid === uid);
       if (i < 0 || prev.matches[i].roster?.file !== file) return prev;
-      return { ...prev, matches: prev.matches.map((m, j) => j === i ? fn(m, prev.matches.slice(0, i)) : m) };
+      return { ...prev, matches: prev.matches.map((m, j) => j === i ? fn(m) : m) };
     });
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await axios.post('/api/logs/roster', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      apply((m, before) => {
-        const inferred = inferOurSlot(before, res.data);
-        return { ...m, roster: { status: 'ok', file, data: res.data }, ourSlot: inferred, ourSlotPrefilled: inferred != null };
-      });
+      apply(m => ({ ...m, roster: { status: 'ok', file, data: res.data } }));
     } catch (err) {
       const detail = err.response?.data?.detail;
       apply(m => ({ ...m, roster: { status: 'error', file, error: typeof detail === 'string' ? detail : err.message } }));
@@ -228,7 +215,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
           ...prev,
           files: newFiles,
           matches: prev.matches.map((m, i) => i === index
-            ? { ...m, ourSlot: null, ourSlotPrefilled: false, roster: file ? { status: 'loading', file } : null }
+            ? { ...m, roster: file ? { status: 'loading', file } : null }
             : m)
         };
     });
@@ -248,7 +235,33 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   const cols2 = isMobile ? '1fr' : '1fr 1fr';
   const btnStyle = (variant) => ({ padding: '14px 28px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', border: variant === 'primary' ? 'none' : `1px solid ${theme.borderHighlight}`, backgroundColor: variant === 'primary' ? theme.text : theme.surfaceHighlight, color: variant === 'primary' ? theme.bg : theme.text });
 
-  const renderRoster = (match, idx) => {
+  // 로그 명단 카드 1장(slot 1 → 1팀명 칸 아래, slot 2 → 2팀명 칸 아래). 머리의 "로그 라벨: …" 은 입력한 팀명과
+  // 로그 표기가 다를 때 대조용(표시만 — 등록 팀명은 입력값).
+  const renderTeamCard = (match, slot) => {
+    const r = match.roster;
+    if (match.source === 'manual' || r?.status !== 'ok') return null;
+    const team = r.data.teams.find(tm => tm.slot === slot);
+    if (!team) return null;
+    return (
+      <div style={{ padding: '12px 14px', borderRadius: '12px', border: `1px solid ${theme.borderHighlight}`, background: theme.surfaceHighlight }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+          <span style={{ fontWeight: 700, fontSize: '14px' }}>{t.smRosterTitle}</span>
+          <span style={{ fontSize: '12px', color: theme.textSub }}>{t.smRosterLogLabel}: {team.label}</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {team.players.map(p => (
+            <div key={p.name} style={{ fontSize: '13px', lineHeight: 1.4 }}>
+              <span style={{ fontWeight: 600, color: theme.text }}>{p.name}</span>
+              <span style={{ color: theme.textSub }}> · {p.heroes.join(', ')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // 파일 선택 칸 아래: 명단 읽는 중 / 오류 / precheck 경고
+  const renderRosterStatus = (match) => {
     const r = match.roster;
     if (!r) return null;
     if (r.status === 'loading') {
@@ -262,46 +275,10 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
       );
     }
-    const { teams, warnings, warning_count } = r.data;
-    const opp = match.opponentName.trim() || t.smOpponentLabel;
+    const { warnings, warning_count } = r.data;
+    if (!(warning_count > 0)) return null;
     return (
-      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text }}>{t.smRosterTitle}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: cols2, gap: '12px' }}>
-          {teams.map(team => {
-            const chosen = match.ourSlot === team.slot;
-            const assigned = match.ourSlot ? (chosen ? BASE_TEAM : opp) : null;
-            return (
-              <label key={team.slot} style={{ display: 'block', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px',
-                border: `${chosen ? 2 : 1}px solid ${chosen ? theme.primary : theme.borderHighlight}`,
-                background: chosen ? `${theme.primary}1f` : theme.surfaceHighlight }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '14px' }}>
-                    <input type="radio" name={`our-team-${match.uid}`} checked={chosen} onChange={() => pickOurSlot(idx, team.slot)} />
-                    {t.smRosterPick}
-                  </span>
-                  <span style={{ fontSize: '12px', color: theme.textSub }}>
-                    {t.smRosterLogLabel} {team.label}{assigned ? ` → ${assigned}` : ''}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {team.players.map(p => (
-                    <div key={p.name} style={{ fontSize: '13px', lineHeight: 1.4 }}>
-                      <span style={{ fontWeight: 600, color: theme.text }}>{p.name}</span>
-                      <span style={{ color: theme.textSub }}> · {p.heroes.join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              </label>
-            );
-          })}
-        </div>
-        {match.ourSlotPrefilled && match.ourSlot && (
-          <div style={{ fontSize: '12px', color: theme.textSub, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <AlertCircle size={12} /> {t.smRosterPrefilled}
-          </div>
-        )}
-        {warning_count > 0 && (
+      <div style={{ marginTop: '12px' }}>
           <details style={{ fontSize: '12px', color: theme.warning }}>
             <summary style={{ cursor: 'pointer' }}>{t.smRosterWarnTpl.replace('{n}', warning_count)}</summary>
             <ul style={{ margin: '6px 0 0', paddingLeft: '18px', color: theme.textSub }}>
@@ -311,7 +288,6 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
               {warning_count > warnings.length && <li>… +{warning_count - warnings.length}</li>}
             </ul>
           </details>
-        )}
       </div>
     );
   };
@@ -411,14 +387,16 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         <input type="text" placeholder="https://youtu.be/..." value={match.videoUrl} onChange={e => updateMatch(idx, 'videoUrl', e.target.value)} style={inputStyle} />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: cols2, gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: cols2, gap: '16px', alignItems: 'start' }}>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smOurTeamLabel}</label>
-                              <div style={{ ...inputStyle, color: theme.textSub, cursor: 'default' }}>{BASE_TEAM}</div>
+                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smTeam1Label}</label>
+                              <input type="text" placeholder="ex: Team A" value={match.team1Name} onChange={e => updateMatch(idx, 'team1Name', e.target.value)} style={inputStyle} />
+                              {renderTeamCard(match, 1)}
                           </div>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smOpponentLabel}</label>
-                              <input type="text" placeholder="ex: Team B" value={match.opponentName} onChange={e => updateMatch(idx, 'opponentName', e.target.value)} style={inputStyle} />
+                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smTeam2Label}</label>
+                              <input type="text" placeholder="ex: Team B" value={match.team2Name} onChange={e => updateMatch(idx, 'team2Name', e.target.value)} style={inputStyle} />
+                              {renderTeamCard(match, 2)}
                           </div>
                       </div>
 
@@ -439,7 +417,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                           <div style={inputGroupStyle}>
                             <label style={labelStyle}><Trophy size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smWinnerLabel}</label>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              {[['', t.smWinnerUndecided], ['us', BASE_TEAM], ['them', match.opponentName.trim() || t.smOpponentLabel], ['Draw', t.woDraw]].map(([val, label], wi) => {
+                              {[['', t.smWinnerUndecided], ['t1', match.team1Name.trim() || t.sdTeam1Name], ['t2', match.team2Name.trim() || t.sdTeam2Name], ['Draw', t.woDraw]].map(([val, label], wi) => {
                                 const active = (match.winner || '') === val;
                                 return (
                                   <button key={wi} onClick={() => updateMatch(idx, 'winner', val)}
@@ -454,7 +432,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                             </div>
                           </div>
                           <div style={inputGroupStyle}>
-                            <label style={labelStyle}>{t.smScoreLabelTpl.replace('{us}', BASE_TEAM).replace('{them}', match.opponentName.trim() || t.smOpponentLabel)} <span style={{ fontWeight: 'normal', fontSize: '11px', color: theme.textSub }}>· {t.smWinnerAutoHint}</span></label>
+                            <label style={labelStyle}>{t.smScoreLabel} <span style={{ fontWeight: 'normal', fontSize: '11px', color: theme.textSub }}>· {t.smWinnerAutoHint}</span></label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <input type="number" min="0" value={match.score_t1} onChange={e => updateMatch(idx, 'score_t1', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
                               <span style={{ color: theme.textSub, fontWeight: 'bold' }}>:</span>
@@ -521,8 +499,8 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                           <Trophy size={16} color={theme.warning} /> {t.woLabel}
                         </label>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          {/* 좌우 순서 = 조립된 team1, team2 순서와 일치 */}
-                          {[['', t.woNone], ...assembleTeamNames(match).map(n => [n === BASE_TEAM ? 'us' : 'them', `${n || t.smOpponentLabel} ${t.woWinSuffix}`])].map(([val, label], wi) => {
+                          {/* 좌우 순서 = team1, team2 순서와 일치 */}
+                          {[['', t.woNone], ['t1', `${match.team1Name.trim() || t.sdTeam1Name} ${t.woWinSuffix}`], ['t2', `${match.team2Name.trim() || t.sdTeam2Name} ${t.woWinSuffix}`]].map(([val, label], wi) => {
                             const active = (match.winner_override || '') === val;
                             return (
                               <button key={wi} onClick={() => updateMatch(idx, 'winner_override', val)}
@@ -551,7 +529,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                             <Upload size={20} /> {scrimData.files[idx] ? scrimData.files[idx].name : t.uploadLog}
                         </label>
                     </div>
-                    {renderRoster(match, idx)}
+                    {renderRosterStatus(match)}
                   </div>
                   )}
                 </div>
@@ -568,9 +546,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
           {step === 2 && submitBlocked && (
             <div style={{ flex: '1 1 240px', fontSize: '13px', color: theme.warning, display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {blockLoading.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedLoading}{blockLoading.join(', ')}</span>}
-              {blockError.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedRosterErr}{blockError.join(', ')}</span>}
-              {blockNoPick.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedNoPick}{blockNoPick.join(', ')}</span>}
-            </div>
+              {blockError.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedRosterErr}{blockError.join(', ')}</span>}            </div>
           )}
           {step === 2 && <button onClick={() => setStep(1)} style={btnStyle('secondary')}>{t.prev}</button>}
           <button onClick={step === 1 ? handleNext : handleSubmit} disabled={step === 2 && submitBlocked}
