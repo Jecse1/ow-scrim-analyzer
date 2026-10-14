@@ -32,6 +32,8 @@ async def lifespan(app: FastAPI):
             print("[DB] Initialized successfully")
         except Exception as e:
             print(f"[DB] Init failed: {e}")
+    from config import DISCORD_WEBHOOK_URL  # 값은 출력하지 않는다(설정 여부만)
+    print(f"[WEBHOOK] DISCORD_WEBHOOK_URL: {'설정됨' if DISCORD_WEBHOOK_URL else '미설정'}")
     yield
 
 
@@ -63,6 +65,9 @@ from routers.stats import router as stats_router
 app.include_router(stats_router)
 from routers.scrims import router as scrims_router
 app.include_router(scrims_router)
+# 집계 조회(봇·외부용). 경로 /api/summary/* — 위 라우터들과 접두가 겹치지 않아 순서 무관.
+from routers.summary import router as summary_router
+app.include_router(summary_router)
 
 # 드래프트 플랜(플랜 전용 테이블·캐시. 경로 /api/plans/* — 기존 라우터와 충돌 없음)
 try:

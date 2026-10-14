@@ -10,6 +10,10 @@ import os
 # 프론트엔드의 frontend/src/config.js BASE_TEAM 값과 동일하게 맞춰야 "우리 시점"이 동작한다.
 BASE_TEAM = os.getenv("BASE_TEAM", "Team A")
 
+# 세션 등록 완료 알림용 디스코드 웹후크 URL(선택). 배포마다 환경변수 DISCORD_WEBHOOK_URL 로 지정(pm2 env).
+# 빈 값이면 POST /api/sessions/{id}/complete 가 발송 없이 webhook:"disabled" 를 돌려준다. 값은 로그에 남기지 않는다.
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
+
 # --- 상수 및 매핑 데이터 ---
 # 영웅/맵/역할/EN→KO 게임 데이터는 game_data(SSOT: heroes.json, maps.json)에서 파생한다.
 # 아래 변수명·값은 기존과 동일(로더가 재구성). 사용처 무수정.

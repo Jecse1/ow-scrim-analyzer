@@ -25,6 +25,7 @@ except Exception as _e:
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
 from config import DATA_FILE, ROW_DATA_DIR, NUMERIC_FIELDS, BASE_TEAM
+import config as _config  # DISCORD_WEBHOOK_URL 은 호출 시점에 읽는다(테스트에서 교체 가능)
 from schemas import ScrimManualInput, BatchDeleteRequest, WinnerOverrideInput, SessionPatchInput, MatchPatchInput
 from cache import _invalidate_response_cache
 from serializers import _db_match_to_dict, _db_session_to_dict
@@ -33,6 +34,9 @@ from parsers.log_precheck import precheck_log_text, precheck_summary
 from services.winner_source import derive_winner_source
 from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
+from services.summary import summarize_session, format_session_message
+from services.discord_webhook import schedule_webhook
+from schemas_summary import SessionCompleteResponse
 
 _json_lock = threading.Lock()
 router = APIRouter()
@@ -1212,6 +1216,49 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     if team_warning:
         resp["warning"] = team_warning
     return resp
+
+
+# ── 세션 등록 완료 알림 ─────────────────────────────────────────
+@router.post("/api/sessions/{session_id}/complete", response_model=SessionCompleteResponse)
+async def complete_session(session_id: str):
+    """세션 등록 완료 신호. 읽기 전용(DB·meta.json 무변경)·멱등 — 같은 세션이면 같은 응답.
+    서버에는 "등록 완료" 시점이 없으므로(manual-register 1회 + upload N회를 브라우저가 순차 호출)
+    호출자가 마지막 업로드 뒤에 부른다. 승패 = D1(유효 승자), 상대 = D3(BASE_TEAM 이 아닌 팀명).
+    DISCORD_WEBHOOK_URL 이 비어 있으면 발송 없이 webhook:"disabled". 설정돼 있으면 발송을
+    asyncio.create_task 로 분리하고(본문 생성 포함) 기다리지 않는다 → webhook:"queued".
+    발송 실패는 services/discord_webhook 안에서 전부 잡혀 이 응답에 영향을 주지 않는다."""
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
+    try:
+        from sqlalchemy.orm import selectinload as _sil
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(DBSession)
+                .where(DBSession.id == session_id, DBSession.deleted_at.is_(None))
+                .options(_sil(DBSession.matches).selectinload(DBMatch.pauses))
+            )
+            sess = result.scalars().first()
+            if not sess:
+                raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+            # /api/scrims 와 같은 직렬화(경량) — 삭제 매치 제외, match_index 순
+            scrim = {
+                "id": sess.id, "scrim_name": sess.scrim_name, "date": sess.date,
+                "matches": [_db_match_to_dict(m, full=False) for m in (sess.matches or []) if m.deleted_at is None],
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+    session = summarize_session(scrim, BASE_TEAM)
+    session.pop("skipped_matches_without_base_team", None)
+    url = _config.DISCORD_WEBHOOK_URL
+    if url:
+        schedule_webhook(url, lambda: format_session_message(scrim, BASE_TEAM))
+        webhook = "queued"
+    else:
+        webhook = "disabled"
+    return {"status": "ok", "session": session, "webhook": webhook}
 
 
 # ── 세션 단건 삭제 ─────────────────────────────────────────────

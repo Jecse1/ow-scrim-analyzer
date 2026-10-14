@@ -20,7 +20,9 @@ heroes.json / maps.json 을 읽어, 기존 코드가 쓰던 상수들을 값 동
 """
 from __future__ import annotations
 import os
+import re
 import json
+import unicodedata
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -77,6 +79,55 @@ for _m in MAPS_DATA:
     MAP_EN2KO.update(_m.get("en2ko", {}))
 
 MODE_EN2KO: dict = dict(_MAPS_DOC["modeEn2ko"])
+
+
+# ── 맵명 정본화 ──────────────────────────────────────────────────────────────
+# 프론트 gameData.js normalizeMapKey / resolveMapEntry / canonicalMapName 과 같은 규칙:
+#   정규화 키 = 트림 → 소문자 → 모든 공백 제거 → NFC.
+#   ① 정확 일치(ko·en·aliases) → ② 정규화 일치(ko·en·zh·aliases·mapTypeData 키), 먼저 나온 엔트리 우선.
+#   미해석이면 입력값 그대로(별도 행으로 남는다).
+# 공백 집합 = JS 의 \s · String.prototype.trim 과 동일(파이썬 \s 는 ﻿ 를 빼고 \x1c-\x1f·\x85 를 더 포함해 다름).
+_JS_WS = "\t\n\v\f\r    -     　﻿"
+_JS_WS_RUN = re.compile(f"[{_JS_WS}]+")
+_JS_WS_EDGE = re.compile(f"^[{_JS_WS}]+|[{_JS_WS}]+$")
+
+
+def _js_trim(s) -> str:
+    return _JS_WS_EDGE.sub("", str(s if s is not None else ""))
+
+
+def normalize_map_key(s) -> str:
+    return unicodedata.normalize("NFC", _JS_WS_RUN.sub("", _js_trim(s).lower()))
+
+
+def _build_map_lookups():
+    exact, norm = {}, {}
+    for m in MAPS_DATA:
+        for f in [m.get("ko"), m.get("en"), *(m.get("aliases") or [])]:
+            if f and f not in exact:
+                exact[f] = m
+        for f in [m.get("ko"), m.get("en"), m.get("zh"), *(m.get("aliases") or []), *(m.get("mapTypeData") or {})]:
+            k = normalize_map_key(f)
+            if k and k not in norm:
+                norm[k] = m
+    return exact, norm
+
+
+_MAP_LOOKUP_EXACT, _MAP_LOOKUP_NORM = _build_map_lookups()
+
+
+def resolve_map_entry(name):
+    """어떤 표기든 maps.json 엔트리로 해석. 없으면 None."""
+    raw = _js_trim(name)
+    if not raw:
+        return None
+    return _MAP_LOOKUP_EXACT.get(raw) or _MAP_LOOKUP_NORM.get(normalize_map_key(raw))
+
+
+def canonical_map_name(name):
+    """집계 키용 정본 맵명(ko). 미해석이면 입력값 그대로."""
+    entry = resolve_map_entry(name)
+    return (entry or {}).get("ko") or name
 
 # ── 밴픽 파생 ───────────────────────────────────────────────────────────────
 # 표시 순서 = banpick.order(STEP 3B 도입)로 정렬. 파생 dict 은 order 를 제외해
