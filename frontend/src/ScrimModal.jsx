@@ -1,53 +1,51 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { X, Upload, Plus, Trash2, Calendar, Youtube, Map, Clock, PauseCircle, AlertCircle, Users, PlayCircle, Trophy } from 'lucide-react';
 // [중요] ThemeContext, LanguageContext 적용
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
+import { BASE_TEAM } from "./config";
+import { useIsMobile } from "./utils/responsive";
+import { assembleTeamNames, inferOurSlot } from "./utils/teamAssign";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+
+// 매치 1개 초기값. 팀명은 우리 팀(BASE_TEAM 고정) + 상대팀명 1개 — team1/team2 순서는
+// 로그 매치는 "우리 팀" 선택(ourSlot), 수기 매치는 우리 팀 = 1팀으로 App 이 조립한다(utils/teamAssign).
+// winner·winner_override 는 'us' | 'them' | 'Draw' | '' 로 들고 있다가 App 이 팀명으로 바꾼다
+// (상대팀명을 나중에 고쳐도 선택이 어긋나지 않게).
+// roster: POST /api/logs/roster 상태 { status: 'loading'|'ok'|'error', file, data?, error? } | null
+let _uidSeq = 0;
+const blankMatch = (opponentName = '') => ({
+  uid: ++_uidSeq,
+  map_name: '', videoUrl: '', opponentName, start_time: '', end_time: '', result: '',
+  has_pause: false, pauses: [], winner_override: '',
+  // 수기(로그 없는) 매치: source='manual' + winner/score 직접 입력
+  source: 'log', winner: '', score_t1: '', score_t2: '',
+  ourSlot: null, ourSlotPrefilled: false, roster: null
+});
 
 const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-
-  const [step, setStep] = useState(1);
-  const [scrimData, setScrimData] = useState({
-    scrimName: '',
-    date: new Date().toISOString().split('T')[0],
-    startHour: '20',
-    endHour: '22',
-    matches: [{
-      map_name: '',
-      videoUrl: '',
-      team1Name: '1팀',
-      team2Name: '2팀',
-      start_time: '',
-      end_time: '',
-      result: '',
-      has_pause: false,
-      pauses: [],
-      winner_override: '',
-      // 수기(로그 없는) 매치: source='manual' + winner/score 직접 입력
-      source: 'log',
-      winner: '',
-      score_t1: '',
-      score_t2: ''
-    }],
-    files: []
-  });
+  const isMobile = useIsMobile();
 
   const initialScrimData = () => ({
     scrimName: '',
     date: new Date().toISOString().split('T')[0],
     startHour: '20',
     endHour: '22',
-    matches: [{ map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '', source: 'log', winner: '', score_t1: '', score_t2: '' }],
+    matches: [blankMatch()],
     files: []
   });
 
+  const [step, setStep] = useState(1);
+  const [scrimData, setScrimData] = useState(initialScrimData);
+
   const isDirty =
     scrimData.scrimName !== '' ||
-    scrimData.matches.some(m => m.map_name !== '' || m.videoUrl !== '' || m.start_time !== '' || m.end_time !== '');
+    scrimData.matches.some(m => m.map_name !== '' || m.videoUrl !== '' || m.start_time !== '' || m.end_time !== '' || m.opponentName !== '') ||
+    scrimData.files.some(Boolean);
 
   const handleClose = () => {
     if (isDirty) {
@@ -74,6 +72,13 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
+  // 등록 불가 사유(로그 매치만): 명단 읽는 중 / 명단 오류 / 파일은 골랐는데 우리 팀 미선택
+  const setList = (pred) => scrimData.matches.map((m, i) => (m.source !== 'manual' && pred(m) ? `SET ${i + 1}` : null)).filter(Boolean);
+  const blockLoading = setList(m => m.roster?.status === 'loading');
+  const blockError = setList(m => m.roster?.status === 'error');
+  const blockNoPick = setList(m => m.roster?.status === 'ok' && !m.ourSlot);
+  const submitBlocked = blockLoading.length + blockError.length + blockNoPick.length > 0;
+
   const handleNext = () => {
     if (!scrimData.scrimName) return alert(t.smEnterName);
     setStep(2);
@@ -81,10 +86,14 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   const handleSubmit = () => {
     if (scrimData.matches.length === 0) return alert(t.smMinOneMatch);
+    if (submitBlocked) return;
     
     // 유효성 검사
     for (let i = 0; i < scrimData.matches.length; i++) {
         const m = scrimData.matches[i];
+        const opp = (m.opponentName || '').trim();
+        if (!opp) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smOpponentRequired}`);
+        if (opp === BASE_TEAM) return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smOpponentSameAsBase}`);
         if (m.has_pause) {
             if (!m.pauses || m.pauses.length === 0) {
                 return alert(`${t.smMatchPre}${i+1}${t.smMatchPost}${t.smPauseSelectedWarn}`);
@@ -155,9 +164,50 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   const addMatch = () => {
     setScrimData(prev => ({
       ...prev,
-      matches: [...prev.matches, { map_name: '', videoUrl: '', team1Name: '1팀', team2Name: '2팀', start_time: '', end_time: '', result: '', has_pause: false, pauses: [], winner_override: '', source: 'log', winner: '', score_t1: '', score_t2: '' }],
+      // 상대팀명은 앞 매치 값을 이어받는다(같은 상대와 여러 맵 — 바꿀 수 있음)
+      matches: [...prev.matches, blankMatch(prev.matches[prev.matches.length - 1]?.opponentName || '')],
       files: [...prev.files, null]
     }));
+  };
+
+  // 매치 유형 전환. 수기로 바꾸면 고른 로그 파일·명단·우리 팀 선택을 비운다(남은 파일이 업로드되지 않게).
+  const setSource = (index, source) => {
+    setScrimData(prev => ({
+      ...prev,
+      matches: prev.matches.map((m, i) => i !== index ? m : (source === 'manual'
+        ? { ...m, source, roster: null, ourSlot: null, ourSlotPrefilled: false, winner_override: '' }
+        : { ...m, source })),
+      files: source === 'manual' ? prev.files.map((f, i) => (i === index ? null : f)) : prev.files
+    }));
+  };
+
+  const pickOurSlot = (index, slot) => {
+    setScrimData(prev => ({
+      ...prev,
+      matches: prev.matches.map((m, i) => i === index ? { ...m, ourSlot: slot, ourSlotPrefilled: false } : m)
+    }));
+  };
+
+  // 파일 선택 직후 서버에서 명단을 읽는다(DB·파일 쓰기 없음). 응답이 늦게 와도 그 매치의 현재 파일과
+  // 같을 때만 반영(uid·file 대조 — 그 사이 매치 삭제·파일 재선택 대비).
+  const fetchRoster = async (uid, file) => {
+    const apply = (fn) => setScrimData(prev => {
+      const i = prev.matches.findIndex(m => m.uid === uid);
+      if (i < 0 || prev.matches[i].roster?.file !== file) return prev;
+      return { ...prev, matches: prev.matches.map((m, j) => j === i ? fn(m, prev.matches.slice(0, i)) : m) };
+    });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post('/api/logs/roster', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      apply((m, before) => {
+        const inferred = inferOurSlot(before, res.data);
+        return { ...m, roster: { status: 'ok', file, data: res.data }, ourSlot: inferred, ourSlotPrefilled: inferred != null };
+      });
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      apply(m => ({ ...m, roster: { status: 'error', file, error: typeof detail === 'string' ? detail : err.message } }));
+    }
   };
 
   const removeMatch = (index) => {
@@ -170,23 +220,101 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   const handleFileChange = (index, file) => {
+    const uid = scrimData.matches[index].uid;
     setScrimData(prev => {
         const newFiles = [...prev.files];
-        newFiles[index] = file;
-        return { ...prev, files: newFiles };
+        newFiles[index] = file || null;
+        return {
+          ...prev,
+          files: newFiles,
+          matches: prev.matches.map((m, i) => i === index
+            ? { ...m, ourSlot: null, ourSlotPrefilled: false, roster: file ? { status: 'loading', file } : null }
+            : m)
+        };
     });
+    if (file) fetchRoster(uid, file);
   };
 
-  const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' };
+  const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: isMobile ? '8px' : '20px' };
   const modalStyle = { backgroundColor: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '20px', width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', color: theme.text, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' };
-  const headerStyle = { padding: '32px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, backgroundColor: theme.bg, zIndex: 10 };
-  const bodyStyle = { padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' };
+  const pad = isMobile ? '16px' : '32px';
+  const headerStyle = { padding: pad, borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, backgroundColor: theme.bg, zIndex: 10 };
+  const bodyStyle = { padding: pad, display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '32px' };
   const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '10px' };
   const labelStyle = { fontSize: '15px', fontWeight: '600', color: theme.textSub };
   const inputStyle = { padding: '16px 20px', backgroundColor: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, borderRadius: '12px', color: theme.text, fontSize: '16px', outline: 'none', width: '100%', boxSizing: 'border-box' };
   const selectStyle = { ...inputStyle, appearance: 'none', cursor: 'pointer', textAlign: 'center' };
-  const footerStyle = { padding: '32px', borderTop: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'flex-end', gap: '16px', position: 'sticky', bottom: 0, backgroundColor: theme.bg, zIndex: 10 };
+  const footerStyle = { padding: pad, borderTop: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px', position: 'sticky', bottom: 0, backgroundColor: theme.bg, zIndex: 10 };
+  const cols2 = isMobile ? '1fr' : '1fr 1fr';
   const btnStyle = (variant) => ({ padding: '14px 28px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', border: variant === 'primary' ? 'none' : `1px solid ${theme.borderHighlight}`, backgroundColor: variant === 'primary' ? theme.text : theme.surfaceHighlight, color: variant === 'primary' ? theme.bg : theme.text });
+
+  const renderRoster = (match, idx) => {
+    const r = match.roster;
+    if (!r) return null;
+    if (r.status === 'loading') {
+      return <div style={{ marginTop: '12px', fontSize: '13px', color: theme.textSub }}>{t.smRosterLoading}</div>;
+    }
+    if (r.status === 'error') {
+      return (
+        <div style={{ marginTop: '12px', padding: '12px', borderRadius: '10px', border: `1px solid ${theme.danger}`, color: theme.danger, fontSize: '13px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+          <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{t.smRosterError}{r.error ? ` (${r.error})` : ''}</span>
+        </div>
+      );
+    }
+    const { teams, warnings, warning_count } = r.data;
+    const opp = match.opponentName.trim() || t.smOpponentLabel;
+    return (
+      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text }}>{t.smRosterTitle}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: cols2, gap: '12px' }}>
+          {teams.map(team => {
+            const chosen = match.ourSlot === team.slot;
+            const assigned = match.ourSlot ? (chosen ? BASE_TEAM : opp) : null;
+            return (
+              <label key={team.slot} style={{ display: 'block', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px',
+                border: `${chosen ? 2 : 1}px solid ${chosen ? theme.success : theme.borderHighlight}`,
+                background: chosen ? `${theme.success}12` : theme.surfaceHighlight }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '14px' }}>
+                    <input type="radio" name={`our-team-${match.uid}`} checked={chosen} onChange={() => pickOurSlot(idx, team.slot)} />
+                    {t.smRosterPick}
+                  </span>
+                  <span style={{ fontSize: '12px', color: theme.textSub }}>
+                    {t.smRosterLogLabel} {team.label}{assigned ? ` → ${assigned}` : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {team.players.map(p => (
+                    <div key={p.name} style={{ fontSize: '13px', lineHeight: 1.4 }}>
+                      <span style={{ fontWeight: 600, color: theme.text }}>{p.name}</span>
+                      <span style={{ color: theme.textSub }}> · {p.heroes.join(', ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        {match.ourSlotPrefilled && match.ourSlot && (
+          <div style={{ fontSize: '12px', color: theme.textSub, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertCircle size={12} /> {t.smRosterPrefilled}
+          </div>
+        )}
+        {warning_count > 0 && (
+          <details style={{ fontSize: '12px', color: theme.warning }}>
+            <summary style={{ cursor: 'pointer' }}>{t.smRosterWarnTpl.replace('{n}', warning_count)}</summary>
+            <ul style={{ margin: '6px 0 0', paddingLeft: '18px', color: theme.textSub }}>
+              {warnings.map((w, wi) => (
+                <li key={wi}>{w.line ? `L${w.line} ` : ''}{w.message}</li>
+              ))}
+              {warning_count > warnings.length && <li>… +{warning_count - warnings.length}</li>}
+            </ul>
+          </details>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={overlayStyle} onClick={handleClose}>
@@ -209,7 +337,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                 <label style={labelStyle}>{t.scrimName}</label>
                 <input type="text" placeholder={t.scrimNamePlace} value={scrimData.scrimName} onChange={e => setScrimData({ ...scrimData, scrimName: e.target.value })} style={inputStyle} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.5fr', gap: '20px' }}>
                   <div style={inputGroupStyle}>
                     <label style={labelStyle}><Calendar size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.date}</label>
                     <input type="date" value={scrimData.date} onChange={e => setScrimData({ ...scrimData, date: e.target.value })} style={{...inputStyle, colorScheme: theme.mode === 'dark' ? 'dark' : 'light'}} />
@@ -236,7 +364,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
               </div>
 
               {scrimData.matches.map((match, idx) => (
-                <div key={idx} style={{ background: theme.surface, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, position: 'relative' }}>
+                <div key={match.uid} style={{ background: theme.surface, padding: isMobile ? '16px' : '24px', borderRadius: '16px', border: `1px solid ${theme.border}`, position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <span style={{ fontSize: '16px', fontWeight: 'bold', color: theme.text, background: theme.surfaceHighlight, padding:'6px 12px', borderRadius:'8px' }}>SET {idx + 1}</span>
                     {scrimData.matches.length > 1 && (
@@ -254,7 +382,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         {[['log', t.smSourceLog], ['manual', t.smSourceManual]].map(([val, label]) => {
                           const active = (match.source || 'log') === val;
                           return (
-                            <button key={val} onClick={() => updateMatch(idx, 'source', val)}
+                            <button key={val} onClick={() => setSource(idx, val)}
                               style={{ padding: '6px 16px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
                                 background: active ? theme.text : 'transparent', color: active ? theme.bg : theme.textSub,
                                 borderColor: active ? theme.text : theme.borderHighlight }}>
@@ -283,18 +411,18 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                         <input type="text" placeholder="https://youtu.be/..." value={match.videoUrl} onChange={e => updateMatch(idx, 'videoUrl', e.target.value)} style={inputStyle} />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: cols2, gap: '16px' }}>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smTeam1Label}</label>
-                              <input type="text" placeholder="ex: Team A" value={match.team1Name} onChange={e => updateMatch(idx, 'team1Name', e.target.value)} style={inputStyle} />
+                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smOurTeamLabel}</label>
+                              <div style={{ ...inputStyle, color: theme.textSub, cursor: 'default' }}>{BASE_TEAM}</div>
                           </div>
                           <div style={inputGroupStyle}>
-                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smTeam2Label}</label>
-                              <input type="text" placeholder="ex: Team B" value={match.team2Name} onChange={e => updateMatch(idx, 'team2Name', e.target.value)} style={inputStyle} />
+                              <label style={labelStyle}><Users size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smOpponentLabel}</label>
+                              <input type="text" placeholder="ex: Team B" value={match.opponentName} onChange={e => updateMatch(idx, 'opponentName', e.target.value)} style={inputStyle} />
                           </div>
                       </div>
 
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+                      <div style={{ display:'grid', gridTemplateColumns: cols2, gap:'16px' }}>
                           <div style={inputGroupStyle}>
                               <label style={labelStyle}><Clock size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {match.source === 'manual' ? t.smVodStart : `${t.matchStart} (MM:SS)`}</label>
                               <input type="text" placeholder={t.smStartPlaceholder} value={match.start_time} onChange={e => updateMatch(idx, 'start_time', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
@@ -307,11 +435,11 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
                       {/* 수기 매치 전용 — 승리 팀·스코어 직접 입력(winner/score 컬럼 저장, 승패 보정 아님) */}
                       {match.source === 'manual' && (
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+                        <div style={{ display:'grid', gridTemplateColumns: cols2, gap:'16px' }}>
                           <div style={inputGroupStyle}>
                             <label style={labelStyle}><Trophy size={16} style={{verticalAlign:'text-bottom', marginRight:6}}/> {t.smWinnerLabel}</label>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              {[['', t.smWinnerUndecided], [match.team1Name, match.team1Name], [match.team2Name, match.team2Name], ['Draw', t.woDraw]].map(([val, label], wi) => {
+                              {[['', t.smWinnerUndecided], ['us', BASE_TEAM], ['them', match.opponentName.trim() || t.smOpponentLabel], ['Draw', t.woDraw]].map(([val, label], wi) => {
                                 const active = (match.winner || '') === val;
                                 return (
                                   <button key={wi} onClick={() => updateMatch(idx, 'winner', val)}
@@ -326,7 +454,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                             </div>
                           </div>
                           <div style={inputGroupStyle}>
-                            <label style={labelStyle}>{t.smScoreLabel} <span style={{ fontWeight: 'normal', fontSize: '11px', color: theme.textSub }}>· {t.smWinnerAutoHint}</span></label>
+                            <label style={labelStyle}>{t.smScoreLabelTpl.replace('{us}', BASE_TEAM).replace('{them}', match.opponentName.trim() || t.smOpponentLabel)} <span style={{ fontWeight: 'normal', fontSize: '11px', color: theme.textSub }}>· {t.smWinnerAutoHint}</span></label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <input type="number" min="0" value={match.score_t1} onChange={e => updateMatch(idx, 'score_t1', e.target.value)} style={{...inputStyle, textAlign:'center'}} />
                               <span style={{ color: theme.textSub, fontWeight: 'bold' }}>:</span>
@@ -393,8 +521,8 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                           <Trophy size={16} color={theme.warning} /> {t.woLabel}
                         </label>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          {/* 좌우 순서 = team1, team2 순서와 일치 */}
-                          {[['', t.woNone], [match.team1Name, `${match.team1Name} ${t.woWinSuffix}`], [match.team2Name, `${match.team2Name} ${t.woWinSuffix}`]].map(([val, label], wi) => {
+                          {/* 좌우 순서 = 조립된 team1, team2 순서와 일치 */}
+                          {[['', t.woNone], ...assembleTeamNames(match).map(n => [n === BASE_TEAM ? 'us' : 'them', `${n || t.smOpponentLabel} ${t.woWinSuffix}`])].map(([val, label], wi) => {
                             const active = (match.winner_override || '') === val;
                             return (
                               <button key={wi} onClick={() => updateMatch(idx, 'winner_override', val)}
@@ -418,11 +546,12 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
                   <div>
                     <label style={{ ...labelStyle, display: 'block', marginBottom: '12px' }}>{t.logFile}</label>
                     <div style={{ position: 'relative' }}>
-                        <input type="file" accept=".txt" id={`file-${idx}`} onChange={e => handleFileChange(idx, e.target.files[0])} style={{ display: 'none' }} />
-                        <label htmlFor={`file-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '20px', border: `1px dashed ${theme.borderHighlight}`, borderRadius: '12px', cursor: 'pointer', color: scrimData.files[idx] ? theme.success : theme.textSub, fontSize: '15px', transition: 'all 0.2s', backgroundColor: scrimData.files[idx] ? `${theme.success}10` : 'transparent' }}>
+                        <input type="file" accept=".txt" id={`file-${match.uid}`} onChange={e => { handleFileChange(idx, e.target.files[0]); e.target.value = ''; }} style={{ display: 'none' }} />
+                        <label htmlFor={`file-${match.uid}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '20px', border: `1px dashed ${theme.borderHighlight}`, borderRadius: '12px', cursor: 'pointer', color: scrimData.files[idx] ? theme.success : theme.textSub, fontSize: '15px', transition: 'all 0.2s', backgroundColor: scrimData.files[idx] ? `${theme.success}10` : 'transparent' }}>
                             <Upload size={20} /> {scrimData.files[idx] ? scrimData.files[idx].name : t.uploadLog}
                         </label>
                     </div>
+                    {renderRoster(match, idx)}
                   </div>
                   )}
                 </div>
@@ -436,8 +565,16 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
 
         <div style={footerStyle}>
+          {step === 2 && submitBlocked && (
+            <div style={{ flex: '1 1 240px', fontSize: '13px', color: theme.warning, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {blockLoading.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedLoading}{blockLoading.join(', ')}</span>}
+              {blockError.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedRosterErr}{blockError.join(', ')}</span>}
+              {blockNoPick.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedNoPick}{blockNoPick.join(', ')}</span>}
+            </div>
+          )}
           {step === 2 && <button onClick={() => setStep(1)} style={btnStyle('secondary')}>{t.prev}</button>}
-          <button onClick={step === 1 ? handleNext : handleSubmit} style={btnStyle('primary')}>
+          <button onClick={step === 1 ? handleNext : handleSubmit} disabled={step === 2 && submitBlocked}
+            style={{ ...btnStyle('primary'), ...(step === 2 && submitBlocked ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
             {step === 1 ? t.next : t.save}
           </button>
         </div>

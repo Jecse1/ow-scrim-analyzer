@@ -137,6 +137,14 @@ export const translations = {
     smManualHint: "로그 없이 맵·승패·스코어만 기록합니다. 로그 표본 지표(한타·궁·선수 통계)에는 포함되지 않으며, 나중에 로그를 추가할 수 있습니다.",
     smWinnerLabel: "승리 팀", smWinnerUndecided: "미정", smWinnerAutoHint: "미정이면 스코어로 자동 판정(동점 = 무승부)",
     smScoreLabel: "스코어 (1팀 : 2팀)", smVodStart: "영상 시작 (MM:SS)", smVodEnd: "영상 끝 (MM:SS, 선택)",
+    // ScrimModal — 우리 팀 선택(로그 명단) · 등록 완료 알림
+    smOurTeamLabel: "우리 팀", smOpponentLabel: "상대팀 이름", smOpponentRequired: "상대팀 이름을 입력해주세요.",
+    smOpponentSameAsBase: "상대팀 이름이 우리 팀 이름과 같습니다.", smScoreLabelTpl: "스코어 ({us} : {them})",
+    smRosterLoading: "로그 명단 읽는 중...", smRosterError: "로그 명단을 읽지 못했습니다 — 파일을 다시 선택하거나 수기 매치로 바꾸세요.",
+    smRosterTitle: "로그 명단 — 우리 팀을 고르세요", smRosterPick: "우리 팀", smRosterLogLabel: "로그 라벨",
+    smRosterPrefilled: "앞 매치와 같은 명단이라 같은 쪽을 미리 골랐습니다(바꿀 수 있음).", smRosterWarnTpl: "경고 {n}건",
+    smBlockedLoading: "명단 읽는 중: ", smBlockedRosterErr: "명단 오류(등록 불가): ", smBlockedNoPick: "우리 팀 미선택: ",
+    notifyLabel: "디스코드 알림: ", notifySent: "전송 요청됨", notifyDisabled: "미설정", notifyFailed: "실패", notifyNotSent: "알림 미발송",
     // UltimateStats
     ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",
     // OverallStats
@@ -528,6 +536,14 @@ export const translations = {
     smManualHint: "Records map/result/score without a log. Excluded from log-based metrics (fights, ults, player stats); you can attach a log later.",
     smWinnerLabel: "Winner", smWinnerUndecided: "Undecided", smWinnerAutoHint: "If undecided, auto-judged from score (tie = draw)",
     smScoreLabel: "Score (Team 1 : Team 2)", smVodStart: "VOD start (MM:SS)", smVodEnd: "VOD end (MM:SS, optional)",
+    // ScrimModal — our-team pick (log roster) · registration-complete notice
+    smOurTeamLabel: "Our team", smOpponentLabel: "Opponent name", smOpponentRequired: "Please enter the opponent name.",
+    smOpponentSameAsBase: "Opponent name is the same as our team name.", smScoreLabelTpl: "Score ({us} : {them})",
+    smRosterLoading: "Reading log roster...", smRosterError: "Could not read the log roster — pick the file again or switch to a manual match.",
+    smRosterTitle: "Log roster — pick our team", smRosterPick: "Our team", smRosterLogLabel: "Log label",
+    smRosterPrefilled: "Same roster as an earlier match, so the same side was preselected (you can change it).", smRosterWarnTpl: "{n} warning(s)",
+    smBlockedLoading: "Reading roster: ", smBlockedRosterErr: "Roster error (cannot register): ", smBlockedNoPick: "Our team not picked: ",
+    notifyLabel: "Discord notice: ", notifySent: "requested", notifyDisabled: "not configured", notifyFailed: "failed", notifyNotSent: "notice not sent",
     // UltimateStats
     ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",
     // OverallStats
@@ -919,6 +935,14 @@ export const translations = {
     smManualHint: "无日志，仅记录地图/胜负/比分。不计入日志样本指标（团战、大招、选手数据），之后可补传日志。",
     smWinnerLabel: "获胜队伍", smWinnerUndecided: "未定", smWinnerAutoHint: "未定时按比分自动判定（平分 = 平局）",
     smScoreLabel: "比分（1队 : 2队）", smVodStart: "视频开始 (MM:SS)", smVodEnd: "视频结束 (MM:SS，可选)",
+    // ScrimModal — 选择我方队伍（日志名单）· 登记完成通知
+    smOurTeamLabel: "我方队伍", smOpponentLabel: "对手队伍名称", smOpponentRequired: "请输入对手队伍名称。",
+    smOpponentSameAsBase: "对手队伍名称与我方队伍名称相同。", smScoreLabelTpl: "比分（{us} : {them}）",
+    smRosterLoading: "正在读取日志名单...", smRosterError: "无法读取日志名单 — 请重新选择文件或改为手动登记。",
+    smRosterTitle: "日志名单 — 请选择我方队伍", smRosterPick: "我方队伍", smRosterLogLabel: "日志标签",
+    smRosterPrefilled: "与之前对局名单相同，已预选同一侧（可更改）。", smRosterWarnTpl: "警告 {n} 条",
+    smBlockedLoading: "正在读取名单：", smBlockedRosterErr: "名单错误（无法登记）：", smBlockedNoPick: "未选择我方队伍：",
+    notifyLabel: "Discord 通知：", notifySent: "已请求发送", notifyDisabled: "未设置", notifyFailed: "失败", notifyNotSent: "未发送通知",
     // UltimateStats
     ultFivePlus: "5个以上", ultTotal: "总计", ultValue: "价值", ultLowSampleNote: "样本不足（少于5次）· 仅供参考",
     // OverallStats

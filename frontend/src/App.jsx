@@ -9,8 +9,9 @@ import { LanguageProvider, useLanguage } from "./LanguageContext";
 import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
-import { APP_NAME } from "./config";
+import { APP_NAME, BASE_TEAM } from "./config";
 import { precheckLine } from "./utils/precheckText";
+import { assembleTeamNames } from "./utils/teamAssign";
 
 import ScrimSessions from "./ScrimSessions";
 import ScrimDetail from "./ScrimDetail";
@@ -352,6 +353,7 @@ function MainApp() {
   };
 
   const handleScrimSubmit = async (scrimData) => {
+    let completeSent = false; // /complete 는 이 등록 1건당 1회만
     setIsModalOpen(false);
     setUploading(true);
     setError(null);
@@ -361,26 +363,32 @@ function MainApp() {
         date: scrimData.date,
         startHour: scrimData.startHour || "00",
         endHour: scrimData.endHour || "00",
-        matches: scrimData.matches.map((m) => ({
-          map_name: m.map_name,
-          videoUrl: m.videoUrl || "",
-          team1Name: m.team1Name || "1팀",
-          team2Name: m.team2Name || "2팀",
-          start_time: m.start_time,
-          end_time: m.end_time,
-          result: m.result || "Unknown",
-          hasPause: m.has_pause,
-          pauses: m.pauses || [],
-          // 승패 보정 — 등록자가 모달에서 수동 선택(맵 종류 무관). 미보정 = 빈값(서버에서 null 저장)
-          winnerOverride: m.winner_override || "",
-          // 수기(로그 없는) 매치: winner/score 직접 저장 + VOD 구간은 t=초 직접(MM:SS → 초 변환)
-          source: m.source || "log",
-          winner: m.source === "manual" ? (m.winner || "") : "",
-          score_t1: m.source === "manual" ? (Number(m.score_t1) || 0) : 0,
-          score_t2: m.source === "manual" ? (Number(m.score_t2) || 0) : 0,
-          videoStartSec: m.source === "manual" ? mmssToSec(m.start_time) : null,
-          videoEndSec: m.source === "manual" ? mmssToSec(m.end_time) : null
-        })),
+        matches: scrimData.matches.map((m) => {
+          // 팀명 순서 = 모달의 "우리 팀" 선택(로그 매치: 고른 slot 자리에 BASE_TEAM) — utils/teamAssign
+          const [team1Name, team2Name] = assembleTeamNames(m);
+          // 모달은 승자·보정을 'us'/'them' 으로 들고 있다 → 팀명으로
+          const sideName = (v) => (v === "us" ? BASE_TEAM : v === "them" ? (m.opponentName || "").trim() : (v || ""));
+          return {
+            map_name: m.map_name,
+            videoUrl: m.videoUrl || "",
+            team1Name: team1Name || "1팀",
+            team2Name: team2Name || "2팀",
+            start_time: m.start_time,
+            end_time: m.end_time,
+            result: m.result || "Unknown",
+            hasPause: m.has_pause,
+            pauses: m.pauses || [],
+            // 승패 보정 — 등록자가 모달에서 수동 선택(맵 종류 무관). 미보정 = 빈값(서버에서 null 저장)
+            winnerOverride: sideName(m.winner_override),
+            // 수기(로그 없는) 매치: winner/score 직접 저장 + VOD 구간은 t=초 직접(MM:SS → 초 변환)
+            source: m.source || "log",
+            winner: m.source === "manual" ? sideName(m.winner) : "",
+            score_t1: m.source === "manual" ? (Number(m.score_t1) || 0) : 0,
+            score_t2: m.source === "manual" ? (Number(m.score_t2) || 0) : 0,
+            videoStartSec: m.source === "manual" ? mmssToSec(m.start_time) : null,
+            videoEndSec: m.source === "manual" ? mmssToSec(m.end_time) : null
+          };
+        }),
         files: []
       };
 
@@ -391,7 +399,7 @@ function MainApp() {
       if (scrimData.files && scrimData.files.length > 0) {
         for (let i = 0; i < scrimData.files.length; i++) {
           const file = scrimData.files[i];
-          if (!file) continue;
+          if (!file || scrimData.matches[i]?.source === "manual") continue;
           const formData = new FormData();
           formData.append("scrim_id", newScrimId);
           formData.append("match_index", i + 1);
@@ -405,12 +413,24 @@ function MainApp() {
       }
       invalidateApiCache(); // 등록 성공 → 공유 fetch 캐시 무효화 (다음 접근부터 재요청)
       setAllScrims([]); // 이미 로드된 full-events 상태도 초기화 (소비 탭 재진입 시 새로 로드)
-      alert(t.success + warnText);
+      // 모든 upload 성공 → 등록 완료 신호 1회(서버가 DISCORD_WEBHOOK_URL 설정 시 디스코드 알림).
+      // 실패해도 등록은 이미 끝났으므로 성공으로 처리하고 표기만 "실패".
+      let notify = t.notifyFailed;
+      if (!completeSent) {
+        completeSent = true;
+        try {
+          const done = await axios.post(`${API_BASE}/api/sessions/${encodeURIComponent(newScrimId)}/complete`);
+          notify = done.data?.webhook === "queued" ? t.notifySent : done.data?.webhook === "disabled" ? t.notifyDisabled : t.notifyFailed;
+        } catch (completeErr) {
+          console.warn("[complete] session complete call failed:", completeErr.response?.status ?? completeErr.message);
+        }
+      }
+      alert(`${t.success}\n${t.notifyLabel}${notify}${warnText}`);
       goSessions();
     } catch (err) {
       let errMsg = err.message;
       if (err.response?.data?.detail) errMsg = JSON.stringify(err.response.data.detail, null, 2);
-      setError(`Upload Failed: ${errMsg}`);
+      setError(`Upload Failed: ${errMsg} (${t.notifyNotSent})`);
     } finally { setUploading(false); }
   };
 
