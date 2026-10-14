@@ -28,11 +28,6 @@ from game_data import (
     FIGHTLAB_DAMAGE as _FIGHTLAB_DAMAGE,
 )
 
-PLAYER_ROLE_OVERRIDES = {
-    "우양": 2,     # support
-    "벤데타": 1,   # dps
-}
-
 # KOREAN_HERO_MAP, MAP_TYPE_DATA 는 game_data 로더에서 파생(위 import 참조).
 
 # 분석 정의 상수(한타 창·트레이드 창·백분위 최소 표본)는 analysis_constants(SSOT)에서 re-export.

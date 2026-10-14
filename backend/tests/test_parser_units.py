@@ -4,6 +4,7 @@ import pytest
 
 from parsers.log_parser import (
     time_str_to_seconds, parse_log_timestamp, normalize_team_name, get_role_score,
+    get_player_role_score,
 )
 
 
@@ -36,3 +37,10 @@ def test_get_role_score():
     assert get_role_score("아나") == 2
     assert get_role_score("트레이서") == 1
     assert get_role_score("없는영웅") == 1
+
+
+def test_get_player_role_score_uses_hero_only():
+    # 선수명 기반 역할 예외는 없다 — 영웅명과 같은 닉네임이어도 대표 영웅 역할로만 판정.
+    assert get_player_role_score("우양", "트레이서") == 1
+    assert get_player_role_score("벤데타", "아나") == 2
+    assert get_player_role_score("PlayerA", "우양") == get_role_score("우양")

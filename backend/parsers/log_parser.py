@@ -9,7 +9,7 @@ main.py 에서 본문·주석 무변경으로 이동. main.py 는 하위호환�
 import re
 from typing import Any, Optional
 from config import (
-    KOREAN_HERO_MAP, TANKS, SUPPORTS, PLAYER_ROLE_OVERRIDES,
+    KOREAN_HERO_MAP, TANKS, SUPPORTS,
     CONTROL_MAP_KEYWORDS, MAP_TYPE_DATA, _MAP_TYPE_DATA_NOSPACE, _MATCH_LEVEL_MAP_TYPES,
 )
 from game_data import PLAYER_NAME_LOOKUP
@@ -90,7 +90,7 @@ def get_role_score(hero_name: str) -> int:
     return 1
 
 def get_player_role_score(player_name: str, hero_name: str) -> int:
-    if player_name in PLAYER_ROLE_OVERRIDES: return PLAYER_ROLE_OVERRIDES[player_name]
+    # 역할은 영웅 기준(game_data/heroes.json)으로만 판정. player_name 은 호출부 호환용으로 유지.
     return get_role_score(hero_name)
 
 def parse_overwatch_log(log_text: str, custom_t1: str = None, custom_t2: str = None):
