@@ -66,11 +66,15 @@ python3.11 -m venv venv          # 또는 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 ```
 
-### 환경변수 (BASE_TEAM · APP_NAME)
+### 환경변수 (BASE_TEAM · DISCORD_WEBHOOK_URL · APP_NAME)
 
-- **백엔드**: `BASE_TEAM`만 읽는다(`backend/config.py:11`, `os.getenv` 방식 —
-  .env 자동 로드는 없으므로 pm2 `env`로 주입한다. 아래 5단계 ecosystem 예시 참조).
+- **백엔드**: `BASE_TEAM`(`backend/config.py:11`)과 `DISCORD_WEBHOOK_URL`(선택, `backend/config.py:15`)을
+  `os.getenv` 로 읽는다 — .env 자동 로드는 없으므로 pm2 `env`로 주입한다. 아래 5단계 ecosystem 예시 참조.
   `APP_NAME`은 프론트 전용.
+- **`DISCORD_WEBHOOK_URL`**(선택): 세션 등록 완료 알림을 보낼 디스코드 웹후크 URL. **백엔드(uvicorn) 프로세스의
+  env** 에 넣는다(디스코드 봇 프로세스가 아님). 비워 두면 `POST /api/sessions/{id}/complete` 가 발송 없이
+  `webhook:"disabled"` 로 응답한다. 값은 비밀로 취급 — 기동 로그에는 `설정됨/미설정`만 찍히고, 발송 실패 로그에도
+  상태 코드·예외 클래스명만 남는다. 저장소·문서에 실제 값을 적지 않는다. 계약: [SUMMARY_API.md](SUMMARY_API.md).
 
 - **프론트**: 환경변수가 아니라 `frontend/src/config.js`의 상수
   (`APP_NAME`, `BASE_TEAM`)를 직접 수정한 뒤 재빌드해 반영한다.
@@ -105,9 +109,16 @@ module.exports = { apps: [{
   cwd: "/home/<user>/app/backend",
   script: "./venv/bin/uvicorn",
   args: "main:app --host 127.0.0.1 --port 8000",
-  env: { BASE_TEAM: "MyTeam" }
+  env: {
+    BASE_TEAM: "MyTeam",
+    // 선택 — 세션 등록 완료 디스코드 알림. 비우거나 생략하면 비활성(no-op).
+    DISCORD_WEBHOOK_URL: ""
+  }
 }]};
 ```
+
+> 위 앱명 `scrim-backend` 는 예시다 — 실서버 pm2 앱명은 환경마다 다를 수 있으니 `pm2 ls` 로 확인한다.
+> env 를 바꾼 뒤에는 `pm2 restart <앱명> --update-env`(또는 ecosystem 으로 `pm2 startOrReload ecosystem.config.js --update-env`).
 
 ## 6. nginx
 

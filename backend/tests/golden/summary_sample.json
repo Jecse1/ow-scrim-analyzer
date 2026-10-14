@@ -1,0 +1,669 @@
+{
+ "complete": {
+  "session": {
+   "date": "2026-10-08",
+   "draws": 2,
+   "id": "2610082022",
+   "losses": 1,
+   "maps": [
+    "리장 타워",
+    "도라도",
+    "눔바니",
+    "왕의 길",
+    "부산",
+    "일리오스",
+    "하나오카"
+   ],
+   "matches": 7,
+   "no_result": 2,
+   "opponents": [
+    "팀C"
+   ],
+   "scrim_name": "261008-팀C",
+   "wins": 2
+  },
+  "status": "ok",
+  "webhook": "queued"
+ },
+ "maps": {
+  "excluded": {
+   "manual_matches_in_first_fight": 3,
+   "no_fight_matches": 1,
+   "null_result_matches": 1
+  },
+  "maps": [
+   {
+    "draws": 0,
+    "fights": 18,
+    "first_fight_winrate": 0.3333333333333333,
+    "first_fight_wins": 1,
+    "first_fights": 3,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map": "남극 반도",
+    "map_type": "쟁탈",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 0,
+    "first_fight_winrate": null,
+    "first_fight_wins": 0,
+    "first_fights": 0,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "네팔",
+    "map_type": "쟁탈",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "눔바니",
+    "map_type": "혼합",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 1.0,
+    "first_fight_wins": 1,
+    "first_fights": 1,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "뉴 퀸 스트리트",
+    "map_type": "밀기",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 1,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "도라도",
+    "map_type": "화물",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "리장 타워",
+    "map_type": "쟁탈",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map": "왕의 길",
+    "map_type": "혼합",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 1,
+    "fights": 0,
+    "first_fight_winrate": null,
+    "first_fight_wins": 0,
+    "first_fights": 0,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "일리오스",
+    "map_type": "쟁탈",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   }
+  ],
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "fight_matches_plus_manual",
+   "to": "2099-12-31"
+  },
+  "total": {
+   "draws": 2,
+   "fights": 33,
+   "first_fight_winrate": 0.5,
+   "first_fight_wins": 6,
+   "first_fights": 12,
+   "first_fights_unknown": 0,
+   "losses": 2,
+   "map": "__total__",
+   "map_type": null,
+   "map_winrate": 0.5,
+   "matches": 8,
+   "wins": 4
+  }
+ },
+ "maps_2026-10-01": {
+  "excluded": {
+   "manual_matches_in_first_fight": 1,
+   "no_fight_matches": 0,
+   "null_result_matches": 0
+  },
+  "maps": [
+   {
+    "draws": 0,
+    "fights": 18,
+    "first_fight_winrate": 0.3333333333333333,
+    "first_fight_wins": 1,
+    "first_fights": 3,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map": "남극 반도",
+    "map_type": "쟁탈",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 0,
+    "first_fight_winrate": null,
+    "first_fight_wins": 0,
+    "first_fights": 0,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "네팔",
+    "map_type": "쟁탈",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 1.0,
+    "first_fight_wins": 1,
+    "first_fights": 1,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "뉴 퀸 스트리트",
+    "map_type": "밀기",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   }
+  ],
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2026-10-01",
+   "population": "fight_matches_plus_manual",
+   "to": "2026-10-01"
+  },
+  "total": {
+   "draws": 0,
+   "fights": 21,
+   "first_fight_winrate": 0.5,
+   "first_fight_wins": 2,
+   "first_fights": 4,
+   "first_fights_unknown": 0,
+   "losses": 1,
+   "map": "__total__",
+   "map_type": null,
+   "map_winrate": 0.6666666666666666,
+   "matches": 3,
+   "wins": 2
+  }
+ },
+ "maps_opponent_팀C": {
+  "excluded": {
+   "manual_matches_in_first_fight": 2,
+   "no_fight_matches": 1,
+   "null_result_matches": 1
+  },
+  "maps": [
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "눔바니",
+    "map_type": "혼합",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 1,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "도라도",
+    "map_type": "화물",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "리장 타워",
+    "map_type": "쟁탈",
+    "map_winrate": 1.0,
+    "matches": 1,
+    "wins": 1
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map": "왕의 길",
+    "map_type": "혼합",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   },
+   {
+    "draws": 1,
+    "fights": 0,
+    "first_fight_winrate": null,
+    "first_fight_wins": 0,
+    "first_fights": 0,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "일리오스",
+    "map_type": "쟁탈",
+    "map_winrate": 0.0,
+    "matches": 1,
+    "wins": 0
+   }
+  ],
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "fight_matches_plus_manual",
+   "to": "2099-12-31"
+  },
+  "total": {
+   "draws": 2,
+   "fights": 12,
+   "first_fight_winrate": 0.5,
+   "first_fight_wins": 4,
+   "first_fights": 8,
+   "first_fights_unknown": 0,
+   "losses": 1,
+   "map": "__total__",
+   "map_type": null,
+   "map_winrate": 0.4,
+   "matches": 5,
+   "wins": 2
+  }
+ },
+ "opponents": {
+  "excluded": {
+   "manual_matches_in_first_fight": 3,
+   "no_fight_matches": 1,
+   "null_result_matches": 1
+  },
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "fight_matches_plus_manual",
+   "to": "2099-12-31"
+  },
+  "opponents": [
+   {
+    "draws": 2,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 4,
+    "first_fights": 8,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map_winrate": 0.4,
+    "matches": 5,
+    "opponent": "팀C",
+    "sessions": 1,
+    "wins": 2
+   },
+   {
+    "draws": 0,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 2,
+    "first_fights": 4,
+    "first_fights_unknown": 0,
+    "losses": 1,
+    "map_winrate": 0.6666666666666666,
+    "matches": 3,
+    "opponent": "Team B",
+    "sessions": 1,
+    "wins": 2
+   }
+  ],
+  "total": {
+   "draws": 2,
+   "first_fight_winrate": 0.5,
+   "first_fight_wins": 6,
+   "first_fights": 12,
+   "first_fights_unknown": 0,
+   "losses": 2,
+   "map_winrate": 0.5,
+   "matches": 8,
+   "opponent": "__total__",
+   "sessions": 2,
+   "wins": 4
+  }
+ },
+ "period": {
+  "excluded": {
+   "sessions_without_base_team": 0
+  },
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "all_matches",
+   "to": "2099-12-31"
+  },
+  "sessions": [
+   {
+    "date": "2026-10-08",
+    "draws": 2,
+    "losses": 1,
+    "maps": [
+     "리장 타워",
+     "도라도",
+     "눔바니",
+     "왕의 길",
+     "부산",
+     "일리오스",
+     "하나오카"
+    ],
+    "matches": 7,
+    "no_result": 2,
+    "opponents": [
+     "팀C"
+    ],
+    "scrim_name": "261008-팀C",
+    "session_id": "2610082022",
+    "wins": 2
+   },
+   {
+    "date": "2026-10-01",
+    "draws": 0,
+    "losses": 1,
+    "maps": [
+     "남극 반도",
+     "뉴 퀸 스트리트",
+     "네팔"
+    ],
+    "matches": 3,
+    "no_result": 0,
+    "opponents": [
+     "Team B"
+    ],
+    "scrim_name": "261001-Team B",
+    "session_id": "2610011921",
+    "wins": 2
+   }
+  ],
+  "total": {
+   "decided_matches": 8,
+   "draws": 2,
+   "losses": 2,
+   "map_winrate": 0.5,
+   "matches": 10,
+   "no_result": 2,
+   "sessions": 2,
+   "skipped_matches_without_base_team": 0,
+   "wins": 4
+  }
+ },
+ "period_team_b": {
+  "excluded": {
+   "sessions_without_base_team": 1
+  },
+  "meta": {
+   "base_team": "Team B",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "all_matches",
+   "to": "2099-12-31"
+  },
+  "sessions": [
+   {
+    "date": "2026-10-01",
+    "draws": 0,
+    "losses": 2,
+    "maps": [
+     "남극 반도",
+     "뉴 퀸 스트리트",
+     "네팔"
+    ],
+    "matches": 3,
+    "no_result": 0,
+    "opponents": [
+     "Team A"
+    ],
+    "scrim_name": "261001-Team B",
+    "session_id": "2610011921",
+    "wins": 1
+   }
+  ],
+  "total": {
+   "decided_matches": 3,
+   "draws": 0,
+   "losses": 2,
+   "map_winrate": 0.3333333333333333,
+   "matches": 3,
+   "no_result": 0,
+   "sessions": 1,
+   "skipped_matches_without_base_team": 7,
+   "wins": 1
+  }
+ },
+ "ults_default": {
+  "counters": [],
+  "counters_total": 0,
+  "fights": 33,
+  "fights_known": 32,
+  "first_ult": {
+   "none": {
+    "fights": 21,
+    "n": 21,
+    "winrate": 0.47619047619047616,
+    "wins": 10
+   },
+   "them": {
+    "fights": 9,
+    "n": 9,
+    "winrate": 0.4444444444444444,
+    "wins": 4
+   },
+   "us": {
+    "fights": 3,
+    "n": 2,
+    "winrate": 0.5,
+    "wins": 1
+   }
+  },
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "log_fights",
+   "to": "2099-12-31"
+  },
+  "params": {
+   "limit": 10,
+   "min_sample": 5,
+   "response_window": 3.0
+  }
+ },
+ "ults_min1": {
+  "counters": [
+   {
+    "avg_react_sec": 1.0,
+    "enemy_hero": "루시우",
+    "enemy_hero_n": 3,
+    "enemy_hero_winrate": 0.6666666666666666,
+    "enemy_hero_wins": 2,
+    "n": 1,
+    "no_response_n": 2,
+    "no_response_winrate": 0.5,
+    "no_response_wins": 1,
+    "our_hero": "미즈키",
+    "winrate": 1.0,
+    "wins": 1
+   },
+   {
+    "avg_react_sec": 2.0,
+    "enemy_hero": "루시우",
+    "enemy_hero_n": 3,
+    "enemy_hero_winrate": 0.6666666666666666,
+    "enemy_hero_wins": 2,
+    "n": 1,
+    "no_response_n": 2,
+    "no_response_winrate": 0.5,
+    "no_response_wins": 1,
+    "our_hero": "캐서디",
+    "winrate": 1.0,
+    "wins": 1
+   },
+   {
+    "avg_react_sec": 1.0,
+    "enemy_hero": "키리코",
+    "enemy_hero_n": 4,
+    "enemy_hero_winrate": 0.5,
+    "enemy_hero_wins": 2,
+    "n": 1,
+    "no_response_n": 1,
+    "no_response_winrate": 0.0,
+    "no_response_wins": 0,
+    "our_hero": "미즈키",
+    "winrate": 1.0,
+    "wins": 1
+   },
+   {
+    "avg_react_sec": 2.0,
+    "enemy_hero": "키리코",
+    "enemy_hero_n": 4,
+    "enemy_hero_winrate": 0.5,
+    "enemy_hero_wins": 2,
+    "n": 1,
+    "no_response_n": 1,
+    "no_response_winrate": 0.0,
+    "no_response_wins": 0,
+    "our_hero": "캐서디",
+    "winrate": 1.0,
+    "wins": 1
+   },
+   {
+    "avg_react_sec": 1.5,
+    "enemy_hero": "키리코",
+    "enemy_hero_n": 4,
+    "enemy_hero_winrate": 0.5,
+    "enemy_hero_wins": 2,
+    "n": 2,
+    "no_response_n": 1,
+    "no_response_winrate": 0.0,
+    "no_response_wins": 0,
+    "our_hero": "키리코",
+    "winrate": 0.5,
+    "wins": 1
+   },
+   {
+    "avg_react_sec": 2.5,
+    "enemy_hero": "시메트라",
+    "enemy_hero_n": 4,
+    "enemy_hero_winrate": 0.5,
+    "enemy_hero_wins": 2,
+    "n": 2,
+    "no_response_n": 2,
+    "no_response_winrate": 1.0,
+    "no_response_wins": 2,
+    "our_hero": "시메트라",
+    "winrate": 0.0,
+    "wins": 0
+   }
+  ],
+  "counters_total": 6,
+  "fights": 33,
+  "fights_known": 32,
+  "first_ult": {
+   "none": {
+    "fights": 21,
+    "n": 21,
+    "winrate": 0.47619047619047616,
+    "wins": 10
+   },
+   "them": {
+    "fights": 9,
+    "n": 9,
+    "winrate": 0.4444444444444444,
+    "wins": 4
+   },
+   "us": {
+    "fights": 3,
+    "n": 2,
+    "winrate": 0.5,
+    "wins": 1
+   }
+  },
+  "meta": {
+   "base_team": "Team A",
+   "definitions_version": "1",
+   "from": "2000-01-01",
+   "population": "log_fights",
+   "to": "2099-12-31"
+  },
+  "params": {
+   "limit": 100,
+   "min_sample": 1,
+   "response_window": 3.0
+  }
+ },
+ "webhook_content": [
+  "```\n2026-10-08 vs 팀C (261008-팀C) [id:2610082022]\n리장 타워 / 승 / 2:0\n도라도 / 무 / 0:0\n눔바니 / 승 / 1:1\n왕의 길 / 패 / 1:2\n부산 / 미정 / 0:0\n일리오스 / 무 / 1:1\n하나오카 / 미정 / 0:0\n합계 2-1-2 (미정 2)\n```"
+ ]
+}
