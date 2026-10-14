@@ -252,7 +252,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
           {team.players.map(p => (
             <div key={p.name} style={{ fontSize: '13px', lineHeight: 1.4 }}>
               <span style={{ fontWeight: 600, color: theme.text }}>{p.name}</span>
-              <span style={{ color: theme.textSub }}> · {p.heroes.join(', ')}</span>
+              {p.heroes.length > 0 && <span style={{ color: theme.textSub }}> · {p.heroes.join(', ')}</span>}
             </div>
           ))}
         </div>

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 class RosterPlayer(BaseModel):
     name: str = Field(description="선수명(players.json 별칭 적용 후 정본명)")
-    heroes: List[str] = Field(description="플레이한 영웅(ko), 라운드 중 최대 플레이 시간 내림차순")
+    heroes: List[str] = Field(description="경기 시간 안에 플레이한 영웅(ko) — 누적 플레이 시간 > 0 만, 시간 내림차순 → 영웅명. 준비 시간에만 고른 영웅(0초)은 제외, 그런 영웅뿐이면 빈 목록")
 
 
 class RosterTeam(BaseModel):

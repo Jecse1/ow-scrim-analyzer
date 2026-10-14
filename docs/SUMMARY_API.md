@@ -216,7 +216,7 @@
 | `teams[]` | 항상 2개, `slot` 1 → 2 순 |
 | `teams[].slot` | `1` = 로그 **첫 `match_start`의 첫 팀** = 등록 시 `team1_name` 자리, `2` = `team2_name` 자리. 파서는 팀명을 위치로만 대응하므로(첫 팀 → team1_name) 프론트는 1팀명 입력값을 slot 1 자리(`team1Name`), 2팀명을 slot 2 자리(`team2Name`)로 manual-register를 호출한다(이 API는 `BASE_TEAM`과 무관) |
 | `teams[].label` | 로그 원시 팀 라벨(예: `1팀`/`2팀`, `Team 1`/`Team 2`). `match_start`가 없으면 `1팀`/`2팀` |
-| `teams[].players[]` | `{name, heroes[]}` — `name`은 `players.json` 별칭 적용 후 정본명, 순서는 파서 `slot_index`(탱→딜→힐). `heroes`는 라운드 중 최대 플레이 시간 내림차순(0초 영웅 포함) |
+| `teams[].players[]` | `{name, heroes[]}` — `name`은 `players.json` 별칭 적용 후 정본명, 순서는 파서 `slot_index`(탱→딜→힐). `heroes`는 경기 누적 플레이 시간이 0보다 큰 영웅만, 시간 내림차순 → 영웅명 순. 라운드 준비 시간(게임 시계 정지)에 거쳐 간 영웅은 `player_stat`에 0초로 나오므로 제외되고, 그런 영웅뿐인 선수는 명단에 남되 `heroes`가 빈 배열 |
 | `warnings[]` | `{code, line, event, message}` — `precheck_log_text` 경고(업로드 응답과 같은 형식, 최대 50건). 두 slot 외 팀 라벨이 `player_stat`에 있으면 `roster_extra_team` 추가(그 팀은 명단에서 제외) |
 | `warning_count` | 전체 경고 수(50건 초과분 포함) |
 

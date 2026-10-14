@@ -44,9 +44,28 @@ def test_roster_sample_teams_players_heroes(client, monkeypatch):
     assert all(by_name[n] for n in by_name)  # 모든 선수에 영웅 1개 이상
     assert by_name["AliasCanon"][0] == "키리코"   # 최대 플레이 시간 영웅이 맨 앞
     assert by_name["Player9"][0] == "D.Va"
+    # 라운드 준비 시간에만 고른 영웅(누적 0초)은 빠진다 — 샘플 실측
+    assert by_name["AliasCanon"] == ["키리코"]               # 아나·메이·일리아리 제외
+    assert by_name["Player9"] == ["D.Va", "라마트라"]         # 라인하르트 제외
+    assert by_name["Player10"][-1] == "엠레"                 # 1초 실사용은 남는다(기준 초 없음)
     # 임시 팀명이 응답에 새지 않는다
     assert "__roster" not in r.text
     assert body["warning_count"] == len(body["warnings"]) == 2  # 샘플 bad_number×2(precheck)
+
+
+def test_roster_excludes_setup_only_heroes(client):
+    # 합성 로그: 준비 시간(game_time 0)의 hero_spawn/hero_swap 영웅이 player_stat 에 0초로 남는 구조
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "roster_setup_picks.txt")
+    with open(path, "rb") as f:
+        r = _roster(client, f.read())
+    assert r.status_code == 200, r.text
+    by_name = {p["name"]: p["heroes"] for t in r.json()["teams"] for p in t["players"]}
+    assert by_name["A1"] == ["라인하르트"]          # 트레이서·겐지(준비 시간 픽) 제외
+    assert by_name["B1"] == ["D.Va"]              # 자리야 제외
+    assert by_name["A3"] == ["겐지", "소전"]       # 같은 시간 → 영웅명 순
+    assert by_name["A4"] == ["아나", "키리코"]     # 경기 중 1초 교체는 남는다
+    assert by_name["B5"] == []                    # 0초뿐인 선수: 명단 유지, 영웅 비움
+    assert len(by_name) == 10
 
 
 def test_roster_has_no_side_effects(client):

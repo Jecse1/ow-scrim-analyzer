@@ -667,6 +667,11 @@ async def extract_log_roster(file: UploadFile = File(...)):
         warnings.append({"code": "roster_extra_team", "line": None, "event": "player_stat",
                          "message": f"첫 match_start 의 두 팀 외 팀 라벨 — 명단에서 제외 ({label})"})
 
+    # 영웅 = 경기 누적 플레이 시간 > 0 만(시간 내림차순 → 영웅명). player_stat 은 라운드 준비 시간(게임 시계 정지)에
+    # 거쳐 간 영웅도 0초로 내보내므로 그런 대기실 픽은 뺀다. 0초뿐인 선수는 명단에 남기고 heroes 만 비운다(팀 식별용).
+    def _ingame_heroes(heroes):
+        return [h for h, t in sorted(heroes.items(), key=lambda hv: (-hv[1], hv[0])) if t > 0]
+
     labels = _first_match_start_labels(log_text)
     teams = []
     for slot in (1, 2):
@@ -674,8 +679,7 @@ async def extract_log_roster(file: UploadFile = File(...)):
         teams.append({
             "slot": slot,
             "label": labels[slot - 1],
-            "players": [{"name": n, "heroes": [h for h, _ in sorted(p["heroes"].items(), key=lambda hv: -hv[1])]}
-                        for n, p in rows],
+            "players": [{"name": n, "heroes": _ingame_heroes(p["heroes"])} for n, p in rows],
         })
     return {"teams": teams, "warnings": warnings, "warning_count": warning_count}
 
