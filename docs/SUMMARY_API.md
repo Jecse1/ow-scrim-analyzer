@@ -162,7 +162,8 @@
 ---
 
 ## POST /api/sessions/{session_id}/complete
-세션 등록 완료 신호. 웹 프론트가 등록 루프(manual-register 1회 + 로그 upload N회) 끝에 호출한다(예정).
+세션 등록 완료 신호. 웹 프론트가 등록 루프(manual-register 1회 + 로그 upload N회)가 **모두 성공했을 때만** 끝에 1회 호출한다
+(upload 하나라도 실패하면 호출하지 않음). 완료 alert에 `webhook` 값을 "디스코드 알림: 전송 요청됨/미설정"으로, 호출 자체 실패는 "실패"로 표기한다.
 디스코드 봇의 알림 재전송 명령도 이 엔드포인트를 호출한다(예정).
 
 - **읽기 전용·멱등**: DB와 meta.json을 바꾸지 않는다. 같은 세션이면 항상 같은 응답이다.
@@ -200,3 +201,27 @@
   **URL·요청 본문·응답 본문은 기록하지 않는다.** 기동 로그에는 `[WEBHOOK] DISCORD_WEBHOOK_URL: 설정됨/미설정`만 남는다.
 - `DISCORD_WEBHOOK_URL`은 **백엔드 프로세스**의 env다(pm2 ecosystem `env`). 디스코드 봇 프로세스의 env가 아니다.
   설정 방법은 [DEPLOY.md](DEPLOY.md) 참조.
+
+---
+
+## POST /api/logs/roster
+등록 **전** 로그 1개의 팀별 선수·영웅 명단. 웹 등록 모달이 로그 파일을 고르는 즉시 호출해 "우리 팀"을 고르게 한다
+(팀 라벨 역입력 방지). **DB·파일 쓰기 없음**, 세션·매치가 없어도 호출할 수 있다.
+
+요청: `multipart/form-data`, 필드 `file`(로그 `.txt` 1개 — `/api/matches/upload`와 같은 필드명·디코드: UTF-8, 실패 시 cp949).
+
+응답 200:
+| 필드 | 설명 |
+|---|---|
+| `teams[]` | 항상 2개, `slot` 1 → 2 순 |
+| `teams[].slot` | `1` = 로그 **첫 `match_start`의 첫 팀** = 등록 시 `team1_name` 자리, `2` = `team2_name` 자리. 파서는 팀명을 위치로만 대응하므로(첫 팀 → team1_name) 프론트는 "우리 팀"으로 고른 slot 자리에 `BASE_TEAM`, 다른 자리에 상대팀명을 넣어 manual-register를 호출한다 |
+| `teams[].label` | 로그 원시 팀 라벨(예: `1팀`/`2팀`, `Team 1`/`Team 2`). `match_start`가 없으면 `1팀`/`2팀` |
+| `teams[].players[]` | `{name, heroes[]}` — `name`은 `players.json` 별칭 적용 후 정본명, 순서는 파서 `slot_index`(탱→딜→힐). `heroes`는 라운드 중 최대 플레이 시간 내림차순(0초 영웅 포함) |
+| `warnings[]` | `{code, line, event, message}` — `precheck_log_text` 경고(업로드 응답과 같은 형식, 최대 50건). 두 slot 외 팀 라벨이 `player_stat`에 있으면 `roster_extra_team` 추가(그 팀은 명단에서 제외) |
+| `warning_count` | 전체 경고 수(50건 초과분 포함) |
+
+422: 선수 기록(`player_stat`)이 하나도 없음(빈 파일·로그 아님) 또는 파싱 예외. `detail`은 고정 문구(+예외 클래스명)이고 파일 내용을 담지 않는다.
+
+구현 메모: 파서 시그니처를 바꾸지 않으려고 `custom_t1/custom_t2`에 임시 팀명(`"__roster,team1__"` 등 — 쉼표가 있어 로그 필드와 충돌 불가)을
+넘기고 응답 `label`은 원시 라벨로 되돌린다. `routers/scrims.py`의 `_first_match_start_labels`는 `parsers/log_parser.py`의
+첫 `match_start` 라벨 규칙을 복제한 것이다 — **파서의 그 규칙을 바꾸면 함께 갱신**한다.

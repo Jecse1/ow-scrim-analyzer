@@ -226,13 +226,13 @@ Log file location (Windows) / 로그 파일 저장 위치 (Windows):
 step-by-step upload instructions.
 익명화된 한 맵 로그와 업로드 방법은 [`sample_data/`](sample_data/) 를 참고하세요.
 
-Upload flow / 업로드 흐름:
-1. Register a scrim session (name, team names, maps).
-   스크림 세션 등록 (세션명, 팀 이름, 맵).
-2. Upload the per-map `.txt` log(s) to that session.
-   해당 세션에 맵별 `.txt` 로그를 업로드.
-3. Open the session to see the analysis tabs populate.
-   세션을 열면 분석 탭이 채워집니다.
+Upload flow / 업로드 흐름 (in the "Create scrim" dialog / "스크림 생성하기" 창):
+1. Per map, enter the opponent name and pick the `.txt` log file.
+   맵마다 상대팀 이름을 입력하고 `.txt` 로그 파일을 고릅니다.
+2. Check the two rosters read from the log (players and heroes per team).
+   로그에서 읽은 두 팀 명단(선수·영웅)을 확인합니다.
+3. Mark which side is your team ("Our team"), then save — the session opens with the analysis tabs populated.
+   우리 팀 쪽을 "우리 팀"으로 고른 뒤 저장합니다 — 세션을 열면 분석 탭이 채워집니다.
 
 ### Related tools / 다른 파서 생태계
 
