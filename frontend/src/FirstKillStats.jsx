@@ -5,14 +5,14 @@ import { useLanguage } from "./LanguageContext";
 import { useIsMobile, ScrollX } from "./utils/responsive";
 import { getDisplayName, HERO_SKILL_MAP, getHeroImageSrc, TANK_HEROES, SUPPORT_HEROES } from "./gameData";
 import { BASE_TEAM } from "./config";
+import { MIN_FIGHTS } from "./utils/analysisConstants";
 
 const normalizeName = (name) => (name ? name.trim() : "");
 
 // 우리 팀(기준 팀). 랭킹에서 우리 팀 선수 행을 구분 표시한다.
 const OUR_TEAM = BASE_TEAM;
 // R2: 비율(첫킬률)의 표본 = 참여 한타 수. 이 값 미만은 흐림 + 랭킹 후순위(하단 분리).
-// totalFights는 스케일이 커(주전 수천) 앱 기본값 5로는 무의미 → 이 화면 전용 임계값.
-const MIN_FIGHTS = 30;
+// totalFights는 스케일이 커(주전 수천) 앱 기본값 5로는 무의미 → 이 화면 전용 임계값(MIN_FIGHTS, utils/analysisConstants).
 
 
 // [i18n] 표시명은 gameData.getDisplayName(단일 함수)로 통일 — 로컬 별칭맵/헬퍼 제거.

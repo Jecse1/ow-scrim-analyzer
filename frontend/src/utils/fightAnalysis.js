@@ -1,5 +1,4 @@
-const INITIAL_WINDOW = 20;
-const KILL_EXTENSION = 10;
+import { INITIAL_WINDOW, KILL_EXTENSION } from './analysisConstants';
 
 function checkIsTeam1(teamName, t1Name) {
     if (!teamName) return false;

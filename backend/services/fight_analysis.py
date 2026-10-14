@@ -3,8 +3,7 @@
 DO NOT diverge from the JS logic — both must produce identical fight groupings.
 """
 
-INITIAL_WINDOW = 20
-KILL_EXTENSION = 10
+from analysis_constants import INITIAL_WINDOW, KILL_EXTENSION
 
 
 def _check_is_team1(team_name: str, t1_name: str) -> bool:

@@ -12,8 +12,9 @@ import {
     SituationTable, ExplainBox, VerdictChip, computeVerdict,
     UltimateComboSection, UltimateSequenceSection, UltimateCounterSection,
     VodList, VOD_PAGE,
-    collectFollowups, seqWin, seqReactInFight, RESPONSE_WINDOW_SEC,
+    collectFollowups, seqWin, seqReactInFight,
 } from './FightLabStats';
+import { RESPONSE_WINDOW_SEC, PATTERN_CHAIN_SEC } from './utils/analysisConstants';
 
 const API_BASE = "";
 
@@ -21,8 +22,7 @@ const API_BASE = "";
 // 3초 묶음(수) 접기는 이 표의 패턴 키에서 제거됨 — 궁 묶음(콤보)의 분석은 [콤보·시퀀스] 서브탭 전담.
 // 정렬: timestamp, 동일 시각은 우리 궁 우선(콤보/이니시와 공통 규칙). 궁 0개 한타 = "무궁".
 // 칩이 MAX_CHIPS(6)를 넘으면 앞 6칩 + "…"로 절단해 같은 버킷으로(패턴 폭발 방지).
-// PATTERN_CHAIN_SEC·patternMoves는 [이니시]의 첫 궁 판정이 재사용하므로 유지(이 표에서는 미사용).
-const PATTERN_CHAIN_SEC = 3;
+// PATTERN_CHAIN_SEC(utils/analysisConstants)·patternMoves는 [이니시]의 첫 궁 판정이 재사용하므로 유지(이 표에서는 미사용).
 const PATTERN_MAX_CHIPS = 6;
 
 // 한타 → 수 배열 [{side, n, ults[]}] (동일 timestamp는 우리 궁 우선 — 콤보/패턴 공통 정렬 규칙)

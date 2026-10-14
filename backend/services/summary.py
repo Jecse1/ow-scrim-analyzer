@@ -44,11 +44,11 @@ POPULATION_FIGHT_MATCHES_PLUS_MANUAL = "fight_matches_plus_manual"
 POPULATION_ALL_MATCHES = "all_matches"
 POPULATION_LOG_FIGHTS = "log_fights"
 
-# 프론트와 같은 기본값(값 출처: frontend/src/FightLabStats.jsx)
-DEFAULT_PERIOD_DAYS = 14   # A_PRESET_DAYS['2w'] = 14 (:57), 기본 프리셋 '2w' (:1411)
-RESPONSE_WINDOW_SEC = 3    # RESPONSE_WINDOW_SEC = 3 (:836)
-DEFAULT_MIN_SAMPLE = 5     # useFightScope minSample 기본 5 (:1406), 카운터 표 minS 기본 5 (:1235)
-DEFAULT_COUNTER_LIMIT = 10
+# 프론트와 같은 기본값 — 정의는 analysis_constants(SSOT, 프론트 utils/analysisConstants.js 와 동일 값)
+# routers/summary.py 가 이 모듈에서 import 하므로 이름을 유지(re-export).
+from analysis_constants import (
+    DEFAULT_PERIOD_DAYS, RESPONSE_WINDOW_SEC, DEFAULT_MIN_SAMPLE, DEFAULT_COUNTER_LIMIT,
+)
 
 PERIOD_TZ = ZoneInfo("Asia/Seoul")
 

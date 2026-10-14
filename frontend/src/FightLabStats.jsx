@@ -6,6 +6,10 @@ import { useLanguage } from "./LanguageContext";
 import { buildVideoLink, hasVideo } from "./utils/videoLink";
 import { useVod, vodClickProps } from "./VodPlayerContext";
 import { useIsMobile } from "./utils/responsive";
+import {
+    COMBO_WINDOW_SEC, RESPONSE_WINDOW_SEC, DEFAULT_MIN_SAMPLE, DEFAULT_PERIOD_DAYS, A_PRESET_DAYS,
+    MIN_SAMPLE_FOR_PERCENTILE_FIGHTS, MIN_SAMPLE_FOR_PERCENTILE_ROUNDS, PERCENTILE_MIN_POOL,
+} from "./utils/analysisConstants";
 
 const API_BASE = "";
 
@@ -53,8 +57,6 @@ const rangesOverlap = ([aS, aE], [bS, bE]) => {
     const s2 = bS || '0000-00-00', e2 = bE || '9999-99-99';
     return !(e2 < s1 || s2 > e1);
 };
-
-const A_PRESET_DAYS = { '1w': 7, '2w': 14, '1m': 30 };
 
 // ── 집계 ────────────────────────────────────────────────────────────────────
 export const isKnown = (r) => r.fight_winner === 'us' || r.fight_winner === 'them';
@@ -165,9 +167,9 @@ function PlayerBreakdown({ pfs, rangeA, rangeB, compareOn, minSample, perspectiv
     const [lbRole, setLbRole] = useState('tank');      // 순위표: 역할 선택
 
     const meta = pfs?.meta || {};
-    const MIN_F = meta.min_sample_for_percentile_fights ?? 20;
-    const MIN_R = meta.min_sample_for_percentile_rounds ?? 10;
-    const MIN_POOL = meta.percentile_min_pool ?? 8;
+    const MIN_F = meta.min_sample_for_percentile_fights ?? MIN_SAMPLE_FOR_PERCENTILE_FIGHTS;
+    const MIN_R = meta.min_sample_for_percentile_rounds ?? MIN_SAMPLE_FOR_PERCENTILE_ROUNDS;
+    const MIN_POOL = meta.percentile_min_pool ?? PERCENTILE_MIN_POOL;
     const items = pfs?.items || [];
     const side = perspective === 'them' ? 'them' : 'us';
 
@@ -515,9 +517,6 @@ function combosOfSize(arr, n) {
     return out;
 }
 
-// 콤보 판정 시간 창(초): 직전 우리 궁으로부터 이 간격 이내면 같은 콤보 체인
-const COMBO_WINDOW_SEC = 3;
-
 // recs → Map(콤보 키 → { key, members, fights[] }).
 // 새 정의: 콤보 = 우리 궁들의 "시간 연쇄"(체인).
 //   R1. 직전 우리 궁으로부터 windowSec 이내(≤, 동일 timestamp 포함)면 같은 체인.
@@ -831,10 +830,6 @@ export function UltimateComboSection({ recsNow, recsPast, compareOn, t, GREEN, R
 // timestamp가 같으면(동시 사용) 후속으로 세지 않음 — 동시 콤보는 콤보 분석 영역.
 // 모든 수치(표본·시퀀스율·반응시간)는 승패 판정 가능 한타 기준(콤보 섹션과 동일 모집단 규칙).
 
-// 응수/시퀀스 후속 인정 창(초) — 콤보 창(COMBO_WINDOW_SEC)과 값이 같아도 별개 상수(개별 조정 가능)
-// export는 [이니시] 서브탭(UltimateAnalysisStats)의 응수 미니 표 재사용용 — 값·계산 무변경.
-export const RESPONSE_WINDOW_SEC = 3;
-
 // (side, hero) 궁이 나온 승패 판정 가능 한타 목록
 const seqSelFights = (recs, side, hero) =>
     recs.filter(r => isKnown(r) && (r.ults || []).some(u => u.side === side && u.hero === hero));
@@ -888,7 +883,7 @@ export function UltimateSequenceSection({ recsNow, recsPast, compareOn, t, GREEN
     const [side1, setSide1] = useState('us');
     const [role1, setRole1] = useState('all');
     const [hero1, setHero1] = useState('');
-    const [minS, setMinS] = useState(5);
+    const [minS, setMinS] = useState(DEFAULT_MIN_SAMPLE);
     const [respWin, setRespWin] = useState(RESPONSE_WINDOW_SEC); // 응수 창(초), 1~30
     const [p1, setP1] = useState(null);      // 1단계 '분석' 클릭 시점 스냅샷
     const [prefill, setPrefill] = useState('');
@@ -1232,7 +1227,7 @@ export function UltimateSequenceSection({ recsNow, recsPast, compareOn, t, GREEN
 // 계산은 기존 시퀀스 로직(seqSelFights/seqWin/seqFirstTs/collectFollowups) 재사용 —
 // 관점만 "상대 궁 선택 → 우리 후속"으로 고정. 새 판정 로직 없음(응수 = 기존 후속 규칙과 동일).
 export function UltimateCounterSection({ recsNow, t, GREEN, RED, perspective }) {
-    const [minS, setMinS] = useState(5);      // 최고 응수 궁 인정 최소 표본
+    const [minS, setMinS] = useState(DEFAULT_MIN_SAMPLE);      // 최고 응수 궁 인정 최소 표본
     const [respWin, setRespWin] = useState(RESPONSE_WINDOW_SEC); // 응수 창(초), 1~30 — 즉시 반영(이 표는 버튼 없음)
     const [selHero, setSelHero] = useState('all');   // 상대 궁 영웅 선택('all' = 표본 많은 순 Top 10)
     const [drillOpen, setDrillOpen] = useState({});  // 상대 궁 영웅 → 드릴다운 펼침
@@ -1403,26 +1398,26 @@ export function UltimateCounterSection({ recsNow, t, GREEN, RED, perspective }) 
 // 기존 FightLabStats 본체에서 그대로 추출(동작 무변경). 훅 인스턴스별로 상태 독립.
 export function useFightScope(records, t) {
     const [perspective, setPerspective] = useState('us'); // 'us' (기준 팀) | 'them' (상대 시점)
-    const [minSample, setMinSample] = useState(5);
+    const [minSample, setMinSample] = useState(DEFAULT_MIN_SAMPLE);
     const [selectedOpponent, setSelectedOpponent] = useState('All');
     const [selectedMap, setSelectedMap] = useState('All');
 
     const today = todayStr();
     const [presetA, setPresetA] = useState('2w'); // '1w' | '2w' | '1m' | 'custom'
-    const [customAStart, setCustomAStart] = useState(addDays(today, -13));
+    const [customAStart, setCustomAStart] = useState(addDays(today, -(DEFAULT_PERIOD_DAYS - 1)));
     const [customAEnd, setCustomAEnd] = useState(today);
     const [presetB, setPresetB] = useState('all_before'); // 'all_before' | 'prev_same' | 'custom'
-    const [customBStart, setCustomBStart] = useState(addDays(today, -27));
-    const [customBEnd, setCustomBEnd] = useState(addDays(today, -14));
+    const [customBStart, setCustomBStart] = useState(addDays(today, -(2 * DEFAULT_PERIOD_DAYS - 1)));
+    const [customBEnd, setCustomBEnd] = useState(addDays(today, -DEFAULT_PERIOD_DAYS));
 
     // 비교 토글 제거: '전체' 기간이면 비교 없음, 그 외엔 항상 비교 표시
     const compareOn = presetA !== 'all';
 
     // 사이드바 초안(draft) — '적용' 버튼을 눌러야 실제 필터(applied 상태들)에 반영
     const [draft, setDraft] = useState({
-        presetA: '2w', customAStart: addDays(today, -13), customAEnd: today,
-        presetB: 'all_before', customBStart: addDays(today, -27), customBEnd: addDays(today, -14),
-        perspective: 'us', opponent: 'All', map: 'All', minSample: 5,
+        presetA: '2w', customAStart: addDays(today, -(DEFAULT_PERIOD_DAYS - 1)), customAEnd: today,
+        presetB: 'all_before', customBStart: addDays(today, -(2 * DEFAULT_PERIOD_DAYS - 1)), customBEnd: addDays(today, -DEFAULT_PERIOD_DAYS),
+        perspective: 'us', opponent: 'All', map: 'All', minSample: DEFAULT_MIN_SAMPLE,
     });
     const setD = (patch) => setDraft(d => ({ ...d, ...patch }));
     const applyDraft = () => {
@@ -1459,7 +1454,7 @@ export function useFightScope(records, t) {
     const rangeA = useMemo(() => {
         if (presetA === 'all') return [null, null];
         if (presetA === 'custom') return [customAStart || null, customAEnd || null];
-        const days = A_PRESET_DAYS[presetA] || 14;
+        const days = A_PRESET_DAYS[presetA] || DEFAULT_PERIOD_DAYS;
         return [addDays(today, -(days - 1)), today];
     }, [presetA, customAStart, customAEnd, today]);
 

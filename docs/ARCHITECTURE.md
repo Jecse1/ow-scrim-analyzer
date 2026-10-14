@@ -6,6 +6,7 @@
 ```
 main.py            app 생성 · lifespan · 미들웨어(GZip/CORS) · include_router(banpick→stats→scrims→summary) · 하위호환 re-export
 config.py          상수 · 경로 · game_data 파생(KOREAN_HERO_MAP…HERO_ROLE_DATA) · makedirs 1회
+analysis_constants.py 분석 정의 상수 정본(한타 창·트레이드/응수 창·최소 표본·기본 기간) — 프론트 utils/analysisConstants.js 와 같은 값 유지
 schemas.py         요청 Pydantic 모델
 schemas_summary.py 응답 Pydantic 모델(/api/summary/* · /api/sessions/{id}/complete 계약)
 schemas_roster.py  응답 Pydantic 모델(POST /api/logs/roster — 등록 전 로그 명단)
@@ -45,6 +46,6 @@ main → routers(include) + 하위호환 re-export.  분리 모듈은 main 을 i
 ## 규칙: 신규 코드는 어디에 두는가
 - **새 엔드포인트**: 조회/통계면 `routers/stats.py` 또는 주제별 라우터(`routers/summary.py` 등 — 새 라우터 파일이면 `main.py` 에 include 1줄 추가), 세션·매치 변경(쓰기)·세션 단위 동작이면 `routers/scrims.py` 에 `@router` 로 추가.
 - **새 분석·계산 함수**: 순수 로직은 `services/`(집계=stats, 한타지표=fight_metrics), 로그 파싱은 `parsers/log_parser.py`.
-- **새 상수·게임데이터 파생**: `config.py`. **DB 직렬화**: `serializers.py`. **요청 스키마**: `schemas.py`. **응답 스키마(외부 계약)**: `schemas_summary.py`(집계·완료), `schemas_roster.py`(등록 전 명단).
+- **새 상수·게임데이터 파생**: `config.py`. **분석 정의 상수(창·표본·기간)**: `analysis_constants.py` + 프론트 `utils/analysisConstants.js` 양쪽에 같은 값. **DB 직렬화**: `serializers.py`. **요청 스키마**: `schemas.py`. **응답 스키마(외부 계약)**: `schemas_summary.py`(집계·완료), `schemas_roster.py`(등록 전 명단).
 - 라우터/서비스는 필요한 심볼을 해당 모듈에서 **직접 import**(절대 import, `from services.x import y`). `main` 에서 가져오지 않는다.
 - 경로 매칭 우선순위상 include 순서(banpick→stats→scrims)를 바꾸지 말 것(`/api/scrims/full-events` vs `/api/scrims/{id}`).

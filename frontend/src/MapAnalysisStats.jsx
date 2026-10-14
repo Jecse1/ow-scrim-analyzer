@@ -9,13 +9,14 @@ import { getMapDisplayName, getModeLabel, canonicalMapName } from './gameData';
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile } from "./utils/responsive";
 import { manualToPseudoRecords } from './utils/mapSummary';
+import { TOP_HERO_MIN } from './utils/analysisConstants';
 import {
     T, tpl, isKnown,
     useFightScope, FightScopeShell, SubTabPills, PerspectiveNotice, ExplainBox,
 } from './FightLabStats';
 
 const API_BASE = "";
-const TOP_HERO_MIN = 3; // Top 영웅(근사) 영웅별 최소 표본(한타) — 지표 설명에 명시
+// TOP_HERO_MIN: Top 영웅(근사) 영웅별 최소 표본(한타) — 지표 설명에 명시(utils/analysisConstants)
 
 // ── 날짜/주 헬퍼 ('YYYY-MM-DD' 문자열 + UTC 산술 — FightLabStats와 동일 규칙) ──────
 const toMs = (s) => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); };

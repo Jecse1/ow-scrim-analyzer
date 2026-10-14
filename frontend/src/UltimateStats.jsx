@@ -6,12 +6,12 @@ import { useLanguage } from "./LanguageContext";
 import { T } from "./FightLabStats";
 import { useIsMobile } from "./utils/responsive";
 import { getHeroImageSrc } from "./gameData";
+import { MIN_ULT_SAMPLE, FIGHT_QUIET_GAP_SEC } from "./utils/analysisConstants";
 
 // R1 방향색(맵 분석과 동일한 은은한 톤). 원색 네온은 제거.
 const GREEN = T.green, RED = T.red;
 const winColor = (wr) => wr === 50 ? T.text : wr >= 50 ? GREEN : RED;
 // R2: 영웅별 궁극기 가치 랭킹의 최소 표본(궁 사용 횟수). 미만은 흐림 + 하단 분리.
-const MIN_ULT_SAMPLE = 5;
 
 // [STEP3] 이미지 리졸버는 gameData.getHeroImageSrc(SSOT image 필드 기반)로 통합·임포트.
 
@@ -52,7 +52,6 @@ export default function UltimateStats({ allScrims }) {
                     if (events.length === 0) return;
 
                     let currentFight = null;
-                    const FIGHT_GAP = 20;
 
                     const processPerspective = (fight, teamName, enemyName) => {
                         let myDeaths = 0, enemyDeaths = 0;
@@ -96,10 +95,10 @@ export default function UltimateStats({ allScrims }) {
                         if (ev.event_type !== 'kill' && ev.event_type !== 'ultimate_start') return;
                         if (!currentFight || ev.timestamp > currentFight.endTime) {
                             if (currentFight) processFight(currentFight);
-                            currentFight = { endTime: ev.timestamp + FIGHT_GAP, events: [ev] };
+                            currentFight = { endTime: ev.timestamp + FIGHT_QUIET_GAP_SEC, events: [ev] };
                         } else {
                             currentFight.events.push(ev);
-                            currentFight.endTime = ev.timestamp + FIGHT_GAP; 
+                            currentFight.endTime = ev.timestamp + FIGHT_QUIET_GAP_SEC; 
                         }
                     });
                     if (currentFight) processFight(currentFight); 

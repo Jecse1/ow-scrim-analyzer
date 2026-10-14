@@ -12,6 +12,7 @@ import { buildVideoLink, hasVideo } from './utils/videoLink';
 import { useVod, vodClickProps } from './VodPlayerContext';
 import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey, canonicalMapName } from './gameData';
 import { BASE_TEAM } from './config';
+import { MIN_LOST_FIGHTS } from './utils/analysisConstants';
 
 const API_BASE = import.meta.env.PROD ? "" : "";
 
@@ -380,7 +381,6 @@ export default function OverallStats({ onBack, onGoSessions }) {
       }
     });
 
-    const MIN_LOST_FIGHTS = 10;
     const carryRanking = Object.entries(carryMap)
       .map(([name, data]) => {
         const cnt = data.fightSet.size;

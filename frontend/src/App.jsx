@@ -32,6 +32,7 @@ import PlanCanvasPage from "./plans/PlanCanvasPage";
 import PrintSheet from "./plans/print/PrintSheet";
 import { FlaskConical } from "lucide-react";
 import { TANK_HEROES, SUPPORT_HEROES } from "./gameData";
+import { ULT_KILL_WINDOW } from "./utils/analysisConstants";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -136,8 +137,7 @@ function MainApp() {
     // [STEP2] TANK_HEROES/SUPPORT_HEROES 는 gameData(SSOT) 파생값(역할별 roleForms). 판정 로직 보존.
     const heroRole = (h) => TANK_HEROES.includes(h) ? '탱크' : SUPPORT_HEROES.includes(h) ? '지원' : '딜러';
 
-    // 궁 사용 후 이 시간(초) 내의 결정타를 '궁극기로 만들어낸 결정타'로 간주 (힐러용)
-    const ULT_KILL_WINDOW = 10;
+    // 궁 사용 후 ULT_KILL_WINDOW초(utils/analysisConstants) 내의 결정타를 '궁극기로 만들어낸 결정타'로 간주 (힐러용)
     // 궁극기 한타 분석 (이벤트 기반): playerName -> heroName -> { uses, ultKillsAbility, ultKillsWindow, fights, fightWins }
     //  - uses           : ultimate_start 이벤트 수 (궁 사용 횟수)
     //  - ultKillsAbility : 궁 스킬(ability='Ultimate')로 직접 처치한 결정타 수 (딜러/탱커용)

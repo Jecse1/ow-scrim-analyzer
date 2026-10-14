@@ -35,6 +35,15 @@ PLAYER_ROLE_OVERRIDES = {
 
 # KOREAN_HERO_MAP, MAP_TYPE_DATA 는 game_data 로더에서 파생(위 import 참조).
 
+# 분석 정의 상수(한타 창·트레이드 창·백분위 최소 표본)는 analysis_constants(SSOT)에서 re-export.
+from analysis_constants import (
+    FIGHT_QUIET_GAP_SEC,
+    TRADE_WINDOW_SEC,
+    MIN_SAMPLE_FOR_PERCENTILE_FIGHTS,
+    MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
+    PERCENTILE_MIN_POOL,
+)
+
 NUMERIC_FIELDS = [
     "eliminations", "final_blows", "deaths",
     "all_damage_dealt", "barrier_damage_dealt", "hero_damage_dealt",
@@ -45,7 +54,6 @@ NUMERIC_FIELDS = [
     "hero_time_played"
 ]
 
-FIGHT_QUIET_GAP_SEC = 20
 # CONTROL_MAP_KEYWORDS 는 game_data 로더에서 파생(위 import 참조).
 
 DATA_FILE = "scrim_data.json"
@@ -60,9 +68,6 @@ if not os.path.exists(ROW_DATA_DIR):
 _MAP_TYPE_DATA_NOSPACE = {k.replace(" ", ""): v for k, v in MAP_TYPE_DATA.items()}
 # 플래시포인트/밀기 = 매치 단위(첫 한타 1개), 그 외 = 라운드 단위. ko/en 값 모두 포함.
 _MATCH_LEVEL_MAP_TYPES = {"밀기", "Push", "플래시포인트", "Flashpoint"}
-
-# 첫 킬 후 이 시간(초) 내 반대편 킬 발생 = "트레이드됨"
-TRADE_WINDOW_SEC = 5
 
 # 라운드 종료 연출("N라운드 종료" 점수 화면) 동안 경기 타이머([hh:mm:ss])가 멈춰
 # 영상 시간과 어긋난다 → 라운드 전환 1회당 이만큼(초) VOD 링크를 뒤로 민다.
@@ -100,8 +105,3 @@ for _h in _FIGHTLAB_SUPPORTS:
     HERO_ROLE_DATA[_h] = "support"
 for _h in _FIGHTLAB_DAMAGE:
     HERO_ROLE_DATA[_h] = "damage"
-
-# 백분위 풀 포함 최소 표본(프론트 안내용 상수 — 응답 meta로 내려줌)
-MIN_SAMPLE_FOR_PERCENTILE_FIGHTS = 20   # 한타 지표: 최소 20한타
-MIN_SAMPLE_FOR_PERCENTILE_ROUNDS = 10   # 라운드 지표: 최소 10라운드
-PERCENTILE_MIN_POOL = 8                 # 풀 최소 인원
