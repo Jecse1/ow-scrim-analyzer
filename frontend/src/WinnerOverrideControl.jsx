@@ -45,7 +45,7 @@ export default function WinnerOverrideControl({ match, onChanged }) {
     }
   };
 
-  const badgeColor = isOverridden ? theme.overrideBadge : (theme.warning || "#f59e0b");
+  const badgeColor = isOverridden ? theme.success : theme.warning;
   const badgeText = isOverridden ? `${t.woBadgeOverridden}: ${wo}` : t.woBadgeDraw;
 
   return (

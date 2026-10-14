@@ -749,7 +749,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
         
         {/* 💡 [기존] 패배 한타 저항력 (Kill Exchange in Lost Fights) */}
         <div style={cardStyle}>
-            <div style={titleStyle}><AlertOctagon size={18} color={theme.warning || '#f59e0b'}/> {t.msLostFightTitle}</div>
+            <div style={titleStyle}><AlertOctagon size={18} color={theme.warning}/> {t.msLostFightTitle}</div>
             
             {/* 상단 요약 바 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
@@ -809,7 +809,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success || '#10b981' }}></div>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success }}></div>
                                     {t.msWinRateAfterWin} <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msWinToWin}</span>
                                 </div>
                                 <div style={{ fontSize: '11px', color: theme.textSub, marginTop: '4px', marginLeft: '14px' }}>{t.msSnowball} ({momentumData.t1AfterWinWon}/{momentumData.t1AfterWinTotal}{t.timesUnit})</div>
@@ -837,7 +837,7 @@ const ChartView = ({ matchData, rounds, fights, t1Name, t2Name }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success || '#10b981' }}></div>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success }}></div>
                                     {t.msWinRateAfterWin} <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msWinToWin}</span>
                                 </div>
                                 <div style={{ fontSize: '11px', color: theme.textSub, marginTop: '4px', marginLeft: '14px' }}>{t.msSnowball} ({momentumData.t2AfterWinWon}/{momentumData.t2AfterWinTotal}{t.timesUnit})</div>

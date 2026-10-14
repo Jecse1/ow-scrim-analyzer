@@ -871,7 +871,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                                         <Bar dataKey="winRate" name={t.winRate} radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: theme.text, fontSize: 11, formatter: (v) => `${v}%` }}>
                                             {filteredData.mapStats.slice(0, 10).map((entry, idx) => (
                                                 <Cell key={idx} fill={
-                                                    entry.winRate >= 70 ? (theme.success || '#10b981') :
+                                                    entry.winRate >= 70 ? (theme.success) :
                                                     entry.winRate >= 40 ? '#60a5fa' :
                                                     theme.danger
                                                 } />
@@ -935,7 +935,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                             return (
                                 <div style={cardStyle}>
                                     <div style={titleStyle}>
-                                        <AlertOctagon size={18} color={theme.warning || '#f59e0b'} />
+                                        <AlertOctagon size={18} color={theme.warning} />
                                         {t.msLostFightTitle}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr 1.2fr', gap: isMobile ? '16px' : '0' }}>
@@ -1000,9 +1000,9 @@ export default function OverallStats({ onBack, onGoSessions }) {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '12px' : '24px' }}>
                                 {/* 승리 후 승률 */}
-                                <div style={{ background: theme.bg, padding: '20px', borderRadius: '12px', border: `1px solid ${theme.success || '#10b981'}40` }}>
+                                <div style={{ background: theme.bg, padding: '20px', borderRadius: '12px', border: `1px solid ${theme.success}40` }}>
                                     <div style={{ fontSize: '13px', fontWeight: 'bold', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success || '#10b981', flexShrink: 0 }} />
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.success, flexShrink: 0 }} />
                                         {t.msWinRateAfterWin}
                                         <span style={{ color: theme.textSub, fontWeight: 'normal', fontSize: '11px' }}>{t.msWinToWin}</span>
                                     </div>

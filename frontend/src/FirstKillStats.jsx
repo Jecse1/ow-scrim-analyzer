@@ -196,7 +196,7 @@ export default function FirstKillStats({ allScrims }) {
     const handleSort = (key) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc' }));
     const toggleExpand = (playerName) => setExpandedPlayer(expandedPlayer === playerName ? null : playerName);
 
-    const SUCCESS_COLOR = "#10b981";
+    const SUCCESS_COLOR = theme.success;
     const selectStyle = { background: theme.bg, color: theme.text, border: `1px solid ${theme.borderHighlight}`, padding: '8px 12px', borderRadius: '8px', outline: 'none', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' };
 
     return (
@@ -283,7 +283,7 @@ export default function FirstKillStats({ allScrims }) {
                                         <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>{p.firstKills}{t.timesUnit}</td>
                                         <td style={{ padding: '16px', textAlign: 'right' }}>
                                             <div style={{ position: 'relative', width: '100%', height: '24px', background: theme.surface, borderRadius: '4px', overflow: 'hidden' }}>
-                                                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(rate * 2, 100)}%`, background: isCarry ? '#10b98180' : '#10b98140' }} />
+                                                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(rate * 2, 100)}%`, background: isCarry ? `${SUCCESS_COLOR}80` : `${SUCCESS_COLOR}40` }} />
                                                 <span style={{ position: 'relative', zIndex: 1, paddingRight: '8px', fontWeight: '900', fontSize: '13px', color: isCarry ? SUCCESS_COLOR : theme.text }}>{rate.toFixed(1)}%</span>
                                             </div>
                                         </td>

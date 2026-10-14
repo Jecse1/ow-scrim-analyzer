@@ -550,7 +550,7 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
                         <input style={inp} value={em.team2_name} onChange={e => upd("team2_name", e.target.value)} /></div>
                       {em.swapPending
                         ? <span style={{ fontSize: 11, color: theme.primary, fontWeight: 700, alignSelf: "center" }}>{t.sdSwapPending}</span>
-                        : crossPending && <span style={{ fontSize: 11, color: theme.warning || "#d97706", fontWeight: 700, alignSelf: "center" }}>{t.sdExchangePending}</span>}
+                        : crossPending && <span style={{ fontSize: 11, color: theme.warning, fontWeight: 700, alignSelf: "center" }}>{t.sdExchangePending}</span>}
                     </div>
                     <div style={{ flexBasis: "100%", maxWidth: 480 }}><span style={lbl}>{t.smYoutubeLink}</span>
                       <input style={{ ...inp, width: "100%", boxSizing: "border-box" }} value={em.video_url} onChange={e => upd("video_url", e.target.value)} /></div>
