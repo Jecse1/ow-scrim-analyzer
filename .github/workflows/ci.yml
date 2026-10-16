@@ -37,5 +37,6 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: node scripts/check_i18n_keys.mjs
       # @gamedata alias 가 ../backend/game_data/*.json 을 읽는다 — 체크아웃만으로 충분
       - run: npm run build
