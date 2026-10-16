@@ -114,9 +114,11 @@ export const getSkillName = (heroName, abilityRaw, lang = _displayLang) => {
 // ── 맵/모드 표시명 ───────────────────────────────────────────────────────────
 // DB 에는 한국어 맵명·모드명(정본)이 저장된다. 어떤 표기(ko/en/aliases)든 엔트리로
 // 해석 후 lang 값 → en → ko 폴백으로 표시명을 돌려준다. 미지 맵은 원문 유지.
+// [2026-10-16] banpick.id(플랜 보드 map_id·밴픽 맵 id)도 색인한다 — 플랜 카드가 id 로 표시명을 구하던
+//   경로가 en 철자 우연(busan=Busan)에만 의존해 12개 맵이 id 그대로 보이던 버그 수정. 호출처 무변경.
 const _mapLookup = new Map();
 for (const m of MAPS) {
-  const forms = [m.ko, m.en, ...(m.aliases || [])];
+  const forms = [m.ko, m.en, m.banpick && m.banpick.id, ...(m.aliases || [])];
   for (const f of forms) if (f && !_mapLookup.has(f)) _mapLookup.set(f, m);
 }
 // 맵명 정규화 키: 트림 → 소문자 → 모든 공백 제거(전각 공백 포함) → NFC.
@@ -127,7 +129,7 @@ export const normalizeMapKey = (s) =>
 const _mapLookupNorm = new Map();
 const _mapNormForms = new Map(); // 엔트리 → 정규화 표기형 Set (부분 일치 검색용)
 for (const m of MAPS) {
-  const forms = [m.ko, m.en, m.zh, ...(m.aliases || []), ...Object.keys(m.mapTypeData || {})];
+  const forms = [m.ko, m.en, m.zh, m.banpick && m.banpick.id, ...(m.aliases || []), ...Object.keys(m.mapTypeData || {})];
   const set = new Set();
   for (const f of forms) {
     const k = normalizeMapKey(f);
