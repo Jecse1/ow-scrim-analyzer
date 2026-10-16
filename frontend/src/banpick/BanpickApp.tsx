@@ -1301,6 +1301,19 @@ export default function BanpickApp() {
     setFirstSetPicker((v) => remote.firstSetPicker ?? v);
   }, [remote, syncOn, myRole]);
 
+  // [1-c] 원격 모드 세트 전환 시 클라 선택 버퍼(맵·선/후밴·사이드) 초기화.
+  //   위 동기화는 `remote.x ?? v` 라 서버값 null 이 로컬을 덮지 않는다 → 이전 세트의 banStarterChoice("PICKER")가
+  //   다음 세트까지 남아, 선밴 버튼(토글)을 누르면 null 로 꺼져 "맵 확정"이 활성화되지 않던 버그.
+  //   서버가 새 세트를 열어(phase=MAP_PICK, completedSets 증가) 보낼 때 한 번만 지운다.
+  const remoteSetNo = remote?.completedSets?.length ?? 0;
+  useEffect(() => {
+    if (!remoteMode || !remote || remote.phase !== "MAP_PICK") return;
+    setSelectedMap(null);
+    setBanStarterChoice(null);
+    setAttackOrDefense(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteMode, remote?.phase, remoteSetNo]);
+
   // ★ HOST도 게스트 patch를 받아서 로컬로 흡수 (되돌림 방지)
   useEffect(() => {
     if (!syncOn || !remote) return;
