@@ -55,10 +55,10 @@ per-player averages, situational ultimate win rates, and exchange patterns.
 
 ## Tech stack / 기술 스택
 
-- **Backend**: FastAPI · SQLAlchemy 2.0 (async) · Alembic · SQLite (aiosqlite)
+- **Backend**: FastAPI · SQLAlchemy 2.0 (async) · SQLite (aiosqlite)
 - **Frontend**: React · Vite · Recharts · lucide-react
 - **Realtime**: WebSocket (ban/pick rooms)
-- **Deploy**: uvicorn + nginx (Docker Compose provided)
+- **Deploy**: uvicorn + pm2 + nginx (see [docs/DEPLOY.md](docs/DEPLOY.md))
 
 ---
 
@@ -120,24 +120,13 @@ backend first. Vite 개발 서버가 `/api`·`/ws` 를 8000 포트 백엔드로 
 
 ---
 
-## Production deploy / 배포 (nginx + Docker)
+## Production deploy / 배포
 
-A `docker-compose.yml` builds both services. nginx serves the built frontend and
-reverse-proxies `/api` (and `/ws`) to uvicorn.
+Deployment is supported only via [docs/DEPLOY.md](docs/DEPLOY.md) (venv + pm2 + nginx).
+To change the base team in production, set the `BASE_TEAM` environment variable on the backend.
 
-`docker-compose.yml` 로 두 서비스를 빌드합니다. nginx 가 빌드된 프론트를 서빙하고
-`/api`·`/ws` 를 uvicorn 으로 리버스 프록시합니다.
-
-Docker 없이 저사양 서버(1GB RAM)에 venv+pm2+nginx 로 배포하려면 [docs/DEPLOY.md](docs/DEPLOY.md) 참조.
-
-```bash
-docker compose up --build
-# frontend on :80, backend on :8000
-```
-
-`frontend/nginx.conf` contains the reverse-proxy config. To change the base team
-in production, set the `BASE_TEAM` environment variable on the backend service.
-프로덕션에서 기준 팀은 백엔드 서비스의 `BASE_TEAM` 환경변수로 지정합니다.
+배포는 [docs/DEPLOY.md](docs/DEPLOY.md)(pm2+nginx)만 지원합니다.
+프로덕션에서 기준 팀은 백엔드의 `BASE_TEAM` 환경변수로 지정합니다.
 
 ---
 
@@ -254,7 +243,6 @@ ow-scrim-analyzer/
 │   ├── db/                # SQLAlchemy models & async engine
 │   ├── services/          # fight_analysis (fight grouping / metrics)
 │   ├── banpick/           # ban/pick rooms (WebSocket, server-authoritative)
-│   ├── alembic/           # DB migrations
 │   ├── log_normalizer.py  # raw Workshop log → normalized events
 │   └── requirements.txt
 ├── frontend/
@@ -263,10 +251,8 @@ ow-scrim-analyzer/
 │   │   ├── App.jsx        # shell, navigation, upload
 │   │   ├── *Stats.jsx     # analysis tabs
 │   │   └── banpick/       # ban/pick UI
-│   ├── public/            # game assets (see "Asset copyright")
-│   └── nginx.conf
-├── sample_data/           # anonymized sample log + how-to
-└── docker-compose.yml
+│   └── public/            # game assets (see "Asset copyright")
+└── sample_data/           # anonymized sample log + how-to
 ```
 
 ---

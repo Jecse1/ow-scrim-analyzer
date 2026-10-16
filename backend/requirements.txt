@@ -7,7 +7,6 @@ requests
 jinja2
 sqlalchemy>=2.0
 aiosqlite
-alembic
 greenlet
 httpx>=0.28.1,<1
 tzdata>=2026.5

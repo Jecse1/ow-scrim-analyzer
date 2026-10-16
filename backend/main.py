@@ -77,38 +77,5 @@ except Exception as _e:
     print(f"[plans] router not loaded: {_e}")
 
 
-# ── 하위호환 re-export ────────────────────────────────────────────────────────
-# scripts/dump_game_data.py · scripts/make_game_data_json.py 가 `import main` 후
-# main.<이름> 으로 참조하는 게임데이터 파생 상수를 노출한다(이 파일이 정본이 아님 — config 등에서 파생).
-# 그 외 심볼은 분리 모듈(config/parsers/services/…)에서 직접 import 하며, 아래는 리팩토링 이전
-# `from main import …` 호환을 위한 재노출이다(현재 외부 참조가 없는 이름은 STEP2 보고서의 "미사용 목록" 참조).
-from config import (
-    KOREAN_HERO_MAP, TANKS, SUPPORTS, MAP_TYPE_DATA, CONTROL_MAP_KEYWORDS,
-    _FIGHTLAB_TANKS, _FIGHTLAB_SUPPORTS, _FIGHTLAB_DAMAGE,
-    NUMERIC_FIELDS, FIGHT_QUIET_GAP_SEC,
-    DATA_FILE, ROW_DATA_DIR,
-    _MAP_TYPE_DATA_NOSPACE, _MATCH_LEVEL_MAP_TYPES,
-    TRADE_WINDOW_SEC, HERO_ROLE_DATA,
-    MIN_SAMPLE_FOR_PERCENTILE_FIGHTS, MIN_SAMPLE_FOR_PERCENTILE_ROUNDS, PERCENTILE_MIN_POOL,
-)
-from parsers.log_parser import (
-    normalize_team_name, is_control_map, resolve_map_type, is_match_level_map, safe_float,
-    time_str_to_seconds, parse_log_timestamp,
-    get_role_score, get_player_role_score,
-    parse_overwatch_log, assign_persistent_slots,
-)
-from schemas import PauseInput, MatchSegment, ScrimManualInput, BatchDeleteRequest
-from serializers import (
-    _db_event_to_dict, _db_player_stat_to_dict, _db_round_to_dict,
-    _aggregate_match_stats, _db_match_to_dict, _db_session_to_dict,
-)
-from services.fight_metrics import (
-    build_fight_summaries, compute_fight_metrics,
-    _build_match_pauses, _fightlab_hero_role, _fightlab_side, _fight_to_record,
-)
-from services.stats import calculate_pure_stats, compute_player_fight_stats
-from cache import _RESPONSE_CACHE, _response_cache_get, _response_cache_store, _invalidate_response_cache
-
-
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

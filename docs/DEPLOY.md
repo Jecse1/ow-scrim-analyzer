@@ -1,7 +1,7 @@
 # 서버 배포 가이드 (Ubuntu + nginx + pm2)
 
-Ubuntu 22.04/24.04, RAM 1GB 인스턴스(GCP e2-micro 등) 기준. Docker 없이
-venv + pm2 + nginx로 구동하는 저사양 배포 절차. (Docker 배포는 README 참조.)
+Ubuntu 22.04/24.04, RAM 1GB 인스턴스(GCP e2-micro 등) 기준.
+venv + pm2 + nginx로 구동하는 저사양 배포 절차. 배포는 이 문서(pm2+nginx)만 지원한다.
 
 ## 0. 스왑 생성 (1GB RAM 필수)
 
@@ -191,7 +191,7 @@ cd frontend && npm ci && npm run build
 pm2 restart scrim-backend
 ```
 
-스키마가 바뀐 경우: 백엔드 재시작만으로 자동 보정된다(기동 시 누락 컬럼 ADD COLUMN, 로그 `[DB] schema check`). alembic으로 직접 적용할 때는 미스탬프 DB면 `alembic stamp <직전 리비전>` 후 `upgrade head`가 필요할 수 있다.
+스키마가 바뀐 경우: 백엔드 재시작만으로 자동 보정된다(기동 시 누락 컬럼 ADD COLUMN, 로그 `[DB] schema check`).
 
 백엔드 의존성이 바뀐 경우:
 
