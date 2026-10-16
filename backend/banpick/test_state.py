@@ -1,7 +1,15 @@
 # 상태 머신 동치성/정합 테스트 (원본 JS 규칙 재현). pytest 없이도 단독 실행 가능.
 import random
+import pytest
 from banpick import state as sm
 from banpick.data import HERO_BY_ID, MAPS
+
+
+# 인스턴스 저장소에 ruleset.json 이 있어도(RL5 등) 이 파일의 테스트는 default 프리셋 기준으로 돈다.
+@pytest.fixture(autouse=True)
+def _force_default_ruleset(monkeypatch):
+    from banpick.ruleset import DEFAULT
+    monkeypatch.setattr(sm, "RULESET", DEFAULT)
 
 
 def _heroes_by_role(role, exclude=()):

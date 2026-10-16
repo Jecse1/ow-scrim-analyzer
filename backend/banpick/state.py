@@ -1,12 +1,15 @@
 # 밴픽 실시간 대결 — 서버 권위 상태 머신 (순수 함수).
 # 원본 프론트(BanpickApp.tsx)의 상태 머신을 그대로 포팅. 서버가 유일한 진실 원본이며
 # 클라는 액션 전송 + 상태 수신/렌더만 한다. 모든 전이는 여기서 검증(턴/소유권/적법성).
-# ⚠️ 원본과 동작 동치. 규칙 요약:
-#   - 밴: 팀당 1개(총 2), roleLock으로 서로 다른 역할, 과거 세트에 밴한 영웅 재밴 금지.
-#   - 픽: 팀당 5슬롯 [Tank,Damage,Damage,Support,Support], 1v1은 두 팀 동시 블라인드 후 각자 락.
+# ⚠️ 원본과 동작 동치(default 프리셋). 규칙 요약:
+#   - 밴: 규칙 프리셋(ruleset.py)이 정한다. default = 팀당 1개(총 2)·선밴→후밴·역할당 1(=roleLock)·과거 전 세트 자기 팀 밴 재밴 금지.
+#   - 픽: 팀당 5슬롯 [Tank,Damage,Damage,Support,Support], 1v1은 두 팀 동시 블라인드 후 각자 락. (프리셋과 무관 — 불변)
 #   - 타이머: 서버 카운트다운, 만료 시 자동처리 없음(overtime 표시만, 입력 계속 허용).
+# [2026-10-16 프리셋 일반화] 밴 순서/수(banSeq)·역할 상한(roleBanCount)·재밴 금지(repeatBlocked)·세트 시작 맵풀(mapChoices)
+#   을 state 에 두고 프론트에 그대로 브로드캐스트한다(서버 권위). state["ruleset"] 이 규칙 원본.
 import random
 from .data import HERO_BY_ID, MAP_BY_ID, MAPS, hero_role, map_exists
+from .ruleset import RULESET, TYPE_TO_MODE
 
 MODE = {"HERO_BAN_ONLY": 1, "HERO_BAN_WITH_MAP": 2, "FULL": 3}
 SLOT_ROLES = ["Tank", "Damage", "Damage", "Support", "Support"]
@@ -38,23 +41,52 @@ def _series_done(state):
     return wins_a >= tw or wins_b >= tw
 
 
+def _rules(state):
+    return state.get("ruleset") or RULESET
+
+
+def _repeat_blocked(state, team):
+    """재밴 금지 집합(프리셋 banRepeat). scope: none | previousSet | allSets, perTeam: 자기 팀 밴만 / 양 팀 밴.
+    default(allSets, perTeam) = 기존 _team_ban_history 와 동일."""
+    br = _rules(state)["banRepeat"]
+    scope = br["scope"]
+    if scope == "none":
+        return set()
+    sets = state["completedSets"]
+    if scope == "previousSet":
+        sets = sets[-1:]
+    teams = [team] if br["perTeam"] else ["A", "B"]
+    blocked = set()
+    for s in sets:
+        for tm in teams:
+            blocked.update(s.get("bans", {}).get(tm, []))
+    return blocked
+
+
 def _team_ban_history(state, team):
-    # 과거 완료 세트에서 이 팀이 밴한 영웅 집합
-    hist = set()
-    for s in state["completedSets"]:
-        for h in s.get("bans", {}).get(team, []):
-            hist.add(h)
-    return hist
+    # 하위호환 이름(테스트 사용). 프리셋 규칙에 따른 재밴 금지 집합.
+    return _repeat_blocked(state, team)
+
+
+def _set_mode_label(state):
+    """fixed 맵풀에서 이번 세트의 모드 라벨(없으면 None — free 모드 또는 시퀀스 범위 밖)."""
+    mp = _rules(state)["mapPool"]
+    if mp["mode"] != "fixed":
+        return None
+    seq = mp["sequence"].get(f"bo{state['sets']}") or []
+    idx = len(state["completedSets"])
+    return seq[idx] if idx < len(seq) else None
 
 
 def _all_banned_this_set(state):
     return list(state["bans"]["A"]) + list(state["bans"]["B"])
 
 
-def new_state(config, rng=random):
+def new_state(config, rng=random, ruleset=None):
     mode = int(config.get("mode", MODE["FULL"]))
     sets = int(config.get("sets", 3))
     st = {
+        "ruleset": ruleset or RULESET,   # 규칙 프리셋(서버 권위) — 프론트는 이 값을 표시·비활성 판단에 쓴다
         "mode": mode,
         "sets": sets,
         "scrimMode": bool(config.get("scrimMode", False)),
@@ -72,6 +104,9 @@ def new_state(config, rng=random):
         "orderChooser": "A", "mapPicker": "A", "turn": "A",
         "selectedMap": None, "banStarterChoice": None, "attackOrDefense": None,
         "roleLock": {}, "bans": {"A": [], "B": []}, "pendingBan": {"A": None, "B": None},
+        # 프리셋 파생(세트마다 갱신): 밴 순서(팀 배열)·현재 인덱스·역할별 밴 수·팀별 재밴 금지 영웅·이번 세트 맵 후보/모드
+        "banSeq": [], "banIdx": 0, "roleBanCount": {}, "repeatBlocked": {"A": [], "B": []},
+        "mapChoices": None, "setMode": None, "mapAutoAssigned": False,
         "pickSlots": {"A": [None] * 5, "B": [None] * 5}, "activeSlot": {"A": 0, "B": 0},
         "pickLockedTeam": {"A": False, "B": False}, "pickLocked": False,
         # series
@@ -119,8 +154,11 @@ def set_team_name(state, team, name, actor=None):
 
 def _start_next_set(state, rng=random, first=False):
     # 세트 초기화 (원본 세트초기화 useEffect 대응). 선택권: 첫 세트=firstSetPicker, 이후=직전 패자.
+    rules = _rules(state)
     if first or not state["completedSets"]:
         fsp = state["firstSetPicker"]
+        if rules["setStart"]["firstSet"] == "host" and fsp == "AUTO":
+            fsp = "A"  # 1세트는 합의 — 방장(A)이 지정. 미지정이면 방장 자신.
         chooser = (("A" if rng.random() < 0.5 else "B") if fsp == "AUTO" else fsp)
     else:
         last_winner = state["completedSets"][-1].get("winner")
@@ -140,9 +178,56 @@ def _start_next_set(state, rng=random, first=False):
     state["bans"] = {"A": [], "B": []}
     state["winnerThisSet"] = None
     state["awaitingResult"] = False
+    state["banSeq"] = []
+    state["banIdx"] = 0
+    state["roleBanCount"] = {}
+    state["repeatBlocked"] = {"A": sorted(_repeat_blocked(state, "A")), "B": sorted(_repeat_blocked(state, "B"))}
+    state["mapChoices"] = None
+    state["setMode"] = None
+    state["mapAutoAssigned"] = False
     state["phase"] = "BAN_ORDER" if state["mode"] == MODE["HERO_BAN_ONLY"] else "MAP_PICK"
+    # fixed 맵풀: 이번 세트 모드의 맵 중 안 쓴 것만 후보. 같은 모드가 다시 나오거나(안 쓴 맵 자동 배정)
+    #   패자 선택권에 map 이 없으면 자동 배정 → 선/후밴만 고르는 BAN_ORDER 로 간다.
+    label = _set_mode_label(state)
+    if label and state["mode"] != MODE["HERO_BAN_ONLY"]:
+        pool = rules["mapPool"]["modes"][label]
+        choices = [m for m in pool if m not in state["usedMaps"]]
+        state["setMode"] = label
+        state["mapChoices"] = choices
+        seen = any(TYPE_TO_MODE.get(MAP_BY_ID.get(s.get("map"), {}).get("type")) == label
+                   for s in state["completedSets"])
+        auto = bool(choices) and (seen or "map" not in rules["setStart"]["loserChooses"] or len(choices) == 1)
+        if auto:
+            state["selectedMap"] = choices[0]
+            state["mapAutoAssigned"] = True
+            state["phase"] = "BAN_ORDER"
+            _log(state, f"[세트 {len(state['completedSets']) + 1}] 맵 자동 배정: {MAP_BY_ID[choices[0]]['name']}")
     _reset_timer(state)
     return state
+
+
+def _begin_bans(state, starter):
+    """선밴 팀이 정해진 뒤 밴 순서(banSeq)를 프리셋 banOrder 로 전개하고 HERO_BAN 으로 간다. 밴 0개면 바로 다음 단계."""
+    order = _rules(state)["banOrder"]
+    state["banSeq"] = [starter if x == "first" else _other(starter) for x in order]
+    state["banIdx"] = 0
+    if not state["banSeq"]:
+        state["turn"] = starter
+        _after_bans(state)
+        return
+    state["turn"] = state["banSeq"][0]
+    state["phase"] = "HERO_BAN"
+    _reset_timer(state)
+
+
+def _after_bans(state):
+    if state["mode"] == MODE["FULL"]:
+        state["phase"] = "HERO_PICK"
+        _reset_timer(state)
+    else:
+        # 밴만/맵+밴: 밴 종료 → 결과 대기
+        state["awaitingResult"] = True
+        state["timerRunning"] = False
 
 
 def _reset_timer(state):
@@ -161,9 +246,13 @@ def _map_pickable(state, map_id):
         return False
     if map_id in state["usedMaps"]:
         return False
+    if state.get("mapChoices") is not None:
+        # fixed 맵풀: 이번 세트 모드의 후보만
+        return map_id in state["mapChoices"]
     mtype = MAP_BY_ID[map_id]["type"]
     cycle = state["usedModesCycle"]
-    if len(cycle) < 5 and mtype in cycle:
+    window = _rules(state)["mapPool"].get("noRepeatModeWithin", 5)
+    if len(cycle) < window and mtype in cycle:
         return False
     return True
 
@@ -183,10 +272,8 @@ def apply_map_pick(state, team, map_id, ban_order, side=None):
     state["banStarterChoice"] = ban_order
     state["attackOrDefense"] = side
     starter = _other(state["mapPicker"]) if ban_order == "OPPONENT" else state["mapPicker"]
-    state["turn"] = starter
-    state["phase"] = "HERO_BAN"
-    _reset_timer(state)
     _log(state, f"[세트 {len(state['completedSets']) + 1}] 맵 확정: {MAP_BY_ID[map_id]['name']}")
+    _begin_bans(state, starter)
     return state
 
 
@@ -200,9 +287,7 @@ def apply_ban_order(state, team, ban_order):
         raise BanpickError("INVALID_ACTION")
     state["banStarterChoice"] = ban_order
     starter = _other(state["orderChooser"]) if ban_order == "OPPONENT" else state["orderChooser"]
-    state["turn"] = starter
-    state["phase"] = "HERO_BAN"
-    _reset_timer(state)
+    _begin_bans(state, starter)
     return state
 
 
@@ -214,34 +299,31 @@ def apply_ban(state, team, hero_id):
     hero = HERO_BY_ID.get(hero_id)
     if not hero:
         raise BanpickError("INVALID_ACTION", "unknown hero")
-    if len(state["bans"][team]) >= 1:
+    rules = _rules(state)
+    seq = state["banSeq"]
+    if len(state["bans"][team]) >= seq.count(team):
         raise BanpickError("INVALID_ACTION", "already banned this set")
-    if hero_id in _team_ban_history(state, team):
+    if hero_id in _repeat_blocked(state, team):
         raise BanpickError("INVALID_ACTION", "banned in a previous set")
     role = hero["role"]
-    lock = state["roleLock"].get(role)
-    if lock and lock != team:
-        raise BanpickError("INVALID_ACTION", "role locked by opponent")
+    if state["roleBanCount"].get(role, 0) >= rules["roleCapPerSet"]:
+        # default(상한 1)에서는 기존 roleLock("role locked by opponent")과 같은 거부
+        raise BanpickError("INVALID_ACTION", "role ban cap reached")
     if hero_id in _all_banned_this_set(state):
         raise BanpickError("INVALID_ACTION", "already banned")
 
     state["bans"][team].append(hero_id)
+    state["roleBanCount"][role] = state["roleBanCount"].get(role, 0) + 1
     if role not in state["roleLock"]:
-        state["roleLock"][role] = team
+        state["roleLock"][role] = team  # 하위호환 표시용(먼저 밴한 팀). 판정은 roleBanCount/roleCapPerSet.
     state["pendingBan"][team] = None
     _log(state, f"{state['teamName'][team]} 밴 확정: {hero['name']}")
 
-    total = len(state["bans"]["A"]) + len(state["bans"]["B"])
-    if total >= 2:
-        if state["mode"] == MODE["FULL"]:
-            state["phase"] = "HERO_PICK"
-            _reset_timer(state)
-        else:
-            # 밴만/맵+밴: 밴 종료 → 결과 대기
-            state["awaitingResult"] = True
-            state["timerRunning"] = False
+    state["banIdx"] += 1
+    if state["banIdx"] >= len(seq):
+        _after_bans(state)
     else:
-        state["turn"] = _other(team)
+        state["turn"] = seq[state["banIdx"]]
         _reset_timer(state)
     return state
 
@@ -360,7 +442,8 @@ def apply_set_result(state, result, score_a=None, score_b=None):
         if m:
             cyc = set(state["usedModesCycle"])
             cyc.add(m["type"])
-            state["usedModesCycle"] = [] if len(cyc) >= 5 else list(cyc)
+            window = _rules(state)["mapPool"].get("noRepeatModeWithin", 5)
+            state["usedModesCycle"] = [] if len(cyc) >= window else list(cyc)
     _log(state, f"[세트 {len(state['completedSets'])}] 승자: {state['teamName'][winner] if winner else '무승부'}")
 
     state["seriesDone"] = _series_done(state)

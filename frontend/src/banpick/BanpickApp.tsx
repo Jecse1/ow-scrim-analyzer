@@ -3,7 +3,7 @@ import "./banpick.css";
 import { useBanpickWS } from "./useBanpickWS";
 import { useLanguage } from "../LanguageContext";
 import { useTheme } from "../ThemeContext";
-import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName, getDisplayName, getMapDisplayName } from "../gameData";
+import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName, getDisplayName, getMapDisplayName, getModeLabel } from "../gameData";
 // [STEP1-플랜] 자산 컴포넌트·리졸버는 공유 모듈로 추출(값·렌더 동일). 플랜 캔버스와 공용.
 import { HeroThumb, MapThumb, BanSlashOverlay, MapTypeBadge, RoleIcon } from "../shared/heroMapAssets";
 
@@ -150,6 +150,12 @@ const STR = {
     openLogs: "로그",
     seriesEnd: "경기가 종료되었습니다",
     endBtn: "종료",
+    // [ruleset] 규칙 프리셋 표시
+    rulesName: "규칙",
+    setModeLabel: "이번 세트 모드",
+    modeOrder: "모드 순서",
+    autoMap: "맵 자동 배정(남은 맵)",
+    banCount: "밴",
   },
   en: {
     title: "OW2 BAN Simulator",
@@ -218,6 +224,11 @@ const STR = {
     openLogs: "Logs",
     seriesEnd: "Series Finished",
     endBtn: "End",
+    rulesName: "Rules",
+    setModeLabel: "This set",
+    modeOrder: "Mode order",
+    autoMap: "Map auto-assigned (remaining)",
+    banCount: "bans",
   },
   zh: {
     title: "OW2 BAN Simulator",
@@ -286,6 +297,11 @@ const STR = {
     openLogs: "日志",
     seriesEnd: "比赛已结束",
     endBtn: "结束",
+    rulesName: "规则",
+    setModeLabel: "本局模式",
+    modeOrder: "模式顺序",
+    autoMap: "自动分配地图(剩余)",
+    banCount: "禁用",
   },
 } as const;
 
@@ -737,7 +753,7 @@ function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사
 /* 선택된 맵 이미지를 전체 폭 배경(blur+어둡게)으로 깔고 좌우 끝은 패널색으로 페이드.
    중앙에 "선택된 맵 · <모드>" + 맵명 크게, 우상단에 페이즈·턴. 밴 셀은 헤더에서 제거(팀 열로 이동).
    HERO_BAN_ONLY/맵 없음은 중립 배경 + 페이즈만. 맵 이미지=public/maps/<맵명>.webp. */
-function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, heroById, t, lang }: {
+function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, heroById, t, lang, banQuota }: {
   selectedMap: string | null;
   mode: number;
   phase: Phase;
@@ -747,6 +763,7 @@ function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, her
   heroById?: (id: string) => Hero | undefined;
   t: I18n;
   lang: Lang;
+  banQuota?: Record<Team, number>;   // [ruleset] 팀별 밴 수(셀 수). 미지정=1(기존)
 }) {
   const m = selectedMap ? MAPS.find((x) => x.id === selectedMap) : null;
   const hasMap = mode !== MODE.HERO_BAN_ONLY && !!m;
@@ -758,11 +775,11 @@ function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, her
   const turnWord = lang === "ko" ? "턴" : lang === "zh" ? "回合" : "turn";
   // [STEP7] 밴 페이즈에서만 양 팀 밴 현황 셀을 헤더 안(좌하단)에 표시. 맵명(중앙)과 겹치지 않음.
   const showBans = phase === "HERO_BAN" && !!bans && !!heroById;
-  const banCell = (tm: Team) => {
-    const hid = bans![tm][0] ?? null;
+  const banCell = (tm: Team, idx = 0) => {
+    const hid = bans![tm][idx] ?? null;
     const name = hid ? getDisplayName(heroById!(hid)?.name ?? hid) : "—";
     return (
-      <div key={tm} className="bp-bghdr-bancell">
+      <div key={`${tm}${idx}`} className="bp-bghdr-bancell">
         <div className="bp-bghdr-banthumb">
           {hid ? (<><HeroThumb id={hid} contain={false} /><BanSlashOverlay /></>) : <span className="bp-bghdr-bandash">—</span>}
         </div>
@@ -797,8 +814,8 @@ function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, her
       </div>
       {showBans && (
         <div className="bp-bghdr-bans">
-          {banCell("A")}
-          {banCell("B")}
+          {Array.from({ length: Math.max(1, banQuota?.A ?? 1) }, (_, i) => banCell("A", i))}
+          {Array.from({ length: Math.max(1, banQuota?.B ?? 1) }, (_, i) => banCell("B", i))}
         </div>
       )}
     </div>
@@ -867,6 +884,7 @@ type PickColumnProps = {
   t: I18n;
   phase: Phase;                                   // [STEP5] HERO_BAN/HERO_PICK 공용 열 — 픽 컨트롤은 PICK만
   bans: Record<Team, string[]>;                   // [STEP5] 팀 밴(헤더 대신 열 최상단 밴 카드)
+  banQuota?: Record<Team, number>;                // [ruleset] 팀별 밴 수(카드 수). 미지정=1
   pickSlots: Record<Team, (string | null)[]>;
   pickLockedTeam: Record<Team, boolean>;
   activeSlot: Record<Team, number>;
@@ -892,8 +910,7 @@ const PickColumn = React.memo(function PickColumn({
   onUnlock,
   canUnlock,
   canPickForTeam,
-  heroById,
-}: PickColumnProps) {
+  heroById, banQuota}: PickColumnProps) {
   const label = team === "A" ? teamName.A : teamName.B;
   const locked = pickLockedTeam[team];
   const roleLabel = (r: Role) => ROLE_LABELS[lang][r];
@@ -913,8 +930,12 @@ const PickColumn = React.memo(function PickColumn({
             </span>
           )}
         </div>
-        {/* [STEP5] 밴 카드 — 열 최상단, 픽 슬롯 바로 위 */}
-        <BanCard heroId={bans[team][0] ?? null} heroById={heroById} lang={lang} />
+        {/* [STEP5] 밴 카드 — 열 최상단, 픽 슬롯 바로 위. [ruleset] 팀 밴 수만큼 카드 */}
+        <div className="flex gap-1">
+          {Array.from({ length: Math.max(1, banQuota?.[team] ?? 1) }, (_, i) => (
+            <div key={i} className="flex-1 min-w-0"><BanCard heroId={bans[team][i] ?? null} heroById={heroById} lang={lang} /></div>
+          ))}
+        </div>
         {/* 픽 완료 — 상태 배지형 버튼(HERO_PICK 전용): 완료=초록 / 진행가능=파랑 / 대기=중립. */}
         {phase === "HERO_PICK" && (() => {
           const allFilled = !pickSlots[team].some((v) => v === null);
@@ -1149,6 +1170,37 @@ export default function BanpickApp() {
     return hist;
   }, [completedSets]);
 
+  /* === [ruleset 2026-10-16] 규칙 프리셋 — 서버 state(remote.ruleset)가 원본. 원격 모드에서만 적용되고
+     SOLO/스크림(서버 없음)은 기존 로컬 규칙(default 동치)을 그대로 쓴다. 판정은 서버가 하고 여기선 표시·비활성만. */
+  const ruleset = remoteMode ? (remote?.ruleset ?? null) : null;
+  const banSeq: Team[] = (remoteMode && Array.isArray(remote?.banSeq)) ? remote.banSeq : [];
+  const banQuota: Record<Team, number> = useMemo(() => {
+    if (!ruleset) return { A: 1, B: 1 };
+    if (banSeq.length) return { A: banSeq.filter((x) => x === "A").length, B: banSeq.filter((x) => x === "B").length };
+    const n = ruleset.banOrder as string[];
+    return { A: n.filter((x) => x === "first").length, B: n.filter((x) => x === "second").length }; // 선밴 팀 미정: 표시용 근사
+  }, [ruleset, banSeq]);
+  const roleBanCount: Record<string, number> = (remoteMode && remote?.roleBanCount) || {};
+  const roleCap: number = ruleset?.roleCapPerSet ?? 1;
+  const repeatBlocked: Record<Team, string[]> | null = (remoteMode && remote?.repeatBlocked) || null;
+  const mapChoices: string[] | null = (remoteMode && Array.isArray(remote?.mapChoices)) ? remote.mapChoices : null;
+  const setModeKo: string | null = (remoteMode && remote?.setMode) || null;
+  const mapAutoAssigned: boolean = !!(remoteMode && remote?.mapAutoAssigned);
+  const modeSequence: string[] | null = (ruleset && ruleset.mapPool?.mode === "fixed")
+    ? (ruleset.mapPool.sequence?.[`bo${sets}`] ?? null) : null;
+  // 역할 비활성(밴 그리드·역할 칩): 원격=역할 상한(양 팀 합산) / 로컬=기존 roleLock
+  const roleDisabledForBan = (r: Role): boolean =>
+    ruleset ? (roleBanCount[r] ?? 0) >= roleCap : !!(roleLock[r] && roleLock[r] !== turn);
+  // [ruleset] 모드 순서 표시(fixed 맵풀): 현재 세트 강조
+  const renderModeOrder = () => modeSequence ? (
+    <div className="text-xs mb-2 flex flex-wrap items-center gap-1">
+      <span className="opacity-70">{t.rulesName}: <b>{ruleset.name}</b> · {t.modeOrder}:</span>
+      {modeSequence.map((mk, i) => (
+        <span key={i} className={"px-2 py-0.5 rounded-full border " + (i === completedSets.length ? theme.activeGreen : "border-neutral-400 opacity-60")}>{i + 1}. {getModeLabel(mk, lang)}</span>
+      ))}
+    </div>
+  ) : null;
+
   // ... App 컴포넌트 내부 ...
 
   const filteredMapsForPick = useMemo(() => {
@@ -1164,8 +1216,10 @@ export default function BanpickApp() {
       if (usedModesCycle.size < 5 && usedModesCycle.has(m.type)) return false;
       return true;
     };
+    // [ruleset] fixed 맵풀이면 서버가 준 이번 세트 후보만(모드 필터·사이클 규칙 무시)
+    if (mapChoices) return available.filter((m) => mapChoices.includes(m.id));
     return available.filter((m) => (mapFilter === "All" ? true : m.type === mapFilter)).filter(typeAllowed);
-  }, [mapFilter, usedMaps, usedModesCycle, completedSets.length]);
+  }, [mapFilter, usedMaps, usedModesCycle, completedSets.length, mapChoices]);
 
   
   const allBannedThisSet = useMemo(() => bans.A.concat(bans.B), [bans]);
@@ -1403,14 +1457,13 @@ export default function BanpickApp() {
 
   useEffect(() => {
     if (phase !== "HERO_BAN") return;
-    const allowed: Role[] = (["Tank", "Damage", "Support"] as Role[]).filter((r) => {
-      const lock = roleLock[r];
-      return !lock || lock === turn;
-    });
+    // [ruleset] 원격은 역할 상한(roleBanCount/roleCapPerSet), 로컬은 기존 roleLock — 역할 칩 필터와 같은 판정
+    const allowed: Role[] = (["Tank", "Damage", "Support"] as Role[]).filter((r) => !roleDisabledForBan(r));
     if (!allowed.includes(filterRole)) {
       setFilterRole(allowed[0] ?? "Tank");
     }
-  }, [phase, turn, roleLock, filterRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, turn, roleLock, filterRole, remote?.roleBanCount, roleCap]);
 
   // 세트 초기화 (직전 세트 패자에게 권한)
   useEffect(() => {
@@ -1924,19 +1977,24 @@ export default function BanpickApp() {
     <>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {(["Tank", "Damage", "Support"] as Role[])
-          .filter((r) => { const lock = roleLock[r]; return !lock || lock === turn; })
+          .filter((r) => !roleDisabledForBan(r))
           .map((r) => (
             <button key={r} onClick={() => setFilterRole(r)} className={"px-3 py-1 rounded-full border text-xs " + (filterRole === r ? theme.activeGreen : "border-neutral-300")}>{roleLabel(r)}</button>
           ))}
-        <div className="ml-auto text-xs">{t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b> · {t.timeLeft}: <b>{timer}s</b></div>
+        <div className="ml-auto text-xs">
+          {t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b>
+          {ruleset && banSeq.length > 1 && <> · {t.banCount} <b>{Math.min((remote?.banIdx ?? 0) + 1, banSeq.length)}/{banSeq.length}</b></>}
+          {" "}· {t.timeLeft}: <b>{timer}s</b>
+        </div>
       </div>
       <div className="mx-auto w-full max-w-[1440px] px-1 sm:px-2">
       <div className="grid gap-3 bp-grid-ban">
         {HEROES.filter((h) => h.role === filterRole).map((h) => {
-          const isLockedRole = roleLock[h.role] && roleLock[h.role] !== turn;
+          // [ruleset] 원격: 서버가 준 역할 상한·재밴 금지·팀 밴 수. 로컬(SOLO): 기존 default 규칙.
+          const isLockedRole = roleDisabledForBan(h.role);
           const bannedThisSet = bans.A.includes(h.id) || bans.B.includes(h.id);
-          const bannedByThisTeamBefore = teamBanHistory[turn].has(h.id);
-          const disabled = !canBanThisTurn || !!isLockedRole || bannedThisSet || bannedByThisTeamBefore || bans[turn].length >= 1;
+          const bannedByThisTeamBefore = repeatBlocked ? repeatBlocked[turn].includes(h.id) : teamBanHistory[turn].has(h.id);
+          const disabled = !canBanThisTurn || !!isLockedRole || bannedThisSet || bannedByThisTeamBefore || bans[turn].length >= banQuota[turn];
           const selected = pendingBan[turn] === h.id;
           return (
             <div
@@ -1962,7 +2020,7 @@ export default function BanpickApp() {
 
   // [STEP5] PickColumn 공통 props(A/B) — HERO_BAN·HERO_PICK 공용.
   const pickColProps = (team: Team) => ({
-    team, teamName, lang, t, phase, bans, pickSlots, pickLockedTeam,
+    team, teamName, lang, t, phase, bans, banQuota, pickSlots, pickLockedTeam,
     activeSlot, onFocusSlot: focusSlot, confirmPick, onUnlock: unlockPick, canUnlock: canUnlockTeam(team),
     canPickForTeam, heroById,
   });
@@ -2021,14 +2079,18 @@ export default function BanpickApp() {
             {phase === "MAP_PICK" ? (
               <h2 className="font-semibold mb-3">{mode !== MODE.HERO_BAN_ONLY && STR[lang].mapPick}</h2>
             ) : (
-              <BanpickHeader selectedMap={selectedMap} mode={mode} phase={phase} turnTeam={headerTurnTeam} teamName={teamName} bans={bans} heroById={heroById} t={t} lang={lang} />
+              <BanpickHeader selectedMap={selectedMap} mode={mode} phase={phase} turnTeam={headerTurnTeam} teamName={teamName} bans={bans} heroById={heroById} t={t} lang={lang} banQuota={banQuota} />
             )}
 
             {/* MAP PICK */}
             {mode !== MODE.HERO_BAN_ONLY && phase === "MAP_PICK" && (
               <div>
+                {renderModeOrder()}
+                {setModeKo && (
+                  <div className="text-xs mb-2">{t.setModeLabel}: <b>{getModeLabel(setModeKo, lang)}</b> ({filteredMapsForPick.length})</div>
+                )}
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  {(["All", "Control", "Escort", "Hybrid", "Push", "Flashpoint"] as const).map((mt) => (
+                  {!mapChoices && (["All", "Control", "Escort", "Hybrid", "Push", "Flashpoint"] as const).map((mt) => (
                     <button
                       key={mt}
                       onClick={() => setMapFilter((prev) => (prev === mt ? "All" : mt))}
@@ -2126,6 +2188,10 @@ export default function BanpickApp() {
             {/* BAN ORDER */}
             {phase === "BAN_ORDER" && (
               <div>
+                {renderModeOrder()}
+                {mapAutoAssigned && selectedMap && (
+                  <div className="text-xs mb-2">{t.autoMap}: <b>{getMapDisplayName(MAPS.find((x) => x.id === selectedMap)?.name ?? selectedMap, lang)}</b></div>
+                )}
                 <div className="text-xs mb-2">
                   {t.chooserRight}: <b>{orderChooser === "A" ? teamName.A : teamName.B}</b>
                 </div>
@@ -2220,7 +2286,9 @@ export default function BanpickApp() {
                           )}
                         </div>
                         <div className="flex gap-1 items-stretch">
-                          <div className="flex-1 min-w-0"><BanCard heroId={bans[tm][0] ?? null} heroById={heroById} lang={lang} mobile /></div>
+                          {Array.from({ length: Math.max(1, banQuota[tm]) }, (_, i) => (
+                            <div key={i} className="flex-1 min-w-0"><BanCard heroId={bans[tm][i] ?? null} heroById={heroById} lang={lang} mobile /></div>
+                          ))}
                           {SLOT_ROLES.map((sr, i) => {
                             const hid = pickSlots[tm][i];
                             const active = activeSlot[tm] === i && !locked;
