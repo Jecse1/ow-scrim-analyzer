@@ -6,6 +6,11 @@ import { useTheme } from "../ThemeContext";
 import { BANPICK_HEROES, BANPICK_MAPS, getHeroByName, getDisplayName, getMapDisplayName, getModeLabel } from "../gameData";
 // [STEP1-플랜] 자산 컴포넌트·리졸버는 공유 모듈로 추출(값·렌더 동일). 플랜 캔버스와 공용.
 import { HeroThumb, MapThumb, BanSlashOverlay, MapTypeBadge, RoleIcon } from "../shared/heroMapAssets";
+// [ruleset-solo] SOLO 로컬 규칙 해석(서버 state.py 와 같은 의미). 1v1 은 서버 판정.
+import {
+  DEFAULT_RULESET, normalizeRuleset, isDefaultRuleset, banSequence, banRejectReason, repeatBlocked as rsRepeatBlocked,
+  roleBanCountOf, firstSetChooser, nextSetMapPlan, modeWindow, type Ruleset,
+} from "./rulesLocal";
 
 // ── 멀티플레이어(1v1 실시간 대전) 스텁 — 이번 통합 단계는 SOLO 전용 ──
 // 원본은 Firebase(Firestore 실시간 룸 + 익명 auth)로 코치 대전을 구현하지만,
@@ -1058,6 +1063,21 @@ export default function BanpickApp() {
   const roomId = ws.roomCode;                              // 서버 발급 6자리 방 코드
   const syncOn = remoteMode && !!roomId;
   // 서버가 유일 권위 → 클라 patch/pushFull은 미사용(액션은 wsSend로만).
+
+  /* [ruleset-solo] SOLO 규칙 프리셋: 화면 진입 시 GET /api/banpick/ruleset 1회. 실패(네트워크·404)면 default.
+     시작 후 도착한 응답은 버린다(진행 중 규칙 변경 방지). 스크림 모드는 자유 모드라 프리셋 미적용(localRules=null). */
+  const [soloRuleset, setSoloRuleset] = useState<Ruleset>(DEFAULT_RULESET);
+  const soloStartedRef = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/banpick/ruleset")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && !soloStartedRef.current) setSoloRuleset(normalizeRuleset(j)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const localRules: Ruleset | null = (!remoteMode && !scrimMode) ? soloRuleset : null;
+  const [localBanSeq, setLocalBanSeq] = useState<Team[]>([]);   // state._begin_bans 의 banSeq(로컬)
   const patch = React.useCallback((_p?: any) => {}, []);
   const pushFull = React.useCallback((_s?: any) => {}, []);
 
@@ -1172,20 +1192,32 @@ export default function BanpickApp() {
 
   /* === [ruleset 2026-10-16] 규칙 프리셋 — 서버 state(remote.ruleset)가 원본. 원격 모드에서만 적용되고
      SOLO/스크림(서버 없음)은 기존 로컬 규칙(default 동치)을 그대로 쓴다. 판정은 서버가 하고 여기선 표시·비활성만. */
-  const ruleset = remoteMode ? (remote?.ruleset ?? null) : null;
-  const banSeq: Team[] = (remoteMode && Array.isArray(remote?.banSeq)) ? remote.banSeq : [];
+  // [ruleset-solo] SOLO(스크림 제외)도 같은 표시·비활성 코드를 쓰고, 입력만 rulesLocal 계산값으로 바꾼다.
+  const ruleset = remoteMode ? (remote?.ruleset ?? null) : localRules;
+  const banSeq: Team[] = remoteMode ? (Array.isArray(remote?.banSeq) ? remote.banSeq : []) : (localRules ? localBanSeq : []);
+  const roleOfHero = (id: string) => HEROES.find((h) => h.id === id)?.role;
+  const mapTypeOf = (id: string) => MAPS.find((m) => m.id === id)?.type;
+  const localPlan = useMemo(
+    () => (localRules ? nextSetMapPlan(localRules, { sets, completedSets, usedMaps, heroBanOnly: mode === MODE.HERO_BAN_ONLY, mapTypeOf })
+                      : { setMode: null, mapChoices: null, autoMap: null }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [localRules, sets, completedSets, usedMaps, mode]);
   const banQuota: Record<Team, number> = useMemo(() => {
     if (!ruleset) return { A: 1, B: 1 };
     if (banSeq.length) return { A: banSeq.filter((x) => x === "A").length, B: banSeq.filter((x) => x === "B").length };
     const n = ruleset.banOrder as string[];
     return { A: n.filter((x) => x === "first").length, B: n.filter((x) => x === "second").length }; // 선밴 팀 미정: 표시용 근사
   }, [ruleset, banSeq]);
-  const roleBanCount: Record<string, number> = (remoteMode && remote?.roleBanCount) || {};
+  const roleBanCount: Record<string, number> = remoteMode ? (remote?.roleBanCount || {}) : (localRules ? roleBanCountOf(bans, roleOfHero) : {});
   const roleCap: number = ruleset?.roleCapPerSet ?? 1;
-  const repeatBlocked: Record<Team, string[]> | null = (remoteMode && remote?.repeatBlocked) || null;
-  const mapChoices: string[] | null = (remoteMode && Array.isArray(remote?.mapChoices)) ? remote.mapChoices : null;
-  const setModeKo: string | null = (remoteMode && remote?.setMode) || null;
-  const mapAutoAssigned: boolean = !!(remoteMode && remote?.mapAutoAssigned);
+  const repeatBlocked: Record<Team, string[]> | null = remoteMode ? (remote?.repeatBlocked || null)
+    : (localRules ? { A: [...rsRepeatBlocked(localRules, completedSets, "A")], B: [...rsRepeatBlocked(localRules, completedSets, "B")] } : null);
+  const mapChoices: string[] | null = remoteMode ? (Array.isArray(remote?.mapChoices) ? remote.mapChoices : null) : localPlan.mapChoices;
+  const setModeKo: string | null = remoteMode ? (remote?.setMode || null) : localPlan.setMode;
+  const mapAutoAssigned: boolean = remoteMode ? !!remote?.mapAutoAssigned : !!localPlan.autoMap;
+  const banIdxNow: number = remoteMode ? (remote?.banIdx ?? 0) : bans.A.length + bans.B.length;
+  // SOLO default 는 기존 화면 그대로(밴 n/N 표시 없음). 원격은 기존대로 표시.
+  const showBanCounter = !!ruleset && banSeq.length > 1 && (remoteMode || !isDefaultRuleset(ruleset));
   const modeSequence: string[] | null = (ruleset && ruleset.mapPool?.mode === "fixed")
     ? (ruleset.mapPool.sequence?.[`bo${sets}`] ?? null) : null;
   // 역할 비활성(밴 그리드·역할 칩): 원격=역할 상한(양 팀 합산) / 로컬=기존 roleLock
@@ -1213,13 +1245,13 @@ export default function BanpickApp() {
       // 같은 모드(쟁탈, 호위 등)가 너무 자주 반복되지 않도록 하는 로직은 유지하거나
       // 원하시면 아래 조건도 삭제하여 모든 맵을 항상 열어둘 수 있습니다.
       // 현재는 5세트 이내에 같은 모드 반복 금지 로직만 남겨둡니다.
-      if (usedModesCycle.size < 5 && usedModesCycle.has(m.type)) return false;
+      if (usedModesCycle.size < (localRules ? modeWindow(localRules) : 5) && usedModesCycle.has(m.type)) return false;
       return true;
     };
     // [ruleset] fixed 맵풀이면 서버가 준 이번 세트 후보만(모드 필터·사이클 규칙 무시)
     if (mapChoices) return available.filter((m) => mapChoices.includes(m.id));
     return available.filter((m) => (mapFilter === "All" ? true : m.type === mapFilter)).filter(typeAllowed);
-  }, [mapFilter, usedMaps, usedModesCycle, completedSets.length, mapChoices]);
+  }, [mapFilter, usedMaps, usedModesCycle, completedSets.length, mapChoices, localRules]);
 
   
   const allBannedThisSet = useMemo(() => bans.A.concat(bans.B), [bans]);
@@ -1463,7 +1495,7 @@ export default function BanpickApp() {
       setFilterRole(allowed[0] ?? "Tank");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, turn, roleLock, filterRole, remote?.roleBanCount, roleCap]);
+  }, [phase, turn, roleLock, filterRole, remote?.roleBanCount, roleCap, bans]);
 
   // 세트 초기화 (직전 세트 패자에게 권한)
   useEffect(() => {
@@ -1476,7 +1508,8 @@ export default function BanpickApp() {
     }
     const first = completedSets.length === 0;
     const lastWinner: Team | null = first ? null : completedSets[completedSets.length - 1].winner ?? null;
-    const chooser: Team = first ? (firstSetPicker === "AUTO" ? (Math.random() < 0.5 ? "A" : "B") : firstSetPicker) : lastWinner ? (lastWinner === "A" ? "B" : "A") : "A";
+    const firstChooser = (): Team => localRules ? firstSetChooser(localRules, firstSetPicker) : (firstSetPicker === "AUTO" ? (Math.random() < 0.5 ? "A" : "B") : firstSetPicker);
+    const chooser: Team = first ? firstChooser() : lastWinner ? (lastWinner === "A" ? "B" : "A") : "A";
     setOrderChooser(chooser);
     setMapPicker(chooser);
     setTurn(chooser);
@@ -1491,7 +1524,16 @@ export default function BanpickApp() {
     setPickLocked(false);
     setBans({ A: [], B: [] });
     setWinnerThisSet(null);
+    setLocalBanSeq([]);
+    // [ruleset-solo] fixed 맵풀: 같은 모드 재등장·후보 1개·패자 맵 선택 없음 → 남은 맵 자동 배정 후 선/후밴만(BAN_ORDER)
+    if (localRules && localPlan.autoMap) {
+      setSelectedMap(localPlan.autoMap);
+      logLine(`[세트 ${completedSets.length + 1}] ${t.autoMap}: ${MAPS.find((m) => m.id === localPlan.autoMap)?.name ?? localPlan.autoMap}`);
+      setPhase("BAN_ORDER");
+      return;
+    }
     setPhase(mode === MODE.HERO_BAN_ONLY ? "BAN_ORDER" : "MAP_PICK");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedSets.length, mode, started, seriesDone, firstSetPicker, scrimMode]);
 
   // 시리즈 종료되면 요약 모달 자동 오픈
@@ -1529,6 +1571,7 @@ export default function BanpickApp() {
       wsSend({ type: "start" });   // 서버 권위: 시작은 서버가 판정
       return;
     }
+    soloStartedRef.current = true;   // [ruleset-solo] 이후 도착한 프리셋 응답은 무시
     setStarted(true);
 
     if (scrimMode) {
@@ -1537,14 +1580,27 @@ export default function BanpickApp() {
     }
   }
 
+  /** [ruleset-solo] state._begin_bans: 선밴 팀 확정 → banSeq 전개 → 첫 턴. 밴 0개면 바로 다음 단계. true=처리함 */
+  function beginLocalBans(starter: Team): boolean {
+    if (!localRules) return false;
+    const seq = banSequence(localRules, starter);
+    setLocalBanSeq(seq);
+    if (!seq.length) { setTurn(starter); proceedAfterBans(); return true; }
+    setTurn(seq[0]);
+    setPhase("HERO_BAN");
+    return true;
+  }
+
   function confirmBanOrderClick() {
     if (remoteMode) { wsSend({ type: "ban_order", ban_order: banStarterChoice }); return; }
     if (!banStarterChoice) return;
     const starter: Team = banStarterChoice === "OPPONENT" ? otherTeam(orderChooser) : orderChooser;
 
     // 로컬 반영
-    setTurn(starter);
-    setPhase("HERO_BAN");
+    if (!beginLocalBans(starter)) {
+      setTurn(starter);
+      setPhase("HERO_BAN");
+    }
 
     // 서버 반영 (게스트가 눌러도 서버에 반영되도록!)
     if (syncOn) {
@@ -1591,8 +1647,10 @@ export default function BanpickApp() {
     popToast(t.toastMap);
 
     // 로컬 상태 업데이트
-    setTurn(starter);
-    setPhase("HERO_BAN");
+    if (!beginLocalBans(starter)) {
+      setTurn(starter);
+      setPhase("HERO_BAN");
+    }
     setRun(true); // 타이머 다시 시작
 
     // 서버 반영 (게스트가 눌러도 반영되도록)
@@ -1621,6 +1679,10 @@ export default function BanpickApp() {
     if (remoteMode) { wsSend({ type: "ban", hero_id: id }); return; }
     const hero = heroById(id);
     if (!hero) return;
+    if (localRules) {
+      // [ruleset-solo] state.apply_ban 과 같은 거부 조건(팀 밴 수·재밴 범위·역할 상한·중복)
+      if (banRejectReason(localRules, { team, heroId: id, role: hero.role, bans, banSeq: localBanSeq, completedSets, roleOf: roleOfHero })) return;
+    } else {
     if (bans[team].length >= 1) return;
     
     // ★ 핵심 복구: 이 팀이 과거 세트에 이 영웅을 밴 했었다면, 이번에는 밴 할 수 없음
@@ -1628,6 +1690,7 @@ export default function BanpickApp() {
 
     if (roleLock[hero.role] && roleLock[hero.role] !== team) return;
     if (allBannedThisSet.includes(id)) return;
+    }
 
     const newBans: Record<Team, string[]> = { ...bans, [team]: [...bans[team], id] };
     const newRoleLock = roleLock[hero.role] ? roleLock : { ...roleLock, [hero.role]: team };
@@ -1638,14 +1701,16 @@ export default function BanpickApp() {
     const total = newBans.A.length + newBans.B.length;
     let nextPhase: Phase = phase;
     let nextTurn: Team = turn;
+    // [ruleset-solo] 프리셋: banSeq 끝까지 / 그 외(스크림): 기존 총 2밴
+    const bansDone = localRules ? total >= localBanSeq.length : total >= 2;
 
-    if (total >= 2) {
+    if (bansDone) {
       if (mode === MODE.FULL) nextPhase = "HERO_PICK";
       else {
         // 요약 모달 등은 아래 setState에서 그대로 동작
       }
     } else {
-      nextTurn = otherTeam(team);
+      nextTurn = localRules ? localBanSeq[total] : otherTeam(team);
     }
 
     // 로컬 반영
@@ -1654,7 +1719,7 @@ export default function BanpickApp() {
     setPendingBan(newPending);
     if (nextTurn !== turn) setTurn(nextTurn);
 
-    if (total >= 2) {
+    if (bansDone) {
       if (mode === MODE.FULL) setPhase("HERO_PICK");
       else {
         setShowSummaryOpen(true);
@@ -1671,7 +1736,7 @@ export default function BanpickApp() {
         pendingBan: newPending,
         turn: nextTurn,
       };
-      if (total >= 2) payload.phase = nextPhase;
+      if (bansDone) payload.phase = nextPhase;
       patch(payload);
     }
 
@@ -1821,7 +1886,7 @@ export default function BanpickApp() {
         setUsedModesCycle((prev) => {
           const nxt = new Set(prev);
           nxt.add(m.type);
-          return nxt.size >= 5 ? new Set() : nxt;
+          return nxt.size >= (localRules ? modeWindow(localRules) : 5) ? new Set() : nxt;
         });
       }
     }
@@ -1890,8 +1955,10 @@ export default function BanpickApp() {
       const starter: Team = choice === "OPPONENT" ? otherTeam(orderChooser) : orderChooser;
 
       setBanStarterChoice(choice);
-      setTurn(starter);
-      setPhase("HERO_BAN");
+      if (!beginLocalBans(starter)) {
+        setTurn(starter);
+        setPhase("HERO_BAN");
+      }
 
       if (syncOn) {
         patch({
@@ -1932,6 +1999,8 @@ export default function BanpickApp() {
     setRoleLock({});
     setPendingBan({ A: null, B: null });
     setAttackOrDefense(null); // ‼️ 초기화 추가
+    setLocalBanSeq([]);
+    soloStartedRef.current = false;
 
     setBans({ A: [], B: [] });
     setPickSlots({ A: [null, null, null, null, null], B: [null, null, null, null, null] });
@@ -1983,7 +2052,7 @@ export default function BanpickApp() {
           ))}
         <div className="ml-auto text-xs">
           {t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b>
-          {ruleset && banSeq.length > 1 && <> · {t.banCount} <b>{Math.min((remote?.banIdx ?? 0) + 1, banSeq.length)}/{banSeq.length}</b></>}
+          {showBanCounter && <> · {t.banCount} <b>{Math.min(banIdxNow + 1, banSeq.length)}/{banSeq.length}</b></>}
           {" "}· {t.timeLeft}: <b>{timer}s</b>
         </div>
       </div>

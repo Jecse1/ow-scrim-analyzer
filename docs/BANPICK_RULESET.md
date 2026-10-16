@@ -4,7 +4,10 @@
 공개판 저장소에는 이 파일을 두지 않는다 — 대회·팀별 값은 각 인스턴스 저장소에만 둔다(FLC `map_pool.json` 과 같은 델타 방식).
 
 - 정본: `backend/banpick/ruleset.py` (`DEFAULT`, `validate`, `load_ruleset`). 파일이 잘못되면 기동이 실패한다(조용히 default 로 가지 않음).
-- 서버 권위: 상태기계(`state.py`)만 규칙을 판정한다. 프론트는 서버 state 의 `ruleset`·`banSeq`·`roleBanCount`·`repeatBlocked`·`mapChoices`·`setMode`·`mapAutoAssigned` 로 표시·비활성만 한다. 로컬(solo)·스크림 모드는 서버가 없어 항상 default 로 동작한다.
+- 1v1(실시간 대결): 상태기계(`state.py`)만 규칙을 판정한다. 프론트는 서버 state 의 `ruleset`·`banSeq`·`roleBanCount`·`repeatBlocked`·`mapChoices`·`setMode`·`mapAutoAssigned` 로 표시·비활성만 한다.
+- SOLO(로컬): 화면 진입 시 `GET /api/banpick/ruleset`(서버가 쓰는 프리셋, 파일 없으면 default)을 1회 받아 `frontend/src/banpick/rulesLocal.ts` 가 같은 의미로 해석한다. 조회 실패(네트워크·404)면 default. 시작 후 도착한 응답은 무시한다. `rulesLocal.ts` 는 `state.py` 함수와 1:1 대응 주석을 달아 두었으므로 **한쪽 규칙을 바꾸면 다른 쪽도 바꾼다**(테스트: `rulesLocal.test.ts`·`test_ruleset.py`).
+- 스크림 모드(로컬): 세트 사이 설정을 사람이 정하는 자유 모드라 프리셋을 적용하지 않는다(항상 default, fixed 맵풀이어도 전체 맵).
+- default 프리셋에서 SOLO 화면·동작은 프리셋 도입 전과 같다(밴 n/N 표시도 default SOLO 에서는 숨김). 프리셋이 있으면 SOLO 타임아웃 자동 맵 선택은 이번 세트 후보 안에서만 고른다.
 - 픽 규칙(5슬롯·동시·미러 허용)은 프리셋과 무관하게 불변이다.
 - `map_pool.json`(인스턴스 맵풀 제한)과 공존한다. fixed 맵풀에서는 `modes` 의 맵만 후보가 되므로 두 파일을 함께 쓰면 교집합이다.
 

@@ -133,6 +133,13 @@ class RoomManager:
 manager = RoomManager()
 
 
+@router.get("/api/banpick/ruleset")
+async def get_ruleset():
+    """SOLO(로컬) 모드용 규칙 프리셋 조회. 서버가 1v1 방에 쓰는 것과 같은 값(ruleset.json 없으면 default).
+    1v1 은 방 state["ruleset"] 로 받으므로 이 API 를 쓰지 않는다. 읽기 전용 — 규칙 판정은 바꾸지 않는다."""
+    return sm.RULESET
+
+
 @router.websocket("/ws/banpick")
 async def banpick_ws(websocket: WebSocket):
     await websocket.accept()

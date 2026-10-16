@@ -63,3 +63,4 @@ main → routers(include).  분리 모듈은 main 을 import 하지 않는다(�
 - **scrim.db**: 공개판 저장소는 `.gitignore` 로 DB 를 추적하지 않는다(팀 데이터 유출 방지). 운영 포크(비공개)는 서버 DB 를 git 으로 추적한다 —
   동기화가 단순하고 이력 복구 가치가 있어서. 충돌 위험은 "서버에서 먼저 커밋 후 pull" 절차로 관리.
 - **i18n 객체 방식**: 라이브러리 미도입. `src/i18n/{ko,en,zh}.js` 분리 + `scripts/check_i18n_keys.mjs` 키 검사로 충분.
+- **프론트 테스트 러너 vitest**(2026-10-16 도입): 밴픽 SOLO 규칙 해석 `rulesLocal.ts` 순수 함수 검증용. CI 에서 `npm test` 로 실행.

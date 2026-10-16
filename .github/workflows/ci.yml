@@ -40,3 +40,5 @@ jobs:
       - run: node scripts/check_i18n_keys.mjs
       # @gamedata alias 가 ../backend/game_data/*.json 을 읽는다 — 체크아웃만으로 충분
       - run: npm run build
+      # 밴픽 SOLO 규칙 해석(rulesLocal.ts) 단위 테스트
+      - run: npm test

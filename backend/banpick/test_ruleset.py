@@ -232,3 +232,25 @@ def test_validate_rejects_bad_presets():
     bad = copy.deepcopy(SYNTH); bad["mapPool"]["sequence"]["bo7"] = ["쟁탈"] * 7          # 맵 2개뿐인데 7회
     with pytest.raises(RulesetError):
         validate(bad)
+
+
+# ── GET /api/banpick/ruleset (SOLO 로컬 모드가 받는 프리셋) ──
+def _client():
+    import main
+    from fastapi.testclient import TestClient
+    return TestClient(main.app)
+
+
+def test_ruleset_api_returns_default_without_file():
+    r = _client().get("/api/banpick/ruleset")
+    assert r.status_code == 200
+    assert r.json() == DEFAULT
+
+
+def test_ruleset_api_returns_server_preset(monkeypatch):
+    monkeypatch.setattr(sm, "RULESET", SYNTH)
+    r = _client().get("/api/banpick/ruleset")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "synthetic-4ban" and body["banOrder"] == ["first", "second", "second", "first"]
+    assert body["mapPool"]["modes"]["쟁탈"] == ["busan", "samoa"]
