@@ -113,6 +113,22 @@ class RoomManager:
     def get(self, code):
         return self.rooms.get((code or "").strip().lower())
 
+    def leave(self, room, role):
+        """명시적 퇴장(1-a, 2026-10-16). 해당 역할의 연결·토큰을 지워 같은 세션으로 재접속할 수 없게 하고,
+        남은 연결이 없으면 방을 즉시 소멸시킨다(타이머 취소). 상대가 아직 접속 중이면 방은 유지한다(TTL 그대로).
+        반환: 방이 소멸했으면 True."""
+        room.conns.pop(role, None)
+        tok = room.role_token.pop(role, None)
+        if tok is not None:
+            room.tokens.pop(tok, None)
+        room.touch()
+        if not room.conns:
+            if room.timer_task:
+                room.timer_task.cancel()
+            self.rooms.pop(room.code, None)
+            return True
+        return False
+
 
 manager = RoomManager()
 
@@ -172,6 +188,11 @@ async def banpick_ws(websocket: WebSocket):
                     await err("ROOM_NOT_FOUND", "방을 찾을 수 없거나 토큰이 유효하지 않습니다.")
                     room = None
                     continue
+                if room.state.get("seriesDone"):
+                    # 끝난 경기에는 복귀시키지 않는다(1-a). 클라는 이 에러를 받으면 저장 세션을 지운다.
+                    await err("SERIES_DONE", "이미 종료된 경기입니다.")
+                    room = None
+                    continue
                 my_role = room.tokens[token]
                 room.conns[my_role] = websocket
                 room.touch()
@@ -182,6 +203,17 @@ async def banpick_ws(websocket: WebSocket):
             # 이후 액션은 방/역할이 있어야 함
             if room is None or my_role is None:
                 await err("NO_ROOM", "먼저 방을 생성/입장하세요.")
+                continue
+
+            if mtype == "leave":
+                # 명시적 퇴장(1-a): 연결·토큰 제거, 마지막 연결이면 방 소멸. 상대에게는 연결 끊김만 알린다.
+                async with room.lock:
+                    removed = manager.leave(room, my_role)
+                await send({"type": "left", "code": room.code, "room_removed": removed})
+                if not removed:
+                    await room.broadcast({"type": "opponent_status", "connected": False})
+                room = None
+                my_role = None
                 continue
 
             # ── 액션(서버 권위) — 방 락으로 직렬화(동시 입력 안전) ──

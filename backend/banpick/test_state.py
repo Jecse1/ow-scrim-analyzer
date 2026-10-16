@@ -391,3 +391,48 @@ if __name__ == "__main__":
     test_pick_unlock_blocked_by_opponent()
     test_set_active_slot_guard()
     print("ALL PASS")
+
+
+# ── 1-a (2026-10-16): 명시적 퇴장·끝난 경기 재접속 거부 ──────────────────────
+def _ws_client():
+    from fastapi.testclient import TestClient
+    import main
+    return TestClient(main.app)
+
+
+def test_leave_keeps_room_while_opponent_connected_then_removes():
+    """A·B 입장 → B leave: 방 유지(A 남음)·B 토큰 무효 → A leave: 방 소멸."""
+    from banpick import rooms
+    c = _ws_client()
+    with c.websocket_connect("/ws/banpick") as a, c.websocket_connect("/ws/banpick") as b:
+        a.send_json({"type": "create_room", "config": {"mode": 3, "sets": 3}})
+        created = a.receive_json(); code = created["code"]
+        b.send_json({"type": "join_room", "code": code})
+        joined = b.receive_json(); assert joined["type"] == "joined"; b_token = joined["token"]
+        a.receive_json(); a.receive_json()  # opponent_status + state
+        b.receive_json(); b.receive_json()
+        b.send_json({"type": "leave"})
+        left = b.receive_json(); assert left["type"] == "left" and left["room_removed"] is False
+        assert rooms.manager.get(code) is not None, "상대가 남아 있으면 방 유지"
+        assert b_token not in rooms.manager.get(code).tokens, "퇴장한 역할의 토큰은 무효"
+        a.receive_json()  # opponent_status False
+        a.send_json({"type": "leave"})
+        left = a.receive_json(); assert left["type"] == "left" and left["room_removed"] is True
+        assert rooms.manager.get(code) is None, "마지막 연결이 나가면 방 즉시 소멸"
+
+
+def test_reconnect_refused_when_series_done():
+    """끝난 경기(seriesDone) 방에는 토큰이 유효해도 reconnect 를 거부한다(SERIES_DONE)."""
+    from banpick import rooms
+    c = _ws_client()
+    with c.websocket_connect("/ws/banpick") as a:
+        a.send_json({"type": "create_room", "config": {"mode": 3, "sets": 3}})
+        created = a.receive_json(); code, token = created["code"], created["token"]
+        rooms.manager.get(code).state["seriesDone"] = True
+    with c.websocket_connect("/ws/banpick") as a2:
+        a2.send_json({"type": "reconnect", "code": code, "token": token})
+        msg = a2.receive_json()
+        assert msg["type"] == "error" and msg["code"] == "SERIES_DONE"
+        a2.send_json({"type": "ready", "value": True})
+        assert a2.receive_json()["code"] == "NO_ROOM", "거부 후에는 방에 붙어 있지 않아야"
+    rooms.manager.rooms.pop(code, None)

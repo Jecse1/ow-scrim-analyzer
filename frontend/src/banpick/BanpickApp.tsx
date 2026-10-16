@@ -1842,6 +1842,9 @@ export default function BanpickApp() {
 
   // ‼️ resetToHome 함수 수정 ‼️
   function resetToHome() {
+    // [1-a] 1v1 방에서 나간다: 서버 leave(토큰 무효화·마지막이면 방 소멸) + sessionStorage 정리 + 소켓 종료.
+    //   이걸 안 하면 저장 세션으로 자동 재접속되어 끝난 경기 화면으로 되돌아갔다(remote.started 동기화).
+    if (remoteMode) ws.leave();
     setRun(false);
     setTimer(TIMER.NORMAL);
     setShowSummaryOpen(false);

@@ -92,7 +92,17 @@ export function useBanpickWS(active: boolean) {
         case "opponent_status":
           setOpponentConnected(!!m.connected);
           break;
+        case "left":
+          // [1-a] 서버가 퇴장을 확인함. 세션은 leave() 에서 이미 지웠다.
+          break;
         case "error":
+          // [1-a] 끝난 경기·사라진 방으로의 자동 재접속 실패 → 저장 세션을 지워 다시 복귀 시도하지 않는다.
+          if (m.code === "SERIES_DONE" || m.code === "ROOM_NOT_FOUND") {
+            wantReconnectRef.current = false;
+            saveSession(null);
+            sessionRef.current = null;
+            setRemote(null); setRoomCode(""); setMyRole(null);
+          }
           setError({ code: m.code, message: m.message });
           break;
       }
@@ -110,13 +120,15 @@ export function useBanpickWS(active: boolean) {
   }, [open, rawSend]);
 
   const leave = useCallback(() => {
+    // [1-a] 서버에 명시적 퇴장을 알린 뒤(토큰 무효화·마지막이면 방 소멸) 세션을 지우고 소켓을 닫는다.
     wantReconnectRef.current = false;
+    rawSend({ type: "leave" });
     saveSession(null);
     sessionRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
     setRemote(null); setRoomCode(""); setMyRole(null); setConnected(false);
-  }, []);
+  }, [rawSend]);
 
   // 활성화 시, 기존 세션 있으면 자동 재접속 시도(새로고침 복구)
   useEffect(() => {
