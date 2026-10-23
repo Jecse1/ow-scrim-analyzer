@@ -94,7 +94,7 @@ export default function PlayerProfileView({ playersData }) {
                     {['All', '탱크', '딜러', '지원'].map(role => (
                         <button key={role} onClick={() => setSelectedRole(role)}
                             style={{ flex: 1, padding: '8px 0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', background: selectedRole === role ? theme.primaryFixed : 'transparent', color: selectedRole === role ? '#fff' : theme.textSub, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                            {role !== 'All' && <img src={getRoleIconSrc(role)} alt={role} style={{ width: 14, height: 14, filter: 'invert(1)', opacity: selectedRole === role ? 1 : 0.6 }} />}
+                            {role !== 'All' && <img src={getRoleIconSrc(role)} alt={role} style={{ width: 14, height: 14, filter: theme.mode === 'dark' || selectedRole === role ? 'invert(1)' : 'none', opacity: selectedRole === role ? 1 : 0.6 }} />}
                             {role === 'All' ? t.all : roleLabelDisplay(role)}
                         </button>
                     ))}
@@ -107,7 +107,7 @@ export default function PlayerProfileView({ playersData }) {
                             <div key={p.id} onClick={() => setSelectedPlayerId(p.id)}
                                 style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', background: isActive ? theme.surfaceHighlight : theme.surface, border: `1px solid ${isActive ? theme.primaryFixed : theme.border}`, display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
                                 <div style={{ width: 36, height: 36, borderRadius: '50%', background: theme.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isActive ? theme.primaryFixed : theme.textSub }}>
-                                    <img src={getRoleIconSrc(p.role)} alt={p.role} style={{ width: 20, height: 20, filter: 'invert(1)', opacity: isActive ? 1 : 0.5 }} />
+                                    <img src={getRoleIconSrc(p.role)} alt={p.role} style={{ width: 20, height: 20, filter: theme.mode === 'dark' ? 'invert(1)' : 'none', opacity: isActive ? 1 : 0.5 }} />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontWeight: '900', fontSize: '15px', color: isActive ? theme.primaryFixed : theme.text }}>{p.name}</span>

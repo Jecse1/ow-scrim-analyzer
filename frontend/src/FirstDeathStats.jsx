@@ -217,7 +217,7 @@ export default function FirstDeathStats({ allScrims }) {
                     {['All', '탱커', '딜러', '힐러'].map(role => (
                         <button key={role} onClick={() => setSelectedRole(role)}
                             style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid', borderColor: selectedRole === role ? theme.primaryFixed : theme.border, background: selectedRole === role ? `${theme.primaryFixed}20` : theme.surface, color: selectedRole === role ? theme.primaryFixed : theme.textSub, cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {role === 'All' ? <Users size={16}/> : <img src={getRoleIconSrc(role)} alt={role} style={{ width: 16, height: 16, filter: 'invert(1)', opacity: selectedRole === role ? 1 : 0.5 }} />}
+                            {role === 'All' ? <Users size={16}/> : <img src={getRoleIconSrc(role)} alt={role} style={{ width: 16, height: 16, filter: theme.mode === 'dark' ? 'invert(1)' : 'none', opacity: selectedRole === role ? 1 : 0.5 }} />}
                             {role === 'All' ? t.allPositions : roleLabelDisplay(role)}
                         </button>
                     ))}
@@ -281,7 +281,7 @@ export default function FirstDeathStats({ allScrims }) {
                                             </div>
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <img src={getRoleIconSrc(p.roleLabel)} style={{ width: 20, height: 20, objectFit: 'contain', filter: 'invert(1)', opacity: 0.6 }} />
+                                            <img src={getRoleIconSrc(p.roleLabel)} style={{ width: 20, height: 20, objectFit: 'contain', filter: theme.mode === 'dark' ? 'invert(1)' : 'none', opacity: 0.6 }} />
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'right' }}>{p.totalFights.toLocaleString()}{t.timesUnit}</td>
                                         <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>{p.firstDeaths}{t.timesUnit}</td>

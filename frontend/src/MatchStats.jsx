@@ -282,7 +282,7 @@ const StatsView = ({ activeRoundTab, setActiveRoundTab, displayStats, rounds, t1
                     <td style={{...tdStyleCenter, padding:'4px'}}>
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center'}}>
                             {roleIconSrc && (
-                                <img src={roleIconSrc} alt={row.role_label} style={{width:'20px', height:'20px', objectFit:'contain', filter:'invert(1)', opacity:0.7}} onError={(e) => {e.currentTarget.style.display = 'none';}} />
+                                <img src={roleIconSrc} alt={row.role_label} style={{width:'20px', height:'20px', objectFit:'contain', filter:theme.mode === 'dark' ? 'invert(1)' : 'none', opacity:0.7}} onError={(e) => {e.currentTarget.style.display = 'none';}} />
                             )}
                         </div>
                     </td>
