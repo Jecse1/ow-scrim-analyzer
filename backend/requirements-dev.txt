@@ -1,4 +1,6 @@
 # Dev/CI only (not needed for production).
 # Install: pip install -r requirements.txt -r requirements-dev.txt
-pytest>=8
-pytest-asyncio>=0.23
+# Ranges follow the versions CI installs (pytest 9.1.1, pytest-asyncio 1.4.0).
+# pytest-asyncio is required: without it pytest.ini asyncio_mode is ignored and async tests error.
+pytest>=9.1,<10
+pytest-asyncio>=1.4,<2

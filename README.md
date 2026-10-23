@@ -315,7 +315,9 @@ Contributions are welcome! 기여를 환영합니다.
    `.gitignore` by design — only anonymized samples under `sample_data/` are
    allowed. 실제 팀 데이터를 커밋하지 마세요. 로그·DB·덤프는 `.gitignore` 로 차단되며,
    `sample_data/` 의 익명 샘플만 허용됩니다.
-4. Backend tests: `cd backend && python -m pytest banpick/test_state.py`.
+4. Backend tests: install `requirements-dev.txt`, then run `python -m pytest` in `backend/`
+   (`pip install -r requirements.txt -r requirements-dev.txt`). 백엔드 테스트: `backend/` 에서
+   `requirements-dev.txt` 설치 후 `python -m pytest` (pytest-asyncio 가 없으면 async 테스트가 오류).
 
 ---
 
