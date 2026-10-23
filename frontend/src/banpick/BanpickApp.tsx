@@ -89,7 +89,6 @@ const SLOT_ROLES: Role[] = ["Tank", "Damage", "Damage", "Support", "Support"];
 
 const STR = {
   ko: {
-    title: "OW2 BAN Simulator",
     startSettings: "시작 설정",
     teamAName: "팀 A 이름",
     teamBName: "팀 B 이름",
@@ -165,9 +164,62 @@ const STR = {
     secUnit: "초",
     defaultTeamA: "팀 A",
     defaultTeamB: "팀 B",
+    // [B4-②] 하드코딩 문구 이관(ko 원문 그대로)
+    heroPickShort: "영웅 픽",
+    turnWord: "턴",
+    banWait: "밴 대기",
+    allTypes: "전체",
+    winnerLabel: "승자",
+    resultLabel: "결과",
+    teamBans: (tm: string) => `${tm}팀 밴`,
+    teamPicks: (tm: string) => `${tm}팀 픽`,
+    winSuffix: " 승리",   // 팀명 뒤에 붙는 접미사(팀명과 별도 텍스트 노드 — 기존 렌더와 동일)
+    winnerHostOnly: "승자 선택은 A팀 코치(호스트)만 가능합니다.",
+    enterScore: "세부 스코어를 입력하세요",
+    resultW: "승리(W)",
+    resultL: "패배(L)",
+    resultD: "무승부(D)",
+    sideTitle: "선공/선수비 선택",
+    sideDesc: "A팀의 선공/선수비를 선택합니다.",
+    attackFirst: "선공격",
+    defendFirst: "선수비",
+    nextSetTitle: "다음 세트 설정",
+    mapPickTeam: "맵 선택 팀",
+    firstBanTeam: "선밴 팀",
+    startNextSet: "다음 세트 시작",
+    scoreWDL: (w: number, d: number, l: number) => `${w}승 ${d}무 ${l}패`,
+    banWord: "밴",
+    pickWord: "픽",
+    scrimSummary: "스크림 요약",
+    copy: "복사",
+    saveTxt: ".txt 저장",
+    endScrim: "스크림 종료",
+    copiedSummary: "요약 복사됨",
+    copyFailed: "복사 실패",
+    pickDoneUnlock: "✓ 픽 완료 · 레디 해제",
+    pickDoneCheck: "✓ 픽 완료",
+    pickDoneClick: "픽 완료 (클릭)",
+    pickDone: "픽 완료",
+    unready: "레디 해제",
+    needBothReady: "양 팀 모두 READY가 되어야 시작할 수 있습니다.",
+    needBothReadyShort: "양 팀 READY 필요",
+    emptySlot: "(빈)",
+    pickUnlockLog: (name: string) => `${name} 픽 해제`,
+    scrimStartTime: "스크림 시작 시간 (HH / 24h)",
+    scrimTimePh: "HH (예: 16)",
+    createRoom: "방 만들기 (호스트 = A)",
+    orWord: "또는",
+    roomCodePh: "방 코드 6자리 입력",
+    joinRoom: "입장 (B)",
+    roomCode: "방 코드",
+    roomCodeCopied: "방 코드 복사됨",
+    roomCodeCopyFailed: "복사 실패 — 코드를 길게 눌러 복사하세요",
+    opponentConnected: "● 상대 연결됨",
+    opponentWaiting: "○ 상대 대기 중…",
+    onlyCoachCanToggle: (tm: string) => `${tm}팀 코치만 변경 가능`,
+    readyToggle: (tm: string, on: boolean) => `${tm} 팀 READY: ${on ? "ON" : "OFF"}`,
   },
   en: {
-    title: "OW2 BAN Simulator",
     startSettings: "Setup",
     teamAName: "Team A Name",
     teamBName: "Team B Name",
@@ -242,9 +294,61 @@ const STR = {
     secUnit: "s",
     defaultTeamA: "Team A",
     defaultTeamB: "Team B",
+    heroPickShort: "Hero Pick",
+    turnWord: "turn",
+    banWait: "Awaiting ban",
+    allTypes: "All",
+    winnerLabel: "Winner",
+    resultLabel: "Result",
+    teamBans: (tm: string) => `Team ${tm} bans`,
+    teamPicks: (tm: string) => `Team ${tm} picks`,
+    winSuffix: " wins",
+    winnerHostOnly: "Only Team A's coach (host) can select the winner.",
+    enterScore: "Enter the detailed score",
+    resultW: "Win (W)",
+    resultL: "Loss (L)",
+    resultD: "Draw (D)",
+    sideTitle: "Choose Attack/Defense",
+    sideDesc: "Choose whether Team A attacks or defends first.",
+    attackFirst: "Attack first",
+    defendFirst: "Defend first",
+    nextSetTitle: "Next Set Setup",
+    mapPickTeam: "Map pick team",
+    firstBanTeam: "First ban team",
+    startNextSet: "Start Next Set",
+    scoreWDL: (w: number, d: number, l: number) => `${w}W ${d}D ${l}L`,
+    banWord: "bans",
+    pickWord: "picks",
+    scrimSummary: "Scrim Summary",
+    copy: "Copy",
+    saveTxt: "Save .txt",
+    endScrim: "End Scrim",
+    copiedSummary: "Summary copied",
+    copyFailed: "Copy failed",
+    pickDoneUnlock: "✓ Picks locked · Unready",
+    pickDoneCheck: "✓ Picks locked",
+    pickDoneClick: "Lock picks (click)",
+    pickDone: "Lock picks",
+    unready: "Unready",
+    needBothReady: "Both teams must be READY to start.",
+    needBothReadyShort: "Both teams must be READY",
+    emptySlot: "(empty)",
+    pickUnlockLog: (name: string) => `${name} picks unlocked`,
+    scrimStartTime: "Scrim start time (HH / 24h)",
+    scrimTimePh: "HH (e.g. 16)",
+    createRoom: "Create room (host = A)",
+    orWord: "or",
+    roomCodePh: "Enter 6-character room code",
+    joinRoom: "Join (B)",
+    roomCode: "Room code",
+    roomCodeCopied: "Room code copied",
+    roomCodeCopyFailed: "Copy failed — long-press the code to copy",
+    opponentConnected: "● Opponent connected",
+    opponentWaiting: "○ Waiting for opponent…",
+    onlyCoachCanToggle: (tm: string) => `Only Team ${tm}'s coach can change this`,
+    readyToggle: (tm: string, on: boolean) => `Team ${tm} READY: ${on ? "ON" : "OFF"}`,
   },
   zh: {
-    title: "OW2 BAN Simulator",
     startSettings: "初始设置",
     teamAName: "队伍 A 名称",
     teamBName: "队伍 B 名称",
@@ -319,6 +423,59 @@ const STR = {
     secUnit: "秒",
     defaultTeamA: "队伍 A",
     defaultTeamB: "队伍 B",
+    heroPickShort: "英雄选取",
+    turnWord: "回合",
+    banWait: "等待禁用",
+    allTypes: "全部",
+    winnerLabel: "胜者",
+    resultLabel: "结果",
+    teamBans: (tm: string) => `队伍 ${tm} 禁用`,
+    teamPicks: (tm: string) => `队伍 ${tm} 选取`,
+    winSuffix: " 获胜",
+    winnerHostOnly: "仅队伍 A 教练（房主）可选择胜者。",
+    enterScore: "请输入详细比分",
+    resultW: "胜(W)",
+    resultL: "负(L)",
+    resultD: "平(D)",
+    sideTitle: "选择先攻/先守",
+    sideDesc: "选择队伍 A 先攻或先守。",
+    attackFirst: "先攻",
+    defendFirst: "先守",
+    nextSetTitle: "下一局设置",
+    mapPickTeam: "地图选择队伍",
+    firstBanTeam: "先禁队伍",
+    startNextSet: "开始下一局",
+    scoreWDL: (w: number, d: number, l: number) => `${w}胜 ${d}平 ${l}负`,
+    banWord: "禁用",
+    pickWord: "选取",
+    scrimSummary: "训练赛摘要",
+    copy: "复制",
+    saveTxt: "保存 .txt",
+    endScrim: "结束训练赛",
+    copiedSummary: "摘要已复制",
+    copyFailed: "复制失败",
+    pickDoneUnlock: "✓ 选取完成 · 取消就绪",
+    pickDoneCheck: "✓ 选取完成",
+    pickDoneClick: "完成选取（点击）",
+    pickDone: "完成选取",
+    unready: "取消就绪",
+    needBothReady: "双方队伍都 READY 后才能开始。",
+    needBothReadyShort: "需要双方 READY",
+    emptySlot: "(空)",
+    pickUnlockLog: (name: string) => `${name} 取消选取锁定`,
+    scrimStartTime: "训练赛开始时间 (HH / 24h)",
+    scrimTimePh: "HH (例: 16)",
+    createRoom: "创建房间 (房主 = A)",
+    orWord: "或",
+    roomCodePh: "输入6位房间码",
+    joinRoom: "加入 (B)",
+    roomCode: "房间码",
+    roomCodeCopied: "房间码已复制",
+    roomCodeCopyFailed: "复制失败 — 请长按房间码复制",
+    opponentConnected: "● 对手已连接",
+    opponentWaiting: "○ 等待对手…",
+    onlyCoachCanToggle: (tm: string) => `仅队伍 ${tm} 教练可更改`,
+    readyToggle: (tm: string, on: boolean) => `队伍 ${tm} READY: ${on ? "ON" : "OFF"}`,
   },
 } as const;
 
@@ -349,6 +506,7 @@ function SummaryLogModal(props: {
   seriesDone: boolean;
   onExitSeries: () => void;
   canEditWinner: boolean;
+  lang: Lang;
 }) {
   const wrapClass = `${props.dark ? "bg-neutral-800 border-neutral-700" : "bg-white border-neutral-200"} border rounded-2xl p-5 max-h-[90vh] overflow-y-auto`;
   const tabBtn = (active: boolean) =>
@@ -391,28 +549,28 @@ function SummaryLogModal(props: {
               return (
                 <div key={i} className="border border-neutral-200 rounded-lg p-2">
                   <div className="font-medium mb-1">
-                    {props.t.setN(i + 1)} {s.winner ? `- 승자: ${s.winner === "A" ? a : b}` : ""}
+                    {props.t.setN(i + 1)} {s.winner ? `- ${props.t.winnerLabel}: ${s.winner === "A" ? a : b}` : ""}
                   </div>
                   <div className="mb-1">
-                    {props.t.map}: <b>{mapObj ? `${mapObj.name} (${MAP_LABELS.ko[mapObj.type]})` : "-"}</b> / {props.t.mapPickerLabel}: <b>{s.mapPicker ? (s.mapPicker === "A" ? a : b) : "-"}</b>
+                    {props.t.map}: <b>{mapObj ? `${mapObj.name} (${MAP_LABELS[props.lang][mapObj.type]})` : "-"}</b> / {props.t.mapPickerLabel}: <b>{s.mapPicker ? (s.mapPicker === "A" ? a : b) : "-"}</b>
                   </div>
                   <div className="mb-1">
                     {props.t.firstBan}: <b>{s.banFirst === "A" ? a : b}</b> / {props.t.secondBan}: <b>{s.banSecond === "A" ? a : b}</b>
                   </div>
                   <div className="mb-1">
-                    A팀 밴: {s.bans.A.length ? s.bans.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") : props.t.none}
+                    {props.t.teamBans("A")}: {s.bans.A.length ? s.bans.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") : props.t.none}
                   </div>
                   <div className="mb-1">
-                    B팀 밴: {s.bans.B.length ? s.bans.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") : props.t.none}
+                    {props.t.teamBans("B")}: {s.bans.B.length ? s.bans.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") : props.t.none}
                   </div>
                   {(s.picks.A.length > 0 || s.picks.B.length > 0) && (
                     <div className="mt-1 grid grid-cols-2 gap-2">
                       <div>
-                        <div className="text-[11px] text-neutral-400 mb-0.5">A팀 픽</div>
+                        <div className="text-[11px] text-neutral-400 mb-0.5">{props.t.teamPicks("A")}</div>
                         <div>{s.picks.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}</div>
                       </div>
                       <div>
-                        <div className="text-[11px] text-neutral-400 mb-0.5">B팀 픽</div>
+                        <div className="text-[11px] text-neutral-400 mb-0.5">{props.t.teamPicks("B")}</div>
                         <div>{s.picks.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}</div>
                       </div>
                     </div>
@@ -451,18 +609,18 @@ function SummaryLogModal(props: {
                 className={`px-3 py-2 rounded-lg border bp-touch ${props.dark ? "border-neutral-700 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-900"}`}
                 onClick={() => props.onFinishSet("A")}
               >
-                {props.teamName.A} 승리
+                {props.teamName.A}{props.t.winSuffix}
               </button>
               <button
                 className={`px-3 py-2 rounded-lg border bp-touch ${props.dark ? "border-neutral-700 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-900"}`}
                 onClick={() => props.onFinishSet("B")}
               >
-                {props.teamName.B} 승리
+                {props.teamName.B}{props.t.winSuffix}
               </button>
             </div>
           )
         ) : (
-          <div className="mt-4 text-xs text-neutral-400">승자 선택은 A팀 코치(호스트)만 가능합니다.</div>
+          <div className="mt-4 text-xs text-neutral-400">{props.t.winnerHostOnly}</div>
         )}
       </div>
     </div>
@@ -475,19 +633,19 @@ function FinishBarForA({ t, onSubmit, dark }: { t: I18n; onSubmit: (r: "W" | "L"
   const [b, setB] = React.useState(0);
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
-      <span className="text-xs">세부 스코어를 입력하세요</span>
+      <span className="text-xs">{t.enterScore}</span>
       <input className={`w-14 px-2 py-1 rounded border ${dark ? "border-neutral-700 bg-neutral-900" : "border-neutral-300 bg-white"}`} type="number" value={a} min={0} onChange={(e) => setA(+e.target.value)} />
       <span>:</span>
       <input className={`w-14 px-2 py-1 rounded border ${dark ? "border-neutral-700 bg-neutral-900" : "border-neutral-300 bg-white"}`} type="number" value={b} min={0} onChange={(e) => setB(+e.target.value)} />
       <div className="ml-auto flex gap-2">
         <button className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={() => onSubmit("W", a, b)}>
-          승리(W)
+          {t.resultW}
         </button>
         <button className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={() => onSubmit("L", a, b)}>
-          패배(L)
+          {t.resultL}
         </button>
         <button className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={() => onSubmit("D", a, b)}>
-          무승부(D)
+          {t.resultD}
         </button>
       </div>
     </div>
@@ -500,11 +658,13 @@ function AttackDefenseModal({
   onClose,
   onConfirm,
   dark,
+  t,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: (side: Side) => void;
   dark: boolean;
+  t: I18n;
 }) {
   if (!open) return null;
 
@@ -517,16 +677,16 @@ function AttackDefenseModal({
       <div className="absolute inset-0 bg-black/60" />
       
       <div className={`relative z-10 w-full max-w-xs ${wrap}`}>
-        <div className="font-semibold mb-1">선공/선수비 선택</div>
+        <div className="font-semibold mb-1">{t.sideTitle}</div>
         <div className="text-xs text-neutral-400 mb-4">
-          A팀의 선공/선수비를 선택합니다.
+          {t.sideDesc}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button className={btn("ATTACK")} onClick={() => onConfirm("ATTACK")}>
-            선공격
+            {t.attackFirst}
           </button>
           <button className={btn("DEFENSE")} onClick={() => onConfirm("DEFENSE")}>
-            선수비
+            {t.defendFirst}
           </button>
         </div>
         {/* 필요한 경우 닫기 버튼을 따로 추가하거나, 선택을 강제해야 한다면 버튼 없음 */}
@@ -543,6 +703,7 @@ function BetweenSetModal({
   teamName,
   dark,
   onConfirm,
+  t: tr,
 }: {
   open: boolean;
   onClose: () => void;
@@ -551,6 +712,7 @@ function BetweenSetModal({
   teamName: Record<Team, string>;
   dark: boolean;
   onConfirm: (nextMapPicker: Team, nextBanFirst: Team) => void;
+  t: I18n;
 }) {
   const [mp, setMp] = React.useState<Team>(defaultMapPicker);
   const [bf, setBf] = React.useState<Team>(defaultBanFirst);
@@ -564,11 +726,11 @@ function BetweenSetModal({
       <div className="absolute inset-0 bg-black/60" />
       
       <div className={`relative z-10 w-full max-w-md ${wrap}`}>
-        <div className="font-semibold mb-3">다음 세트 설정</div>
+        <div className="font-semibold mb-3">{tr.nextSetTitle}</div>
 
         <div className="space-y-3 text-sm">
           <div>
-            <div className="text-xs mb-1">맵 선택 팀</div>
+            <div className="text-xs mb-1">{tr.mapPickTeam}</div>
             <div className="flex gap-2">
               {(["A", "B"] as Team[]).map((t) => (
                 <button
@@ -583,7 +745,7 @@ function BetweenSetModal({
           </div>
 
           <div>
-            <div className="text-xs mb-1">선밴 팀</div>
+            <div className="text-xs mb-1">{tr.firstBanTeam}</div>
             <div className="flex gap-2">
               {(["A", "B"] as Team[]).map((t) => (
                 <button
@@ -601,10 +763,10 @@ function BetweenSetModal({
         <div className="mt-4 flex items-center gap-2">
           {/* 닫기 버튼으로만 닫을 수 있게 유지 */}
           <button className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={onClose}>
-            닫기
+            {tr.close}
           </button>
           <button className={`ml-auto px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={() => onConfirm(mp, bf)}>
-            다음 세트 시작
+            {tr.startNextSet}
           </button>
         </div>
       </div>
@@ -626,6 +788,8 @@ function ScrimSummaryModal({
   onExitSeries,
   scrimTime,
   onToast,
+  t,
+  lang,
 }: {
   open: boolean;
   onClose: () => void;
@@ -639,13 +803,15 @@ function ScrimSummaryModal({
   onExitSeries: () => void;
   scrimTime: string;
   onToast: (m: string) => void;
+  t: I18n;
+  lang: Lang;
 }) {
   if (!open) return null;
   const wins = sets.filter((s) => s.resultA === "W").length;
   const loses = sets.filter((s) => s.resultA === "L").length;
   const draws = sets.filter((s) => s.resultA === "D").length;
 
-  const scoreStr = `${wins}승 ${draws}무 ${loses}패`;
+  const scoreStr = t.scoreWDL(wins, draws, loses);
   const finalResultStr = wins > loses ? "W" : wins < loses ? "L" : "D";
   const startTime = parseInt(scrimTime, 10);
   const timeStr = !isNaN(startTime)
@@ -661,15 +827,15 @@ function ScrimSummaryModal({
     "",
     ...sets.map((s, i) => {
       const mapObj = s.map ? MAPS.find((m) => m.id === s.map) : null;
-      const resultText = s.resultA === "W" ? "승리(W)" : s.resultA === "L" ? "패배(L)" : "무승부(D)";
-      const rline = `세트 ${i + 1} - ${s.scoreA ?? 0}:${s.scoreB ?? 0} ${resultText}`;
-      const sideStr = s.attackOrDefense === "ATTACK" ? "/ 선공격 " : s.attackOrDefense === "DEFENSE" ? "/ 선수비 " : "";
-      const mline = `맵 : ${mapObj ? `${mapObj.name}(${MAP_LABELS.ko[mapObj.type]})` : "-"} ${sideStr}/ 맵 선택 : ${s.mapPicker ?? "-"}`;
-      const bline = `선밴 : ${s.banFirst} / 후밴 : ${s.banSecond}`;
-      const aban = `${teamName.A} 밴 : ${s.bans.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") || "-"}`;
-      const apick = `${teamName.A} 픽 : ${s.picks.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}`;
-      const bban = `${teamName.B} 밴 : ${s.bans.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") || "-"}`;
-      const bpick = `${teamName.B} 픽 : ${s.picks.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}`;
+      const resultText = s.resultA === "W" ? t.resultW : s.resultA === "L" ? t.resultL : t.resultD;
+      const rline = `${t.setN(i + 1)} - ${s.scoreA ?? 0}:${s.scoreB ?? 0} ${resultText}`;
+      const sideStr = s.attackOrDefense === "ATTACK" ? `/ ${t.attackFirst} ` : s.attackOrDefense === "DEFENSE" ? `/ ${t.defendFirst} ` : "";
+      const mline = `${t.map} : ${mapObj ? `${mapObj.name}(${MAP_LABELS[lang][mapObj.type]})` : "-"} ${sideStr}/ ${t.mapPickerLabel} : ${s.mapPicker ?? "-"}`;
+      const bline = `${t.firstBan} : ${s.banFirst} / ${t.secondBan} : ${s.banSecond}`;
+      const aban = `${teamName.A} ${t.banWord} : ${s.bans.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") || "-"}`;
+      const apick = `${teamName.A} ${t.pickWord} : ${s.picks.A.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}`;
+      const bban = `${teamName.B} ${t.banWord} : ${s.bans.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(", ") || "-"}`;
+      const bpick = `${teamName.B} ${t.pickWord} : ${s.picks.B.map((id) => HEROES.find((h) => h.id === id)?.name ?? id).join(" / ") || "-"}`;
       return [rline, mline, bline, "", aban, apick, "", bban, bpick, ""].join("\n");
     }),
   ].join("\n");
@@ -692,7 +858,7 @@ function ScrimSummaryModal({
       <div className="absolute inset-0 bg-black/60" />
 
       <div className={`relative z-10 w-full max-w-2xl ${wrap}`}>
-        <div className="font-semibold mb-2">스크림 요약</div>
+        <div className="font-semibold mb-2">{t.scrimSummary}</div>
         <textarea
           className={`w-full h-[50vh] rounded-lg border ${dark ? "border-neutral-700 bg-neutral-900 text-white" : "border-neutral-300 bg-white text-neutral-900"} text-xs p-2`}
           readOnly
@@ -701,23 +867,23 @@ function ScrimSummaryModal({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`}
-            onClick={() => copyWithToast(lines, onToast, "요약 복사됨", "복사 실패")}
+            onClick={() => copyWithToast(lines, onToast, t.copiedSummary, t.copyFailed)}
           >
-            복사
+            {t.copy}
           </button>
           <button className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={download}>
-            .txt 저장
+            {t.saveTxt}
           </button>
 
           <button className={`ml-auto px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`} onClick={onClose}>
-            닫기
+            {t.close}
           </button>
 
           <button
             className={`px-3 py-2 rounded-lg border ${dark ? "border-neutral-700" : "border-neutral-300"}`}
             onClick={onExitSeries}
           >
-            스크림 종료
+            {t.endScrim}
           </button>
         </div>
       </div>
@@ -762,7 +928,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 /* 복사 + 결과 토스트. 토스트 표시는 호출부가 주입(popToast). */
-function copyWithToast(text: string, toast: (m: string) => void, okMsg = "복사되었습니다", failMsg = "복사 실패") {
+function copyWithToast(text: string, toast: (m: string) => void, okMsg: string, failMsg: string) {
   copyText(text).then((ok) => toast(ok ? okMsg : failMsg));
 }
 
@@ -787,9 +953,9 @@ function BanpickHeader({ selectedMap, mode, phase, turnTeam, teamName, bans, her
   const modeLbl = m ? MAP_LABELS[lang][m.type] : "";
   const phaseLabel =
     phase === "HERO_BAN" ? t.heroBan :
-    phase === "HERO_PICK" ? (lang === "ko" ? "영웅 픽" : lang === "zh" ? "英雄选取" : "Hero Pick") :
+    phase === "HERO_PICK" ? t.heroPickShort :
     phase === "BAN_ORDER" ? t.banOrder : "";
-  const turnWord = lang === "ko" ? "턴" : lang === "zh" ? "回合" : "turn";
+  const turnWord = t.turnWord;
   // [STEP7] 밴 페이즈에서만 양 팀 밴 현황 셀을 헤더 안(좌하단)에 표시. 맵명(중앙)과 겹치지 않음.
   const showBans = phase === "HERO_BAN" && !!bans && !!heroById;
   const banCell = (tm: Team, idx = 0) => {
@@ -848,7 +1014,7 @@ function BanCard({ heroId, heroById, lang, mobile }: {
   mobile?: boolean;
 }) {
   const name = heroId ? getDisplayName(heroById(heroId)?.name ?? heroId) : "";
-  const wait = lang === "ko" ? "밴 대기" : lang === "zh" ? "等待禁用" : "Awaiting ban";
+  const wait = STR[lang].banWait;
   return (
     <div className={cn("bp-bancard", heroId ? "banned" : "empty", mobile && "mobile")}>
       {heroId ? (
@@ -972,7 +1138,7 @@ const PickColumn = React.memo(function PickColumn({
                 style={{ borderColor: "var(--bp-danger)", color: "var(--bp-danger)", background: "rgba(239,68,68,0.12)" }}
                 onClick={() => onUnlock(team)}
               >
-                ✓ 픽 완료 · 레디 해제
+                {t.pickDoneUnlock}
               </button>
             );
           }
@@ -983,7 +1149,7 @@ const PickColumn = React.memo(function PickColumn({
               onClick={() => confirmPick(team)}
               disabled={done || !allFilled || !canAct}
             >
-              {done ? "✓ 픽 완료" : ready ? "픽 완료 (클릭)" : "픽 완료"}
+              {done ? t.pickDoneCheck : ready ? t.pickDoneClick : t.pickDone}
             </button>
           );
         })()}
@@ -1050,7 +1216,7 @@ export default function BanpickApp() {
   useEffect(() => { if (appLang === "ko" || appLang === "en" || appLang === "zh") setLang(appLang); }, [appLang]);
   const t: I18n = useMemo(() => STR[lang], [lang]);
   const roleLabel = (r: Role) => ROLE_LABELS[lang][r];
-  const mapTypeLabel = (mt: string) => (mt === "All" ? (lang === "ko" ? "전체" : lang === "zh" ? "全部" : "All") : MAP_LABELS[lang][mt as MapType]);
+  const mapTypeLabel = (mt: string) => (mt === "All" ? t.allTypes : MAP_LABELS[lang][mt as MapType]);
 
   /* === Setup === */
   const [teamName, setTeamName] = useState<Record<Team, string>>({ A: STR.ko.defaultTeamA, B: STR.ko.defaultTeamB });
@@ -1551,7 +1717,7 @@ export default function BanpickApp() {
     // [ruleset-solo] fixed 맵풀: 같은 모드 재등장·후보 1개·패자 맵 선택 없음 → 남은 맵 자동 배정 후 선/후밴만(BAN_ORDER)
     if (localRules && localPlan.autoMap) {
       setSelectedMap(localPlan.autoMap);
-      logLine(`[세트 ${completedSets.length + 1}] ${t.autoMap}: ${MAPS.find((m) => m.id === localPlan.autoMap)?.name ?? localPlan.autoMap}`);
+      logLine(`[${t.setN(completedSets.length + 1)}] ${t.autoMap}: ${MAPS.find((m) => m.id === localPlan.autoMap)?.name ?? localPlan.autoMap}`);
       setPhase("BAN_ORDER");
       return;
     }
@@ -1588,7 +1754,7 @@ export default function BanpickApp() {
     }
     if (partMode === "COACH_1V1") {
       if (!(readyA && readyB)) {
-        alert("양 팀 모두 READY가 되어야 시작할 수 있습니다.");
+        alert(t.needBothReady);
         return;
       }
       wsSend({ type: "start" });   // 서버 권위: 시작은 서버가 판정
@@ -1665,8 +1831,8 @@ export default function BanpickApp() {
     const mapObj = MAPS.find((m) => m.id === selectedMap);
 
     // 로그 기록 (선공/선수비 포함)
-    const sideStr = side === "ATTACK" ? " / 선공격" : side === "DEFENSE" ? " / 선수비" : "";
-    logLine(`[세트 ${completedSets.length + 1}] ${t.confirmMap}: ${mapObj?.name ?? selectedMap}${sideStr}`);
+    const sideStr = side === "ATTACK" ? ` / ${t.attackFirst}` : side === "DEFENSE" ? ` / ${t.defendFirst}` : "";
+    logLine(`[${t.setN(completedSets.length + 1)}] ${t.confirmMap}: ${mapObj?.name ?? selectedMap}${sideStr}`);
     popToast(t.toastMap);
 
     // 로컬 상태 업데이트
@@ -1849,7 +2015,7 @@ export default function BanpickApp() {
     const nextLocked = { ...pickLockedTeam, [team]: true };
     setPickLockedTeam(nextLocked);
 
-    const names = pickSlots[team].map((id) => (id ? heroById(id)?.name ?? id : "(빈)"));
+    const names = pickSlots[team].map((id) => (id ? heroById(id)?.name ?? id : t.emptySlot));
     logLine(STR[lang].lockPickTeam(teamName[team]) + ": " + names.join(" / "));
     popToast(STR[lang].lockPickTeam(teamName[team]));
 
@@ -1863,7 +2029,7 @@ export default function BanpickApp() {
     if (pickLocked || !pickLockedTeam[team] || pickLockedTeam[otherTeam(team)]) return;
     const next = { ...pickLockedTeam, [team]: false };
     setPickLockedTeam(next);
-    logLine(`${teamName[team]} 픽 해제`);
+    logLine(t.pickUnlockLog(teamName[team]));
     if (syncOn) patch({ pickLockedTeam: next });
   }
 
@@ -1913,7 +2079,7 @@ export default function BanpickApp() {
         });
       }
     }
-    logLine(`[세트 ${completedSets.length + 1}] 승자: ${winner === "A" ? teamName.A : teamName.B}`);
+    logLine(`[${t.setN(completedSets.length + 1)}] ${t.winnerLabel}: ${winner === "A" ? teamName.A : teamName.B}`);
     setTimeout(pushImportant, 0);
   }
 
@@ -1945,8 +2111,8 @@ export default function BanpickApp() {
     setCompletedSets((prev) => prev.concat([snapshot]));
 
     // ‼️ 로그 메시지 수정 ‼️
-    const resultText = resultA === "W" ? "승리(W)" : resultA === "L" ? "패배(L)" : "무승부(D)";
-    logLine(`[세트 ${completedSets.length + 1}] 결과: ${resultText} (${scoreA}:${scoreB})`);
+    const resultText = resultA === "W" ? t.resultW : resultA === "L" ? t.resultL : t.resultD;
+    logLine(`[${t.setN(completedSets.length + 1)}] ${t.resultLabel}: ${resultText} (${scoreA}:${scoreB})`);
 
     if (syncOn && myRole === "HOST") pushFull(sharedSnapshot);
 
@@ -2162,7 +2328,7 @@ export default function BanpickApp() {
                 <button className={`px-2 py-1 rounded border ${theme.btnBorder} text-xs`} onClick={() => { setSummaryTab("summary"); setShowSummaryOpen(true); }}>{t.openSummary}</button>
                 <button className={`px-2 py-1 rounded border ${theme.btnBorder} text-xs`} onClick={() => { setSummaryTab("log"); setShowSummaryOpen(true); }}>{t.openLogs}</button>
                 {scrimMode && (
-                  <button className={`px-2 py-1 rounded border ${theme.btnBorder} text-xs`} onClick={() => { setFrozenSummarySets(completedSets); setShowScrimSummary(true); }}>스크림 종료</button>
+                  <button className={`px-2 py-1 rounded border ${theme.btnBorder} text-xs`} onClick={() => { setFrozenSummarySets(completedSets); setShowScrimSummary(true); }}>{t.endScrim}</button>
                 )}
               </div>
             </div>
@@ -2373,7 +2539,7 @@ export default function BanpickApp() {
                               style={{ borderColor: "var(--bp-danger)", color: "var(--bp-danger)", background: "rgba(239,68,68,0.12)" }}
                               onClick={() => unlockPick(tm)}
                             >
-                              레디 해제
+                              {t.unready}
                             </button>
                           )}
                         </div>
@@ -2430,7 +2596,7 @@ export default function BanpickApp() {
                           onClick={() => confirmPick(tm)}
                           disabled={done || !allFilled || !canAct}
                         >
-                          {(tm === "A" ? teamName.A : teamName.B)} — {done ? "✓ 픽 완료" : ready ? "픽 완료 (클릭)" : "픽 완료"}
+                          {(tm === "A" ? teamName.A : teamName.B)} — {done ? t.pickDoneCheck : ready ? t.pickDoneClick : t.pickDone}
                         </button>
                       </div>
                     );
@@ -2481,6 +2647,7 @@ export default function BanpickApp() {
           seriesDone={seriesDone}
           onExitSeries={resetToHome}
           canEditWinner={canEditWinner}
+          lang={lang}
         />
       )}
 
@@ -2492,6 +2659,7 @@ export default function BanpickApp() {
         defaultBanFirst={completedSets.length ? (completedSets[completedSets.length - 1].banFirst === "A" ? "B" : "A") : "A"}
         teamName={teamName}
         dark={dark}
+        t={t}
         onConfirm={(mp, bf) => {
           const choice: "PICKER" | "OPPONENT" = bf === mp ? "PICKER" : "OPPONENT";
 
@@ -2550,6 +2718,7 @@ export default function BanpickApp() {
           setShowSideModal(false); // 모달 닫기
         }}
         dark={dark}
+        t={t}
         // ‼️ teamName과 chooserTeam prop 제거 ‼️
       />
 
@@ -2568,6 +2737,8 @@ export default function BanpickApp() {
           onExitSeries={resetToHome}
           scrimTime={scrimTime}
           onToast={popToast}
+          t={t}
+          lang={lang}
         />
       )}
     </div>
@@ -2670,13 +2841,13 @@ function Setup(props: {
       {/* ‼️ "스크림 시간" 입력창 (텍스트 수정) ‼️ */}
       {props.scrimMode && (
         <div className="grid gap-3 mt-3">
-          <div className="text-xs">스크림 시작 시간 (HH / 24h)</div>
+          <div className="text-xs">{t.scrimStartTime}</div>
           <input
             className={fieldStyle}
             value={props.scrimTime}
             onChange={(e) => props.setScrimTime(e.target.value)}
             disabled={!canEditGlobal}
-            placeholder="HH (예: 16)"
+            placeholder={t.scrimTimePh}
           />
         </div>
       )}
@@ -2727,13 +2898,13 @@ function Setup(props: {
                 className={`px-3 py-2 rounded-lg border bp-touch ${dark ? "border-neutral-700" : "border-neutral-300"}`}
                 onClick={() => props.onCreateRoom && props.onCreateRoom()}
               >
-                방 만들기 (호스트 = A)
+                {t.createRoom}
               </button>
-              <div className="text-xs" style={{ textAlign: "center", opacity: 0.6 }}>또는</div>
+              <div className="text-xs" style={{ textAlign: "center", opacity: 0.6 }}>{t.orWord}</div>
               <div className="flex gap-2">
                 <input
                   className={fieldStyle}
-                  placeholder="방 코드 6자리 입력"
+                  placeholder={t.roomCodePh}
                   value={joinCode}
                   maxLength={6}
                   onChange={(e) => setJoinCode(e.target.value.trim().toLowerCase())}
@@ -2744,7 +2915,7 @@ function Setup(props: {
                   onClick={() => joinCode.length === 6 && props.onJoinRoom && props.onJoinRoom(joinCode)}
                   disabled={joinCode.length !== 6}
                 >
-                  입장 (B)
+                  {t.joinRoom}
                 </button>
               </div>
             </div>
@@ -2752,17 +2923,17 @@ function Setup(props: {
             /* 방 대기실: 코드 · 상대 연결 · READY */
             <>
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs">방 코드</span>
+                <span className="text-xs">{t.roomCode}</span>
                 <span className="text-lg font-extrabold" style={{ letterSpacing: "3px" }}>{props.roomCode.toUpperCase()}</span>
                 <button
                   type="button"
                   className={`px-2 py-1 rounded border ${dark ? "border-neutral-700" : "border-neutral-300"} text-xs`}
-                  onClick={() => copyWithToast(props.roomCode!.toUpperCase(), props.onToast, "방 코드 복사됨", "복사 실패 — 코드를 길게 눌러 복사하세요")}
+                  onClick={() => copyWithToast(props.roomCode!.toUpperCase(), props.onToast, t.roomCodeCopied, t.roomCodeCopyFailed)}
                 >
-                  복사
+                  {t.copy}
                 </button>
                 <span className="text-xs ml-auto" style={{ color: props.opponentConnected ? "#5bb98b" : "#a1a1aa" }}>
-                  {props.opponentConnected ? "● 상대 연결됨" : "○ 상대 대기 중…"}
+                  {props.opponentConnected ? t.opponentConnected : t.opponentWaiting}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -2772,9 +2943,9 @@ function Setup(props: {
                   style={props.readyA ? { borderColor: "#4ade80", boxShadow: "0 0 0 1px #4ade8055" } : undefined}
                   onClick={() => canToggleA && props.setReadyA((v) => !v)}
                   disabled={!canToggleA}
-                  title={canToggleA ? "" : "A팀 코치만 변경 가능"}
+                  title={canToggleA ? "" : t.onlyCoachCanToggle("A")}
                 >
-                  A 팀 READY: {props.readyA ? "ON" : "OFF"}
+                  {t.readyToggle("A", props.readyA)}
                 </button>
                 <button
                   type="button"
@@ -2782,9 +2953,9 @@ function Setup(props: {
                   style={props.readyB ? { borderColor: "#4ade80", boxShadow: "0 0 0 1px #4ade8055" } : undefined}
                   onClick={() => canToggleB && props.setReadyB((v) => !v)}
                   disabled={!canToggleB}
-                  title={canToggleB ? "" : "B팀 코치만 변경 가능"}
+                  title={canToggleB ? "" : t.onlyCoachCanToggle("B")}
                 >
-                  B 팀 READY: {props.readyB ? "ON" : "OFF"}
+                  {t.readyToggle("B", props.readyB)}
                 </button>
               </div>
             </>
@@ -2798,7 +2969,7 @@ function Setup(props: {
         }`}
         onClick={props.onStart}
         disabled={props.partMode === "COACH_1V1" && (!props.roomCode || !(props.readyA && props.readyB))}
-        title={props.partMode === "COACH_1V1" && !(props.readyA && props.readyB) ? "양 팀 READY 필요" : ""}
+        title={props.partMode === "COACH_1V1" && !(props.readyA && props.readyB) ? t.needBothReadyShort : ""}
       >
         {t.start}
       </button>
