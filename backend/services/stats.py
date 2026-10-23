@@ -200,6 +200,7 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
             t = ev.get("game_timestamp", 0)
             # round_start 는 직전 라운드 경계 시각에 찍히므로 시작하는 라운드에 넣는다(반열린 구간 prev ≤ t < cur).
             # 그런 라운드가 없으면(다음 라운드 스탯이 없는 마지막 경계 등) 아래 기존 규칙으로 — 이벤트를 새로 잃지 않게.
+            # 폴백은 반열린 구간에 드는 DB 라운드가 없을 때만(로그 라운드 수 > player_stat 스냅샷 수 — C1-b 참조).
             # 그 밖의 이벤트(round_end·objective_* 등)는 경계 시각이면 끝나는 라운드 소속 — 기존 `<=` 그대로.
             if rs_fit.get(id(ev)):
                 if r in rs_fit[id(ev)]: round_events.append(ev)
