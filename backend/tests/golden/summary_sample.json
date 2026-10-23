@@ -20,6 +20,7 @@
     "팀C"
    ],
    "scrim_name": "261008-팀C",
+   "undetermined": 1,
    "wins": 2
   },
   "status": "ok",
@@ -426,6 +427,7 @@
     ],
     "scrim_name": "261008-팀C",
     "session_id": "2610082022",
+    "undetermined": 1,
     "wins": 2
    },
    {
@@ -444,6 +446,7 @@
     ],
     "scrim_name": "261001-Team B",
     "session_id": "2610011921",
+    "undetermined": 0,
     "wins": 2
    }
   ],
@@ -456,6 +459,7 @@
    "no_result": 2,
    "sessions": 2,
    "skipped_matches_without_base_team": 0,
+   "undetermined": 1,
    "wins": 4
   }
  },
@@ -487,6 +491,7 @@
     ],
     "scrim_name": "261001-Team B",
     "session_id": "2610011921",
+    "undetermined": 0,
     "wins": 1
    }
   ],
@@ -499,6 +504,7 @@
    "no_result": 0,
    "sessions": 1,
    "skipped_matches_without_base_team": 7,
+   "undetermined": 0,
    "wins": 1
   }
  },

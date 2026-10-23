@@ -242,6 +242,7 @@ def _session_match_rows(scrim, base_team: str) -> tuple[list, int]:
             "map": canonical_map_name(m.get("map_name")), "opponent": opp,
             "result": None if not w else ("draw" if w == "Draw" else ("win" if w == base_team else "loss")),
             "our_score": ours or 0, "enemy_score": theirs or 0,
+            "undetermined": m.get("winner_source") == "undetermined",
         })
     return rows, skipped
 
@@ -260,6 +261,8 @@ def summarize_session(scrim, base_team: str) -> dict:
         "opponents": opponents, "matches": len(rows),
         "wins": wl["wins"], "losses": wl["losses"], "draws": wl["draws"],
         "no_result": sum(1 for r in rows if r["result"] is None),
+        # 무승부(draws) 중 로그로 못 가린 매치 수 — 승률·분모 정의는 그대로(04 미결: 분모 제외 여부)
+        "undetermined": sum(1 for r in rows if r["undetermined"]),
         "maps": [r["map"] for r in rows],
         "skipped_matches_without_base_team": skipped,
     }
@@ -290,6 +293,7 @@ def summarize_period(scrims, frm=None, to=None, base_team: str = "") -> dict:
     total = {
         "sessions": len(sessions), "matches": sum(x["matches"] for x in sessions),
         "wins": tw, "losses": tl, "draws": td, "no_result": sum(x["no_result"] for x in sessions),
+        "undetermined": sum(x["undetermined"] for x in sessions),
         "map_winrate": _rate(tw, tw + tl + td), "decided_matches": tw + tl + td,
         "skipped_matches_without_base_team": skipped,
     }

@@ -6318,7 +6318,18 @@
   },
   "total_final_blows_t1": 34.0,
   "total_final_blows_t2": 50.0,
-  "winner": "Team A"
+  "winner": "Team A",
+  "winner_detail": {
+   "match_end": {
+    "present": true,
+    "t1": 1,
+    "t2": 2
+   },
+   "path": "score",
+   "prog_t1": null,
+   "prog_t2": null,
+   "rounds": 3
+  }
  },
  "parsed": {
   "events": [

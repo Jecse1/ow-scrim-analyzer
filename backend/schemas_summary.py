@@ -83,6 +83,7 @@ class SessionSummaryRow(BaseModel):
     losses: int
     draws: int
     no_result: int
+    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
     maps: List[str]
 
 
@@ -93,6 +94,7 @@ class PeriodTotal(BaseModel):
     losses: int
     draws: int
     no_result: int
+    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
     map_winrate: Optional[float] = None
     decided_matches: int = Field(description="map_winrate 분모 = wins + losses + draws")
     skipped_matches_without_base_team: int
@@ -120,6 +122,7 @@ class CompletedSession(BaseModel):
     losses: int
     draws: int
     no_result: int
+    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
     maps: List[str]
 
 

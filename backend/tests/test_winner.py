@@ -23,8 +23,8 @@ def _judge(text):
 @pytest.mark.parametrize("name, winner, score, source", [
     ("hybrid_score.txt", T1, (2, 1), "score"),
     ("hybrid_progress.txt", T1, (1, 1), "progress"),
-    ("escort_draw.txt", "Draw", (0, 0), "draw"),
-    ("push.txt", "Draw", (0, 0), "draw"),
+    ("escort_draw.txt", "Draw", (0, 0), "undetermined"),   # 2라운드 진행도 동률 — 로그로 못 가림
+    ("push.txt", "Draw", (0, 0), "undetermined"),          # 밀기 0:0 — 로그에 거리 없음
     ("control_simple.txt", T1, (2, 0), "score"),
 ])
 def test_winner_and_source(fixture_text, name, winner, score, source):
@@ -40,12 +40,12 @@ def test_progress_result_note(fixture_text):
 
 
 def test_push_override_flow(fixture_text):
-    # 밀기는 로그 판정이 항상 Draw → winner_override 로 보정하면 출처가 override, 해제하면 draw 로 복귀
+    # 밀기는 로그 판정이 항상 Draw(미확정) → winner_override 로 보정하면 출처가 override, 해제하면 undetermined 로 복귀
     m = _judge(fixture_text("push.txt"))
     m["winner_override"] = T2
     assert derive_winner_source(m) == "override"
     m["winner_override"] = None
-    assert derive_winner_source(m) == "draw"
+    assert derive_winner_source(m) == "undetermined"
 
 
 @pytest.mark.parametrize("match, expected", [
@@ -53,7 +53,12 @@ def test_push_override_flow(fixture_text):
     ({"winner": "A", "winner_override": "", "source": "manual", "score_t1": 0, "score_t2": 0}, "manual"),
     ({"winner": "", "winner_override": None, "source": "manual"}, None),
     ({"winner": "", "winner_override": None, "source": "log"}, None),
-    ({"winner": "Draw", "source": "log", "score_t1": 2, "score_t2": 2}, "draw"),
+    ({"winner": "Draw", "source": "log", "score_t1": 2, "score_t2": 2}, "undetermined"),   # 근거(winner_detail) 없음
+    ({"winner": "Draw", "source": "log", "winner_detail": {"path": "draw_match_end_tie"}}, "draw"),
+    ({"winner": "Draw", "source": "log", "winner_detail": '{"path": "draw_match_end_tie"}'}, "draw"),  # DB 문자열
+    ({"winner": "Draw", "source": "log", "winner_detail": {"path": "undetermined_push"}}, "undetermined"),
+    ({"winner": "Draw", "source": "manual", "score_t1": 1, "score_t2": 1}, "draw"),          # 사용자 입력 무승부
+    ({"winner": "Draw", "winner_override": "A", "source": "log"}, "override"),
     ({"winner": "A", "source": "log", "score_t1": 3, "score_t2": 2}, "score"),
     ({"winner": "A", "source": "log", "score_t1": 2, "score_t2": 2}, "progress"),
     ({"winner": "A", "source": None, "score_t1": None, "score_t2": 1}, "score"),

@@ -41,9 +41,11 @@ class Match(Base):
     # 원본 winner 컬럼 불변 규칙은 source='log'에 한정 — 로그 파싱 원본 보존 취지.
     # source='manual' 매치는 원본이 사용자 입력이므로 winner/score를 컬럼에 직접 저장·수정한다.
     winner_override = Column(String, nullable=True)
-    # 승자 출처(services/winner_source.derive_winner_source): override/manual/draw/score/progress, NULL=미정.
+    # 승자 출처(services/winner_source.derive_winner_source): override/manual/draw/undetermined/score/progress, NULL=미정.
     # 승패 계산과 무관한 기록용 — 승자를 바꾸는 모든 경로가 저장 직전에 파생값으로 갱신한다.
     winner_source = Column(String, nullable=True)
+    # 판정 경로·근거 JSON(services/winner_source 모듈 설명). NULL = 아직 기록 없음(재파싱·백필 전).
+    winner_detail = Column(Text, nullable=True)
     # 'log' = 로그 파싱 매치(기존 전부), 'manual' = 로그 없는 수기 등록 매치(rounds/events/player_stats 없음)
     source = Column(String, nullable=False, server_default="log")
     video_url = Column(String)

@@ -14,6 +14,22 @@ from services.fight_analysis import compute_fights
 from services.fight_metrics import (
     build_fight_summaries, compute_fight_metrics, _fightlab_side, _fightlab_hero_role,
 )
+from services.winner_source import classify_draw_path
+
+
+def _progress_best(events, n_team):
+    """팀의 최대 진행도 (거점 인덱스, %) — winner_detail 기록용.
+    calculate_pure_stats 동점 타이브레이커의 _max_progress 와 같은 규칙(판정 분기는 그쪽을 그대로 쓴다)."""
+    best = (0, 0.0)
+    for ev in events:
+        if ev.get("event_type") not in ("payload_progress", "point_progress"):
+            continue
+        if normalize_team_name(ev.get("team", "")) != n_team:
+            continue
+        cur = (ev.get("prog_idx") or 0, ev.get("prog_pct") or 0.0)
+        if cur > best:
+            best = cur
+    return best
 
 def calculate_pure_stats(parsed, target_match, match_label=""):
     rounds_map = parsed["rounds_stats"]
@@ -153,6 +169,26 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
         target_match["result"] = f"무승부 ({final_t1_score} : {final_t2_score})"
         
     target_match["winner"] = match_winner
+
+    # 판정 경로·근거 기록(services/winner_source.WINNER_PATHS). 위 판정 분기·결과는 그대로 — 기록만 추가.
+    n_attack_rounds = len(round_attackers)
+    has_me = score_match_end_t1 is not None and score_match_end_t2 is not None
+    if match_winner == "Draw":
+        _mode = "밀기" if is_push else ("혼합" if is_hybrid_escort else (resolve_map_type(map_name) or ""))
+        win_path = classify_draw_path(_mode, n_attack_rounds, has_me, score_match_end_t1, score_match_end_t2)
+    elif progress_winner and match_winner == progress_winner and final_t1_score == final_t2_score:
+        win_path = "progress"
+    elif is_hybrid_escort and n_attack_rounds > 2 and score_obj_t1 == score_obj_t2:
+        win_path = "match_end_tiebreak"
+    else:
+        win_path = "score"
+    target_match["winner_detail"] = {
+        "path": win_path,
+        "rounds": n_attack_rounds,
+        "match_end": {"present": has_me, "t1": score_match_end_t1, "t2": score_match_end_t2},
+        "prog_t1": list(_progress_best(parsed["events"], n_team1)) if is_hybrid_escort else None,
+        "prog_t2": list(_progress_best(parsed["events"], n_team2)) if is_hybrid_escort else None,
+    }
 
     round_end_times = {}
     for r in range(1, total_rounds + 1):

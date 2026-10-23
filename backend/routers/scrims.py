@@ -484,6 +484,10 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
             target_match: dict = {}
             calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
+            # 로그로 승자를 못 가린 무승부면 사유(판정 경로)를 응답에 싣는다(경고 표시용 — 저장·판정 무관).
+            _wpath = (target_match.get("winner_detail") or {}).get("path") or ""
+            if target_match.get("winner") == "Draw" and _wpath.startswith("undetermined"):
+                pre_resp["undetermined_reason"] = _wpath
 
             # 수기 매치에 로그를 붙일 때: 수기값 vs 파싱값 차이(맵·승자·스코어)
             prev_source = db_match.source or "log"
@@ -517,6 +521,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             db_match.duration_sec = target_match.get("timeline", {}).get("duration_sec", 0)
             db_match.total_final_blows_t1 = target_match.get("total_final_blows_t1", 0)
             db_match.total_final_blows_t2 = target_match.get("total_final_blows_t2", 0)
+            db_match.winner_detail = json.dumps(target_match.get("winner_detail"), ensure_ascii=False) if target_match.get("winner_detail") else None
             db_match.winner_source = derive_winner_source(db_match)
 
             # 신규 방식: setup_complete의 real_timestamp 추출 → game_setup_sec 저장
@@ -594,6 +599,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 "map_name": db_match.map_name,
                 "winner_override": db_match.winner_override or "",
                 "winner_source": db_match.winner_source,
+                "winner_detail": target_match.get("winner_detail"),
                 "precheck": {"warning_count": pre["warning_count"],
                              "codes": sorted(pre["counts"]["by_code"])},
             })
@@ -834,8 +840,11 @@ async def rebuild_database():
                         total_final_blows_t1=m.get("total_final_blows_t1", 0),
                         total_final_blows_t2=m.get("total_final_blows_t2", 0),
                     )
-                    # 승자 출처: meta 기록값 우선, 없으면(옛 meta) 복원된 override 까지 반영해 파생
-                    dbm.winner_source = m.get("winner_source") or derive_winner_source(dbm)
+                    # 승자 출처: 재파싱 결과(winner_detail)와 복원된 override 로 다시 파생(meta 의 옛 값은 쓰지 않음 —
+                    # 분류 규칙이 바뀌면 meta 값이 낡을 수 있다). 수기 매치는 winner_detail 없이 같은 규칙.
+                    _wd = m.get("winner_detail")
+                    dbm.winner_detail = json.dumps(_wd, ensure_ascii=False) if _wd else None
+                    dbm.winner_source = derive_winner_source(dbm)
                     db.add(dbm)
                     # 자리 바꾸기 복원: meta는 로그 원본 순서 → 재파싱으로 선수 소속이 정확히 복원된 뒤
                     # 이 매치만 라이브와 동일한 _swap_team_slots_db 를 재적용(이름+슬롯 숫자쌍 교환).
