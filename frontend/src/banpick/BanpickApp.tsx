@@ -81,7 +81,7 @@ const ROLE_LABELS: Record<Lang, Record<Role, string>> = {
   zh: { Tank: "重装", Damage: "输出", Support: "支援" },
 };
 const MAP_LABELS: Record<Lang, Record<MapType, string>> = {
-  ko: { Control: "쟁탈", Escort: "호위", Hybrid: "혼합", Push: "밀기", Flashpoint: "플래시포인트" },
+  ko: { Control: "쟁탈", Escort: "화물", Hybrid: "혼합", Push: "밀기", Flashpoint: "플래시포인트" },
   en: { Control: "Control", Escort: "Escort", Hybrid: "Hybrid", Push: "Push", Flashpoint: "Flashpoint" },
   zh: { Control: "占领要点", Escort: "运载目标", Hybrid: "混合", Push: "推进", Flashpoint: "闪点行动" },
 };
@@ -94,7 +94,7 @@ const STR = {
     teamAName: "팀 A 이름",
     teamBName: "팀 B 이름",
     participation: "모드",
-    solo: "solo",
+    solo: "솔로",
     oneVone: "1vs1",
     scrim: "스크림 모드",
     format: "진행 방식",
@@ -122,7 +122,7 @@ const STR = {
     banned: "밴됨",
     confirmBan: "밴 확정",
     slot: "슬롯",
-    ready: "Ready",
+    ready: "준비 완료",
     lockPickTeam: (name: string) => `${name} 픽 확정`,
     pickLockShort: "픽 확정",
     setWinner: "세트 승리 팀 선택",
@@ -161,6 +161,10 @@ const STR = {
     modeOrder: "모드 순서",
     autoMap: "맵 자동 배정(남은 맵)",
     banCount: "밴",
+    banTag: "밴",
+    secUnit: "초",
+    defaultTeamA: "팀 A",
+    defaultTeamB: "팀 B",
   },
   en: {
     title: "OW2 BAN Simulator",
@@ -234,6 +238,10 @@ const STR = {
     modeOrder: "Mode order",
     autoMap: "Map auto-assigned (remaining)",
     banCount: "bans",
+    banTag: "BAN",
+    secUnit: "s",
+    defaultTeamA: "Team A",
+    defaultTeamB: "Team B",
   },
   zh: {
     title: "OW2 BAN Simulator",
@@ -269,7 +277,7 @@ const STR = {
     banned: "已禁用",
     confirmBan: "确定禁用",
     slot: "位置",
-    ready: "Ready",
+    ready: "已就绪",
     lockPickTeam: (name: string) => `${name} 选取锁定`,
     pickLockShort: "锁定选取",
     setWinner: "选择本局获胜队伍",
@@ -307,6 +315,10 @@ const STR = {
     modeOrder: "模式顺序",
     autoMap: "自动分配地图(剩余)",
     banCount: "禁用",
+    banTag: "禁用",
+    secUnit: "秒",
+    defaultTeamA: "队伍 A",
+    defaultTeamB: "队伍 B",
   },
 } as const;
 
@@ -843,7 +855,7 @@ function BanCard({ heroId, heroById, lang, mobile }: {
         <>
           <div className="bp-bancard-img"><HeroThumb id={heroId} contain={false} /></div>
           <BanSlashOverlay />
-          <span className="bp-bancard-tag">BAN</span>
+          <span className="bp-bancard-tag">{STR[lang].banTag}</span>
           <span className="bp-bancard-name">{name}</span>
         </>
       ) : (
@@ -1041,7 +1053,7 @@ export default function BanpickApp() {
   const mapTypeLabel = (mt: string) => (mt === "All" ? (lang === "ko" ? "전체" : lang === "zh" ? "全部" : "All") : MAP_LABELS[lang][mt as MapType]);
 
   /* === Setup === */
-  const [teamName, setTeamName] = useState<Record<Team, string>>({ A: "Team A", B: "Team B" });
+  const [teamName, setTeamName] = useState<Record<Team, string>>({ A: STR.ko.defaultTeamA, B: STR.ko.defaultTeamB });
   const [sets, setSets] = useState(3);
   const [mode, setMode] = useState<number>(MODE.FULL);
   const [partMode, setPartMode] = useState<PartMode>("SOLO");
@@ -1110,6 +1122,17 @@ export default function BanpickApp() {
 
   /* === Match === */
   const [started, setStarted] = useState(false);
+  // 팀명 기본값은 언어별(STR.defaultTeamA/B). 사용자가 고치지 않은 기본값이면 언어 전환 시 따라 바꾼다.
+  // 원격(1v1)·진행 중에는 서버/사용자 값을 건드리지 않는다.
+  useEffect(() => {
+    if (remoteMode || started) return;
+    const isDefault = (team: Team, v: string) => (Object.keys(STR) as Lang[]).some((lg) => v === (team === "A" ? STR[lg].defaultTeamA : STR[lg].defaultTeamB));
+    setTeamName((v) => {
+      const A = isDefault("A", v.A) ? STR[lang].defaultTeamA : v.A;
+      const B = isDefault("B", v.B) ? STR[lang].defaultTeamB : v.B;
+      return A === v.A && B === v.B ? v : { A, B };
+    });
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [phase, setPhase] = useState<Phase>(mode === MODE.HERO_BAN_ONLY ? "BAN_ORDER" : "MAP_PICK");
   const [timer, setTimer] = useState<number>(TIMER.NORMAL);
   const [run, setRun] = useState(false);
@@ -2053,7 +2076,7 @@ export default function BanpickApp() {
         <div className="ml-auto text-xs">
           {t.curTurn}: <b>{turn === "A" ? teamName.A : teamName.B}</b>
           {showBanCounter && <> · {t.banCount} <b>{Math.min(banIdxNow + 1, banSeq.length)}/{banSeq.length}</b></>}
-          {" "}· {t.timeLeft}: <b>{timer}s</b>
+          {" "}· {t.timeLeft}: <b>{timer}{t.secUnit}</b>
         </div>
       </div>
       <div className="mx-auto w-full max-w-[1440px] px-1 sm:px-2">
@@ -2226,7 +2249,7 @@ export default function BanpickApp() {
                     {t.pickSecond}
                   </button>
                   <div className="ml-auto text-xs">
-                    {t.timeLeft}: <b>{timer}s</b>
+                    {t.timeLeft}: <b>{timer}{t.secUnit}</b>
                   </div>
                 </div>
 
@@ -2284,7 +2307,7 @@ export default function BanpickApp() {
                     {t.pickSecond}
                   </button>
                   <div className="ml-auto text-xs">
-                    {t.timeLeft}: <b>{timer}s</b>
+                    {t.timeLeft}: <b>{timer}{t.secUnit}</b>
                   </div>
                 </div>
                 <div className="mt-3">
@@ -2327,7 +2350,7 @@ export default function BanpickApp() {
                   {/* 턴·남은시간 — 스크롤 무관 항상 상단 고정 */}
                   <div className="bp-turnbar flex items-center gap-2 text-xs">
                     <span>{t.curTurn}: <b>{headerTurnTeam ? teamName[headerTurnTeam] : "-"}</b></span>
-                    <span className="ml-auto">{t.timeLeft}: <b>{timer}s</b></span>
+                    <span className="ml-auto">{t.timeLeft}: <b>{timer}{t.secUnit}</b></span>
                   </div>
 
                   {/* 양 팀: 밴 카드 + 가로 슬롯 행(HERO_BAN은 슬롯 비활성 플레이스홀더) */}
