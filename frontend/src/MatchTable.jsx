@@ -117,7 +117,7 @@ const MatchTable = ({ stats }) => {
                     onMouseOver={e => e.currentTarget.style.background = theme.surfaceHighlight} 
                     onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <td style={{...tdStyle, color: theme.textDim}}>{idx + 1}</td>
+                  <td style={{...tdStyle, color: theme.textSub}}>{idx + 1}</td>
                   
                   <td style={{...tdStyle, textAlign: 'left', paddingLeft: '20px'}}>
                     <div style={{fontWeight: 'bold', color: teamColor}}>
@@ -140,7 +140,7 @@ const MatchTable = ({ stats }) => {
 
                   <td style={tdStyle}>{fmt(row.hero_damage_dealt)}</td>
                   <td style={tdStyle}>{fmt(row.damage_taken)}</td>
-                  <td style={{...tdStyle, color: (row.healing_dealt || 0) > 0 ? theme.success : theme.textDim}}>
+                  <td style={{...tdStyle, color: (row.healing_dealt || 0) > 0 ? theme.success : theme.textSub}}>
                     {(row.healing_dealt || 0) > 0 ? fmt(row.healing_dealt) : '-'}
                   </td>
                   <td style={tdStyle}>{fmt(row.healing_received)}</td>

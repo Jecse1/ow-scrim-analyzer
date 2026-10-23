@@ -278,7 +278,7 @@ const StatsView = ({ activeRoundTab, setActiveRoundTab, displayStats, rounds, t1
                 <React.Fragment key={idx}>
                   {isTeamChange && (<tr><td colSpan="18" style={{borderBottom: `2px solid ${theme.borderHighlight}`}}></td></tr>)}
                   <tr style={{ background: 'transparent' }} onMouseOver={e=>e.currentTarget.style.background=theme.surfaceHighlight} onMouseOut={e=>e.currentTarget.style.background='transparent'}>
-                    <td style={{...tdStyleCenter, color: theme.textDim}}>{idx + 1}</td>
+                    <td style={{...tdStyleCenter, color: theme.textSub}}>{idx + 1}</td>
                     <td style={{...tdStyleCenter, padding:'4px'}}>
                         <div style={{display:'flex', justifyContent:'center', alignItems:'center'}}>
                             {roleIconSrc && (
