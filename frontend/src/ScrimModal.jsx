@@ -8,6 +8,12 @@ import { useIsMobile } from "./utils/responsive";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 
+// 브라우저 로컬 기준 오늘 'YYYY-MM-DD'. toISOString()은 UTC라 KST 오전 9시 전에는 전날이 된다.
+const localTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 // 매치 1개 초기값. 1팀명·2팀명은 자유 입력 — 로그 매치는 1팀명 = 로그 첫 match_start 의 첫 팀(roster slot 1) 자리.
 // winner·winner_override 는 't1' | 't2' | 'Draw' | '' 로 들고 있다가 App 이 팀명으로 바꾼다
 // (팀명을 나중에 고쳐도 선택이 어긋나지 않게).
@@ -29,7 +35,7 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   const initialScrimData = () => ({
     scrimName: '',
-    date: new Date().toISOString().split('T')[0],
+    date: localTodayStr(),
     startHour: '20',
     endHour: '22',
     matches: [blankMatch()],
