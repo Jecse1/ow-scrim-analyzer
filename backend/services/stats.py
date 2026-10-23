@@ -186,6 +186,12 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
         for ev in parsed["events"] if ev.get("event_type") == "round_start"
     }
 
+    # 마지막 라운드 이벤트 상한: match_end 시각(없으면 상한 없음) — 경계(스탯 기반)보다 늦은 꼬리 이벤트를 잃지 않게.
+    # 경계를 줄이지는 않는다(match_end 가 더 이르면 경계 그대로). 다른 라운드 경계 무변경.
+    # 라운드별 초기화(비누적) 스냅샷 로그는 지원 범위 밖(다른 워크숍 출력).
+    _match_end_ts = [ev.get("game_timestamp", 0) for ev in parsed["events"] if ev.get("event_type") == "match_end"]
+    last_round_cap = max(_match_end_ts) if _match_end_ts else float("inf")
+
     actual_rounds_temp = []
     for r in range(1, total_rounds + 1):
         pure_round_stats = []
@@ -196,6 +202,7 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
         pure_duration = max(0, curr_time - prev_time)
 
         round_events = []
+        ev_upper = max(curr_time, last_round_cap) if r == total_rounds else curr_time   # 이벤트 배정 상한(위 주석)
         for ev in parsed["events"]:
             t = ev.get("game_timestamp", 0)
             # round_start 는 직전 라운드 경계 시각에 찍히므로 시작하는 라운드에 넣는다(반열린 구간 prev ≤ t < cur).
@@ -205,9 +212,9 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
             if rs_fit.get(id(ev)):
                 if r in rs_fit[id(ev)]: round_events.append(ev)
             elif r == 1:
-                if t <= curr_time: round_events.append(ev)
+                if t <= ev_upper: round_events.append(ev)
             else:
-                if prev_time < t <= curr_time: round_events.append(ev)
+                if prev_time < t <= ev_upper: round_events.append(ev)
 
         r_winner = round_scores.get(r, {}).get("winner", "Unknown")
         round_kills = [e for e in round_events if e.get("event_type") == "kill"]
