@@ -2628,13 +2628,6 @@
       "old_index": 0,
       "round": 2,
       "timestamp": 356
-     },
-     {
-      "attacker": "0",
-      "event_type": "round_start",
-      "game_timestamp": 185.23,
-      "round_number": 2,
-      "timestamp": 357
      }
     ],
     "fights": [
@@ -3179,6 +3172,13 @@
    {
     "duration_sec": 299.04,
     "events": [
+     {
+      "attacker": "0",
+      "event_type": "round_start",
+      "game_timestamp": 185.23,
+      "round_number": 2,
+      "timestamp": 357
+     },
      {
       "ability": "Secondary Fire",
       "event_type": "kill",
@@ -3944,13 +3944,6 @@
       "old_index": 2,
       "round": 3,
       "timestamp": 708
-     },
-     {
-      "attacker": "0",
-      "event_type": "round_start",
-      "game_timestamp": 484.27,
-      "round_number": 3,
-      "timestamp": 709
      }
     ],
     "fights": [
@@ -4646,6 +4639,13 @@
    {
     "duration_sec": 287.72,
     "events": [
+     {
+      "attacker": "0",
+      "event_type": "round_start",
+      "game_timestamp": 484.27,
+      "round_number": 3,
+      "timestamp": 709
+     },
      {
       "ability": "Primary Fire",
       "event_type": "kill",

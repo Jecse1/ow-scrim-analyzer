@@ -178,6 +178,14 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
                 player_snapshots[r][p_key] = {}
             player_snapshots[r][p_key][h_name] = log_stat.copy()
 
+    # round_start 별 반열린 구간(prev ≤ t < cur)에 드는 라운드 집합 — 아래 라운드 배정에서 사용.
+    rs_fit = {
+        id(ev): {r for r in range(1, total_rounds + 1)
+                 if (r == 1 or round_end_times.get(r - 1, 0) <= ev.get("game_timestamp", 0))
+                 and ev.get("game_timestamp", 0) < round_end_times.get(r, 0)}
+        for ev in parsed["events"] if ev.get("event_type") == "round_start"
+    }
+
     actual_rounds_temp = []
     for r in range(1, total_rounds + 1):
         pure_round_stats = []
@@ -190,7 +198,12 @@ def calculate_pure_stats(parsed, target_match, match_label=""):
         round_events = []
         for ev in parsed["events"]:
             t = ev.get("game_timestamp", 0)
-            if r == 1:
+            # round_start 는 직전 라운드 경계 시각에 찍히므로 시작하는 라운드에 넣는다(반열린 구간 prev ≤ t < cur).
+            # 그런 라운드가 없으면(다음 라운드 스탯이 없는 마지막 경계 등) 아래 기존 규칙으로 — 이벤트를 새로 잃지 않게.
+            # 그 밖의 이벤트(round_end·objective_* 등)는 경계 시각이면 끝나는 라운드 소속 — 기존 `<=` 그대로.
+            if rs_fit.get(id(ev)):
+                if r in rs_fit[id(ev)]: round_events.append(ev)
+            elif r == 1:
                 if t <= curr_time: round_events.append(ev)
             else:
                 if prev_time < t <= curr_time: round_events.append(ev)
