@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { fetchCached, invalidateApiCache } from './utils/apiCache';
-import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, RefreshCw, Filter, Trash2 } from 'lucide-react';
+import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, RefreshCw, Filter, Trash2, AlertCircle } from 'lucide-react';
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { BASE_TEAM } from "./config";
@@ -18,19 +18,22 @@ const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
 
 // 우리 팀 = 기준 팀(config.js BASE_TEAM, 앱 전반의 "우리 시점"과 동일). 매치 winner(override 반영 최종값)로 세션 전적 산출.
 //  - winner === 기준 팀           → 승
-//  - winner in (Draw/무승부/빈값) → 무 (판정 불가 포함)
+//  - winner_source=undetermined  → 미확정 (로그로 승자를 못 가린 무승부, 별도 집계)
+//  - winner in (Draw/무승부/빈값) → 무
 //  - 그 외(상대팀명)             → 패
+// 세션 승패 결과(outcome)는 w·l 만 비교 — 미확정 분리로 바뀌지 않는다.
 const OUR_TEAM = BASE_TEAM;
 const sessionRecord = (s) => {
-  let w = 0, l = 0, d = 0;
+  let w = 0, l = 0, d = 0, u = 0;
   for (const m of (s.matches || [])) {
     const win = (m.winner || '').trim();
     if (win === OUR_TEAM) w++;
+    else if (m.winner_source === 'undetermined') u++;
     else if (!win || win === 'Draw' || win === '무승부') d++;
     else l++;
   }
   const outcome = w > l ? 'win' : w < l ? 'loss' : 'draw';
-  return { w, l, d, outcome };
+  return { w, l, d, u, outcome };
 };
 
 const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -413,7 +416,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                         <div
                           key={s.id}
                           className="ssc-chip"
-                          title={`${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : language === 'zh' ? '胜 ' : 'W '}${rec.l}${language === 'ko' ? '패' : language === 'zh' ? '负' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : language === 'zh' ? ` ${rec.d}平` : ` ${rec.d}D`) : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
+                          title={`${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : language === 'zh' ? '胜 ' : 'W '}${rec.l}${language === 'ko' ? '패' : language === 'zh' ? '负' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : language === 'zh' ? ` ${rec.d}平` : ` ${rec.d}D`) : ''}${rec.u ? ` · ${t.ssUndetermined.replace('{n}', rec.u)}` : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
                           onClick={(e) => { e.stopPropagation(); onSelectScrim(s.id); }}
                           style={{
                             background: col.bg, color: col.fg, border: `1px solid ${col.bd}`, borderRadius: '6px',
@@ -453,7 +456,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                     >
                       <span style={{ width: 9, height: 9, borderRadius: '999px', background: col.fg, flexShrink: 0 }} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.scrim_name}</span>
-                      <span style={{ flexShrink: 0, fontSize: '12px', fontWeight: 700, color: col.fg }}>{rec.w}-{rec.l}{rec.d ? `-${rec.d}` : ''}</span>
+                      <span style={{ flexShrink: 0, fontSize: '12px', fontWeight: 700, color: col.fg }}>{rec.w}-{rec.l}{rec.d + rec.u ? `-${rec.d + rec.u}` : ''}</span>
                     </button>
                   );
                 })}
@@ -522,6 +525,12 @@ const ScrimSessions = ({ onSelectScrim }) => {
                         <div style={{ display: 'flex', gap: '16px', color: theme.textSub, fontSize: '13px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {scrim.date}</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {t.matchCount.replace('{n}', scrim.matches ? scrim.matches.length : 0)}</span>
+                          {(() => {
+                            const u = sessionRecord(scrim).u;
+                            return u > 0 && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: theme.warning, fontWeight: 600 }}><AlertCircle size={14} /> {t.ssUndetermined.replace('{n}', u)}</span>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

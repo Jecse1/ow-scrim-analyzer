@@ -5,6 +5,7 @@ export default {
   dashboard: "대시보드", sessions: "스크림 세션", overall: "전체 통계", teamManage: "팀 관리 (준비중)",
   navGroupStats: "통계", navGroupAnalysis: "분석", navBanpick: "밴픽", navPlans: "드래프트 플랜",
   ssCalendar: "달력", ssList: "리스트",
+  ssUndetermined: "미확정 {n}건",
   title: "스크림 데이터 센터", desc: "오버워치 스크림 로그를 업로드하여 팀의 퍼포먼스를 분석하세요.", desc2: "데이터는 서버에 안전하게 저장됩니다.",
   createScrim: "스크림 생성하기", viewHistory: "기록 보기", uploading: "업로드 중...",
   modalTitle: "스크림 기록 생성", step1Title: "기본 정보 입력", step1Desc: "스크림 날짜와 시간을 입력해주세요.",
@@ -116,6 +117,10 @@ export default {
   sdManualBadge: "수기", sdEditFail: "수정 실패: ", sdUploadDone: "로그가 반영되었습니다.",
   pcWarnPrefix: "로그 형식 경고", pcWarnUnit: "건",
   wsOverride: "보정", wsProgress: "진행도", wsDraw: "무승부", wsTitle: "승자 출처",
+  wsUndetermined: "미확정",
+  pcUdPrefix: "승자 미확정(승패 보정 필요)", pcUdPush: "밀기 맵 — 로그에 전진 거리 기록 없음",
+  pcUdNoMatchEnd: "match_end 기록 없음 — 최종 점수 확인 불가", pcUdProgressTie: "2라운드 진행도 동률",
+  pcUdScoreTie: "점수 동점", pcUdOther: "로그로 승자를 가릴 수 없음",
   // Common (buttons / delete dialogs)
   delete: "삭제", reset: "초기화", cancelSelection: "선택 취소", selectAll: "전체 선택", deselectAll: "전체 해제",
   selectedCount: "선택됨", deleting: "삭제 중...", deleteSelected: "선택 삭제", deleteConfirmPre: "선택한 ",
@@ -396,6 +401,7 @@ export default {
   woHint: "밀기맵은 로그에 스코어가 없어 자동 판정이 무승부로 저장됩니다. 실제 승리 팀을 선택하면 맵 분석·통계에 반영됩니다(원본 기록은 유지).",
   // 사후 승패 보정 배지·인라인 편집(매치 상세·세션 매치 목록)
   woBadgeDraw: "무승부 · 수기 판정",
+  woBadgeUndetermined: "미확정 · 수기 판정",
   woBadgeOverridden: "수기 보정됨",
   woPick: "판정",
   woSaving: "저장 중…",

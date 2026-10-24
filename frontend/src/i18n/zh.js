@@ -5,6 +5,7 @@ export default {
   dashboard: "仪表盘", sessions: "训练赛场次", overall: "总体统计", teamManage: "队伍管理（开发中）",
   navGroupStats: "统计", navGroupAnalysis: "分析", navBanpick: "禁选", navPlans: "草案计划",
   ssCalendar: "日历", ssList: "列表",
+  ssUndetermined: "未确定 {n} 场",
   title: "训练赛数据中心", desc: "上传守望先锋训练赛日志，分析队伍表现。", desc2: "数据将安全存储在服务器。",
   createScrim: "创建训练赛", viewHistory: "查看记录", uploading: "上传中...",
   modalTitle: "创建训练赛记录", step1Title: "基本信息", step1Desc: "请输入训练赛日期与时间。",
@@ -116,6 +117,10 @@ export default {
   sdManualBadge: "手动", sdEditFail: "编辑失败：", sdUploadDone: "日志已应用。",
   pcWarnPrefix: "日志格式警告", pcWarnUnit: "条",
   wsOverride: "修正", wsProgress: "进度", wsDraw: "平局", wsTitle: "胜者来源",
+  wsUndetermined: "未确定",
+  pcUdPrefix: "胜者未确定（需胜负修正）", pcUdPush: "推进图 — 日志中没有推进距离",
+  pcUdNoMatchEnd: "缺少 match_end — 无法确认最终比分", pcUdProgressTie: "两回合进度持平",
+  pcUdScoreTie: "比分持平", pcUdOther: "无法从日志判定胜者",
   // Common (buttons / delete dialogs)
   delete: "删除", reset: "重置", cancelSelection: "取消选择", selectAll: "全选", deselectAll: "全部取消",
   selectedCount: "已选", deleting: "删除中...", deleteSelected: "删除所选", deleteConfirmPre: "确定删除所选 ",
@@ -396,6 +401,7 @@ export default {
   woHint: "推进图日志中没有比分，自动判定会存为平局。选择实际获胜队伍后将反映到地图分析与统计（原始记录保留）。",
   // 事后胜负修正徽章·内联编辑（对局详情·场次对局列表）
   woBadgeDraw: "平局 · 手动判定",
+  woBadgeUndetermined: "未确定 · 手动判定",
   woBadgeOverridden: "已手动修正",
   woPick: "判定",
   woSaving: "保存中…",

@@ -408,7 +408,8 @@ function MainApp() {
             headers: { "Content-Type": "multipart/form-data" },
           });
           const w = precheckLine(res.data, t);
-          if (w) warnText += `\n#${i + 1} ${w.trim()}`;
+          // 경고·미확정 사유가 여러 줄이면 줄마다 매치 번호를 붙인다
+          for (const l of w.split("\n").filter(Boolean)) warnText += `\n#${i + 1} ${l}`;
         }
       }
       invalidateApiCache(); // 등록 성공 → 공유 fetch 캐시 무효화 (다음 접근부터 재요청)

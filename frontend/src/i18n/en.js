@@ -5,6 +5,7 @@ export default {
   dashboard: "Dashboard", sessions: "Sessions", overall: "Overall Stats", teamManage: "Team Manage (WIP)",
   navGroupStats: "Stats", navGroupAnalysis: "Analysis", navBanpick: "Ban/Pick", navPlans: "Draft Plans",
   ssCalendar: "Calendar", ssList: "List",
+  ssUndetermined: "{n} undetermined",
   title: "Scrim Data Center", desc: "Upload Overwatch scrim logs to analyze team performance.", desc2: "Data is safely stored on the server.",
   createScrim: "Create Scrim", viewHistory: "View History", uploading: "Uploading...",
   modalTitle: "Create Scrim Record", step1Title: "Basic Information", step1Desc: "Please enter the scrim date and time.",
@@ -116,6 +117,10 @@ export default {
   sdManualBadge: "Manual", sdEditFail: "Edit failed: ", sdUploadDone: "Log applied.",
   pcWarnPrefix: "Log format warnings", pcWarnUnit: "",
   wsOverride: "Override", wsProgress: "Progress", wsDraw: "Draw", wsTitle: "Winner source",
+  wsUndetermined: "Undetermined",
+  pcUdPrefix: "Winner undetermined (set it via override)", pcUdPush: "Push map — the log has no push distance",
+  pcUdNoMatchEnd: "No match_end — final score unknown", pcUdProgressTie: "Progress tied after 2 rounds",
+  pcUdScoreTie: "Score tied", pcUdOther: "The log cannot decide the winner",
   // Common (buttons / delete dialogs)
   delete: "Delete", reset: "Reset", cancelSelection: "Cancel", selectAll: "Select All", deselectAll: "Deselect All",
   selectedCount: "selected", deleting: "Deleting...", deleteSelected: "Delete Selected", deleteConfirmPre: "Delete ",
@@ -396,6 +401,7 @@ export default {
   woHint: "Push maps carry no score in the log, so the automatic result is stored as a draw. Pick the actual winner to reflect it in Map Analysis and stats (the original record is preserved).",
   // Post-hoc result correction badge & inline edit (match detail · session match list)
   woBadgeDraw: "Draw · set winner",
+  woBadgeUndetermined: "Undetermined · set winner",
   woBadgeOverridden: "Overridden",
   woPick: "Set",
   woSaving: "Saving…",

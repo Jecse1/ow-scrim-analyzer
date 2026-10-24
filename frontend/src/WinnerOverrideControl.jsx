@@ -1,6 +1,6 @@
 // src/WinnerOverrideControl.jsx
 // 사후 승패 보정 컨트롤 — 매치 상세 헤더·세션 매치 목록에서 공용.
-// 노출 조건: 유효 승자가 무승부(Draw)이거나 이미 수기 보정된 매치에만 표시한다.
+// 노출 조건: 유효 승자가 무승부(Draw)·미확정(winner_source=undetermined)이거나 이미 수기 보정된 매치에만 표시한다.
 //   (명확한 자동 승패 매치에는 노출하지 않음 — 오조작 방지)
 // 동작: [team1][team2][해제] 인라인 선택 → PATCH /api/matches/{id}/winner-override →
 //   공유 API 캐시 무효화 + onChanged(newWo)로 부모 상태 갱신. 라벨·색은 ScrimModal 보정 UI와 동일.
@@ -26,7 +26,9 @@ export default function WinnerOverrideControl({ match, onChanged }) {
   const isOverridden = !!wo;
   // 유효 승자가 팀명이 아니면(빈값/Draw/미상) 무승부로 간주.
   const isDraw = !eff || eff === "Draw" || !teams.includes(eff);
-  if (!isDraw && !isOverridden) return null;
+  // 로그로 승자를 못 가린 무승부 — 배지를 실제 무승부와 구분
+  const isUndetermined = match?.winner_source === "undetermined";
+  if (!isDraw && !isUndetermined && !isOverridden) return null;
 
   const patch = async (value) => {
     setSaving(true); setErr("");
@@ -46,7 +48,7 @@ export default function WinnerOverrideControl({ match, onChanged }) {
   };
 
   const badgeColor = isOverridden ? theme.success : theme.warning;
-  const badgeText = isOverridden ? `${t.woBadgeOverridden}: ${wo}` : t.woBadgeDraw;
+  const badgeText = isOverridden ? `${t.woBadgeOverridden}: ${wo}` : isUndetermined ? t.woBadgeUndetermined : t.woBadgeDraw;
 
   return (
     <div onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>

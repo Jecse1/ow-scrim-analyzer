@@ -13,7 +13,7 @@ import { precheckLine } from "./utils/precheckText";
 const API_BASE = import.meta.env.PROD ? "" : "";
 // 승자 출처 → 배지 i18n 키. 목록에 없는 값(score·manual·null)은 배지 없음
 // (manual 은 제목 줄의 '수기' 배지가 이미 표시).
-const WS_BADGE_KEYS = { override: "wsOverride", progress: "wsProgress", draw: "wsDraw" };
+const WS_BADGE_KEYS = { override: "wsOverride", progress: "wsProgress", draw: "wsDraw", undetermined: "wsUndetermined" };
 
 // "MM:SS"/"HH:MM:SS" → 초 (빈값/불가 = null), 초 → "MM:SS"
 const mmssToSec = (s) => {
