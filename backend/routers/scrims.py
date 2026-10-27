@@ -299,11 +299,21 @@ async def register_scrim_manual(request: Request):
     except:
         base_id = datetime.now().strftime("%y%m%d%H%M")
 
+    # 세션 ID 중복 확인은 DB(삭제 행 포함) 기준. 살아 있는 세션의 ID 는 _1, _2 … 접미사로 피하고,
+    # 삭제된 세션의 ID 는 그대로 재사용한다(아래 DB 저장에서 삭제 표시를 푼다). 세션을 지우면
+    # meta.json 도 지워지므로 파일 유무만 보면 삭제된 행과 ID 가 겹쳐 새 매치가 목록에서 빠진다.
+    # DB 행 없이 meta.json 만 남은 ID 는 덮어쓰지 않도록 피한다.
     new_scrim_id = base_id
     counter = 0
-    while os.path.exists(f"{ROW_DATA_DIR}/{new_scrim_id}_meta.json"):
-        counter += 1
-        new_scrim_id = f"{base_id}_{counter}"
+    async with AsyncSessionLocal() as db:
+        while True:
+            row = await db.get(DBSession, new_scrim_id)
+            if row is not None and row.deleted_at is not None:
+                break
+            if row is None and not os.path.exists(f"{ROW_DATA_DIR}/{new_scrim_id}_meta.json"):
+                break
+            counter += 1
+            new_scrim_id = f"{base_id}_{counter}"
 
     processed_matches = []
     
@@ -397,6 +407,15 @@ async def register_scrim_manual(request: Request):
                     start_time=data.start_time,
                     end_time=data.end_time,
                 ))
+            elif existing.deleted_at is not None:
+                # 삭제된 세션의 ID 재사용: 삭제 표시를 풀고 새 입력값으로 갱신. 이전 매치는 삭제 상태 그대로 둔다.
+                existing.deleted_at = None
+                existing.updated_at = datetime.utcnow()
+                existing.scrim_name = data.scrim_name
+                existing.date = data.date
+                existing.start_time = data.start_time
+                existing.end_time = data.end_time
+                print(f"[DB] register: 삭제된 세션 ID 재사용 {new_scrim_id}")
             for m in processed_matches:
                 db.add(DBMatch(
                     id=m["id"],
@@ -433,6 +452,14 @@ async def register_scrim_manual(request: Request):
     return {"status": "success", "scrim_id": new_scrim_id}
 
 
+async def _raise_if_session_deleted(scrim_id: str):
+    """세션이 삭제 상태면 409. 삭제된 세션 아래에 쓰거나 완료 처리하면 목록에 보이지 않으므로 오류로 알린다."""
+    async with AsyncSessionLocal() as db:
+        sess = await db.get(DBSession, scrim_id)
+    if sess is not None and sess.deleted_at is not None:
+        raise HTTPException(status_code=409, detail=f"Session {scrim_id} is deleted")
+
+
 def _decode_log_bytes(content: bytes):
     """업로드 로그 바이트 → (텍스트, cp949 대체 여부). UTF-8 실패 시 cp949(errors=ignore)."""
     try:
@@ -450,6 +477,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
       'keep'   = 맵은 수기값 유지, 파싱 winner/score는 컬럼에 저장하고 수기 winner를 winner_override로 이동(원본 보존 규칙과 일관)."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
+    await _raise_if_session_deleted(scrim_id)  # 원문 파일을 쓰기 전에 거른다
 
     content = await file.read()
     log_text, enc_fallback = _decode_log_bytes(content)
@@ -1321,6 +1349,7 @@ async def complete_session(session_id: str):
     발송 실패는 services/discord_webhook 안에서 전부 잡혀 이 응답에 영향을 주지 않는다."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
+    await _raise_if_session_deleted(session_id)  # 삭제 세션 = 409, 없는 세션 = 아래 404
     try:
         from sqlalchemy.orm import selectinload as _sil
         async with AsyncSessionLocal() as db:

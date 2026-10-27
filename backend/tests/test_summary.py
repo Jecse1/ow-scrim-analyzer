@@ -146,13 +146,13 @@ def test_summary_default_period_and_422(seeded):
     assert c.get("/api/summary/ults", params={"limit": 0}).status_code == 422
 
 
-def test_complete_404_missing_and_deleted(seeded):
+def test_complete_404_missing_409_deleted(seeded):
     c, _s1, _s2 = seeded
     assert c.post("/api/sessions/no-such-session/complete").status_code == 404
     sid = _register(c, "261009-삭제용", "2026-10-09", "10", "11", [_m("네팔", BASE, "X", source="manual", winner=BASE)])
     assert c.post(f"/api/sessions/{sid}/complete").status_code == 200
     assert c.delete(f"/api/sessions/{sid}").status_code == 200
-    assert c.post(f"/api/sessions/{sid}/complete").status_code == 404
+    assert c.post(f"/api/sessions/{sid}/complete").status_code == 409  # 삭제 세션은 오류가 보이도록 409
 
 
 def test_complete_disabled_is_noop_and_idempotent(seeded, monkeypatch):
