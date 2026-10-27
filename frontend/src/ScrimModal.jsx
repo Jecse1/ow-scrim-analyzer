@@ -5,6 +5,7 @@ import { X, Upload, Plus, Trash2, Calendar, Youtube, Map, Clock, PauseCircle, Al
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile } from "./utils/responsive";
+import { snapshotFile, submitBlockers, hasBlockers } from "./utils/registerFlow";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 
@@ -75,11 +76,10 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
-  // 등록 불가 사유(로그 매치만): 명단 읽는 중 / 명단 오류
-  const setList = (pred) => scrimData.matches.map((m, i) => (m.source !== 'manual' && pred(m) ? `SET ${i + 1}` : null)).filter(Boolean);
-  const blockLoading = setList(m => m.roster?.status === 'loading');
-  const blockError = setList(m => m.roster?.status === 'error');
-  const submitBlocked = blockLoading.length + blockError.length > 0;
+  // 등록 불가 사유(로그 매치만): 명단 읽는 중 / 명단 오류 / 로그 파일 없음
+  const blockers = submitBlockers(scrimData.matches, scrimData.files);
+  const setLabels = (nums) => nums.map(n => `SET ${n}`).join(', ');
+  const submitBlocked = hasBlockers(blockers);
 
   const handleNext = () => {
     if (!scrimData.scrimName) return alert(t.smEnterName);
@@ -212,20 +212,29 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
     }));
   };
 
-  const handleFileChange = (index, file) => {
+  // 파일을 고르면 바로 내용을 메모리로 복사(snapshotFile)하고, 명단 읽기·업로드에는 그 사본을 쓴다
+  // (첨부 뒤 디스크 파일이 바뀌어도 업로드가 막히지 않게). 복사가 끝나기 전에 매치가 지워졌거나
+  // 다른 파일을 골랐으면 늦게 끝난 결과는 버린다(uid·roster.file 대조).
+  const handleFileChange = async (index, file) => {
     const uid = scrimData.matches[index].uid;
-    setScrimData(prev => {
-        const newFiles = [...prev.files];
-        newFiles[index] = file || null;
-        return {
-          ...prev,
-          files: newFiles,
-          matches: prev.matches.map((m, i) => i === index
-            ? { ...m, roster: file ? { status: 'loading', file } : null }
-            : m)
-        };
+    const setFor = (expectFile, nextFile, roster) => setScrimData(prev => {
+      const i = prev.matches.findIndex(m => m.uid === uid);
+      if (i < 0 || (expectFile && prev.matches[i].roster?.file !== expectFile)) return prev;
+      const newFiles = [...prev.files];
+      newFiles[i] = nextFile;
+      return { ...prev, files: newFiles, matches: prev.matches.map((m, j) => j === i ? { ...m, roster } : m) };
     });
-    if (file) fetchRoster(uid, file);
+    if (!file) return setFor(null, null, null);
+    setFor(null, null, { status: 'loading', file });
+    let copy;
+    try {
+      copy = await snapshotFile(file);
+    } catch (err) {
+      console.warn('[attach] log file read failed:', err?.name || err);
+      return setFor(file, null, { status: 'error', file, error: t.smFileChanged });
+    }
+    setFor(file, copy, { status: 'loading', file: copy });
+    fetchRoster(uid, copy);
   };
 
   const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: isMobile ? '8px' : '20px' };
@@ -551,8 +560,10 @@ const ScrimModal = ({ isOpen, onClose, onSubmit }) => {
         <div style={footerStyle}>
           {step === 2 && submitBlocked && (
             <div style={{ flex: '1 1 240px', fontSize: '13px', color: theme.warning, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {blockLoading.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedLoading}{blockLoading.join(', ')}</span>}
-              {blockError.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedRosterErr}{blockError.join(', ')}</span>}            </div>
+              {blockers.loading.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedLoading}{setLabels(blockers.loading)}</span>}
+              {blockers.rosterError.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedRosterErr}{setLabels(blockers.rosterError)}</span>}
+              {blockers.missingFile.length > 0 && <span><AlertCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{t.smBlockedNoFile}{setLabels(blockers.missingFile)}</span>}
+            </div>
           )}
           {step === 2 && <button onClick={() => setStep(1)} style={btnStyle('secondary')}>{t.prev}</button>}
           <button onClick={step === 1 ? handleNext : handleSubmit} disabled={step === 2 && submitBlocked}

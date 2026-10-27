@@ -146,6 +146,7 @@ export default {
   smRosterLoading: "Reading log roster...", smRosterError: "Could not read the log roster — pick the file again or switch to a manual match.",
   smRosterTitle: "Log roster", smRosterLogLabel: "Log label", smRosterWarnTpl: "{n} warning(s)",
   smBlockedLoading: "Reading roster: ", smBlockedRosterErr: "Roster error (cannot register): ",
+  smBlockedNoFile: "No log file: ", smFileChanged: "The file changed after it was attached. Please select it again.",
   notifyLabel: "Discord notice: ", notifySent: "requested", notifyDisabled: "not configured", notifyFailed: "failed", notifyNotSent: "notice not sent",
   // UltimateStats
   ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",

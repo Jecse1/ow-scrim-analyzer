@@ -146,6 +146,7 @@ export default {
   smRosterLoading: "로그 명단 읽는 중...", smRosterError: "로그 명단을 읽지 못했습니다 — 파일을 다시 선택하거나 수기 매치로 바꾸세요.",
   smRosterTitle: "로그 명단", smRosterLogLabel: "로그 라벨", smRosterWarnTpl: "경고 {n}건",
   smBlockedLoading: "명단 읽는 중: ", smBlockedRosterErr: "명단 오류(등록 불가): ",
+  smBlockedNoFile: "로그 파일 없음: ", smFileChanged: "첨부 후 파일이 바뀌었습니다. 다시 선택하세요",
   notifyLabel: "디스코드 알림: ", notifySent: "전송 요청됨", notifyDisabled: "미설정", notifyFailed: "실패", notifyNotSent: "알림 미발송",
   // UltimateStats
   ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",
