@@ -147,6 +147,10 @@ export default {
   smRosterTitle: "Log roster", smRosterLogLabel: "Log label", smRosterWarnTpl: "{n} warning(s)",
   smBlockedLoading: "Reading roster: ", smBlockedRosterErr: "Roster error (cannot register): ",
   smBlockedNoFile: "No log file: ", smFileChanged: "The file changed after it was attached. Please select it again.",
+  ubCancelledTitle: "No log was uploaded, so the registration was cancelled", ubDeleteFailed: "The session just created could not be deleted automatically. Please delete it from the session list.",
+  ubPartialTitle: "Some match logs were not uploaded — the session was saved ({n} failed)", ubPartialHint: "Select the log file again for a failed match to upload just that match. The Discord notice is sent once all are uploaded.",
+  ubRetry: "Retry failed match", ubRetrying: "Uploading…", ubResolvedTitle: "All previously failed match logs are uploaded", ubDismiss: "Close", ubSession: "Session",
+  ubNetwork: "The request did not reach the server (network error, or the file changed after it was attached — select it again)",
   notifyLabel: "Discord notice: ", notifySent: "requested", notifyDisabled: "not configured", notifyFailed: "failed", notifyNotSent: "notice not sent",
   // UltimateStats
   ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",

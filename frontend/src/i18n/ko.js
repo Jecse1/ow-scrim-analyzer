@@ -147,6 +147,10 @@ export default {
   smRosterTitle: "로그 명단", smRosterLogLabel: "로그 라벨", smRosterWarnTpl: "경고 {n}건",
   smBlockedLoading: "명단 읽는 중: ", smBlockedRosterErr: "명단 오류(등록 불가): ",
   smBlockedNoFile: "로그 파일 없음: ", smFileChanged: "첨부 후 파일이 바뀌었습니다. 다시 선택하세요",
+  ubCancelledTitle: "로그가 하나도 올라가지 않아 등록을 취소했습니다", ubDeleteFailed: "방금 만든 세션을 자동으로 지우지 못했습니다. 기록 보기에서 직접 삭제하세요.",
+  ubPartialTitle: "일부 매치의 로그가 올라가지 않았습니다 — 세션은 저장됨 (실패 {n}건)", ubPartialHint: "실패한 매치의 로그 파일을 다시 선택하면 그 매치만 다시 올립니다. 모두 올라가면 디스코드 알림을 보냅니다.",
+  ubRetry: "실패 매치 재시도", ubRetrying: "업로드 중…", ubResolvedTitle: "실패했던 매치 로그를 모두 올렸습니다", ubDismiss: "닫기", ubSession: "세션",
+  ubNetwork: "서버에 요청이 닿지 않았습니다(네트워크 오류, 또는 첨부 후 파일이 바뀜 — 파일을 다시 선택하세요)",
   notifyLabel: "디스코드 알림: ", notifySent: "전송 요청됨", notifyDisabled: "미설정", notifyFailed: "실패", notifyNotSent: "알림 미발송",
   // UltimateStats
   ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",

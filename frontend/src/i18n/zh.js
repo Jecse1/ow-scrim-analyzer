@@ -147,6 +147,10 @@ export default {
   smRosterTitle: "日志名单", smRosterLogLabel: "日志标签", smRosterWarnTpl: "警告 {n} 条",
   smBlockedLoading: "正在读取名单：", smBlockedRosterErr: "名单错误（无法登记）：",
   smBlockedNoFile: "缺少日志文件：", smFileChanged: "附加后文件已更改，请重新选择。",
+  ubCancelledTitle: "没有任何日志上传成功，已取消登记", ubDeleteFailed: "无法自动删除刚创建的会话，请在记录列表中手动删除。",
+  ubPartialTitle: "部分比赛日志未能上传 — 会话已保存（失败 {n} 场）", ubPartialHint: "为失败的比赛重新选择日志文件即可只重新上传该场。全部上传后发送 Discord 通知。",
+  ubRetry: "重试失败的比赛", ubRetrying: "上传中…", ubResolvedTitle: "之前失败的比赛日志已全部上传", ubDismiss: "关闭", ubSession: "会话",
+  ubNetwork: "请求未到达服务器（网络错误，或附加后文件已更改 — 请重新选择）",
   notifyLabel: "Discord 通知：", notifySent: "已请求发送", notifyDisabled: "未设置", notifyFailed: "失败", notifyNotSent: "未发送通知",
   // UltimateStats
   ultFivePlus: "5个以上", ultTotal: "总计", ultValue: "价值", ultLowSampleNote: "样本不足（少于5次）· 仅供参考",

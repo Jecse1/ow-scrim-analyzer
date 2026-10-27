@@ -16,6 +16,8 @@ import ScrimSessions from "./ScrimSessions";
 import ScrimDetail from "./ScrimDetail";
 import MatchStats from "./MatchStats";
 import ScrimModal from "./ScrimModal";
+import UploadIssueBanner from "./UploadIssueBanner";
+import { snapshotFile, classifyUploads, uploadFailReason } from "./utils/registerFlow";
 import OverallStats from "./OverallStats";
 import PlayerProfileView from "./PlayerProfileView";
 import PlayerCompareView from "./PlayerCompareView";
@@ -70,6 +72,7 @@ function MainApp() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [uploadIssue, setUploadIssue] = useState(null); // 등록 후 업로드 실패 배너(UploadIssueBanner)
   
   const [allScrims, setAllScrims] = useState([]);
 
@@ -351,11 +354,34 @@ function MainApp() {
     return parts.reduce((acc, v) => acc * 60 + v, 0);
   };
 
+  // 매치 1개 로그 업로드(등록·실패 매치 재시도 공용)
+  const uploadMatchLog = (scrimId, matchIndex, file) => {
+    const formData = new FormData();
+    formData.append("scrim_id", scrimId);
+    formData.append("match_index", matchIndex);
+    formData.append("file", file);
+    return axios.post(`${API_BASE}/api/matches/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  };
+
+  // 등록 완료 신호(서버가 DISCORD_WEBHOOK_URL 설정 시 디스코드 알림) → 알림 표기 문구.
+  // 실패해도 등록은 이미 끝났으므로 표기만 "실패".
+  const sendComplete = async (scrimId) => {
+    try {
+      const done = await axios.post(`${API_BASE}/api/sessions/${encodeURIComponent(scrimId)}/complete`);
+      return done.data?.webhook === "queued" ? t.notifySent : done.data?.webhook === "disabled" ? t.notifyDisabled : t.notifyFailed;
+    } catch (completeErr) {
+      console.warn("[complete] session complete call failed:", completeErr.response?.status ?? completeErr.message);
+      return t.notifyFailed;
+    }
+  };
+
   const handleScrimSubmit = async (scrimData) => {
-    let completeSent = false; // /complete 는 이 등록 1건당 1회만
     setIsModalOpen(false);
     setUploading(true);
     setError(null);
+    setUploadIssue((u) => (u?.kind === "partial" ? u : null)); // 재시도 대기 중인 배너는 남긴다
     try {
       const payload = {
         scrimName: scrimData.scrimName || "이름 없는 스크림",
@@ -395,37 +421,50 @@ function MainApp() {
       const createRes = await axios.post(`${API_BASE}/api/scrim/manual-register`, payload);
       const newScrimId = createRes.data.scrim_id;
 
+      // 로그 매치를 차례로 올린다. 한 매치가 실패해도 나머지는 계속 올리고, 결과를 모아 마무리를 가른다.
       let warnText = "";   // 매치별 로그 사전 검사 경고(있을 때만) — 완료 alert에 덧붙임
-      if (scrimData.files && scrimData.files.length > 0) {
-        for (let i = 0; i < scrimData.files.length; i++) {
-          const file = scrimData.files[i];
-          if (!file || scrimData.matches[i]?.source === "manual") continue;
-          const formData = new FormData();
-          formData.append("scrim_id", newScrimId);
-          formData.append("match_index", i + 1);
-          formData.append("file", file);
-          const res = await axios.post(`${API_BASE}/api/matches/upload`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+      const results = [];  // [{ index, ok, map?, reason? }] — 로그 매치만
+      for (let i = 0; i < scrimData.matches.length; i++) {
+        const file = scrimData.files?.[i];
+        if (!file || scrimData.matches[i]?.source === "manual") continue;
+        try {
+          const res = await uploadMatchLog(newScrimId, i + 1, file);
           const w = precheckLine(res.data, t);
           // 경고·미확정 사유가 여러 줄이면 줄마다 매치 번호를 붙인다
           for (const l of w.split("\n").filter(Boolean)) warnText += `\n#${i + 1} ${l}`;
+          results.push({ index: i + 1, ok: true });
+        } catch (upErr) {
+          console.warn(`[upload] #${i + 1} failed:`, upErr.response?.status ?? upErr.message);
+          results.push({ index: i + 1, ok: false, map: scrimData.matches[i].map_name, reason: uploadFailReason(upErr) });
         }
       }
-      invalidateApiCache(); // 등록 성공 → 공유 fetch 캐시 무효화 (다음 접근부터 재요청)
+      invalidateApiCache(); // 등록 결과 반영 → 공유 fetch 캐시 무효화 (다음 접근부터 재요청)
       setAllScrims([]); // 이미 로드된 full-events 상태도 초기화 (소비 탭 재진입 시 새로 로드)
-      // 모든 upload 성공 → 등록 완료 신호 1회(서버가 DISCORD_WEBHOOK_URL 설정 시 디스코드 알림).
-      // 실패해도 등록은 이미 끝났으므로 성공으로 처리하고 표기만 "실패".
-      let notify = t.notifyFailed;
-      if (!completeSent) {
-        completeSent = true;
+      const outcome = classifyUploads(results);
+      const issueBase = { scrimId: newScrimId, scrimName: payload.scrimName, failed: outcome.failed };
+
+      if (outcome.kind === "none") {
+        // 로그가 하나도 안 올라감 → 방금 만든 세션을 지워 빈 세션이 목록에 남지 않게 한다(완료 신호 없음)
+        let deleted = true;
         try {
-          const done = await axios.post(`${API_BASE}/api/sessions/${encodeURIComponent(newScrimId)}/complete`);
-          notify = done.data?.webhook === "queued" ? t.notifySent : done.data?.webhook === "disabled" ? t.notifyDisabled : t.notifyFailed;
-        } catch (completeErr) {
-          console.warn("[complete] session complete call failed:", completeErr.response?.status ?? completeErr.message);
+          await axios.delete(`${API_BASE}/api/sessions/${encodeURIComponent(newScrimId)}`);
+        } catch (delErr) {
+          deleted = false;
+          console.warn("[register] auto delete failed:", delErr.response?.status ?? delErr.message);
         }
+        invalidateApiCache();
+        setUploadIssue({ kind: "cancelled", ...issueBase, deleted });
+        return;
       }
+      if (outcome.kind === "partial") {
+        // 세션은 유지하고 실패 매치만 배너에서 다시 올린다. 완료 신호는 전부 올라간 뒤 1회.
+        setUploadIssue({ kind: "partial", ...issueBase, busy: null });
+        goSessions();
+        return;
+      }
+
+      // 전부 성공 → 등록 완료 신호 1회
+      const notify = await sendComplete(newScrimId);
       alert(`${t.success}\n${t.notifyLabel}${notify}${warnText}`);
       goSessions();
     } catch (err) {
@@ -433,6 +472,31 @@ function MainApp() {
       if (err.response?.data?.detail) errMsg = JSON.stringify(err.response.data.detail, null, 2);
       setError(`Upload Failed: ${errMsg} (${t.notifyNotSent})`);
     } finally { setUploading(false); }
+  };
+
+  // 배너의 "실패 매치 재시도": 고른 파일을 메모리로 복사해 그 매치만 다시 올린다. 남은 실패가 없으면 완료 신호 1회.
+  const retryFailedMatch = async (matchIndex, picked) => {
+    const issue = uploadIssue;
+    if (issue?.kind !== "partial" || issue.busy) return;
+    setUploadIssue({ ...issue, busy: matchIndex });
+    let reason = null;
+    try {
+      await uploadMatchLog(issue.scrimId, matchIndex, await snapshotFile(picked));
+    } catch (err) {
+      console.warn(`[upload] retry #${matchIndex} failed:`, err.response?.status ?? err.message);
+      reason = uploadFailReason(err);
+    }
+    invalidateApiCache();
+    setAllScrims([]);
+    const failed = reason
+      ? issue.failed.map((f) => (f.index === matchIndex ? { ...f, reason } : f))
+      : issue.failed.filter((f) => f.index !== matchIndex);
+    if (failed.length > 0) {
+      setUploadIssue({ ...issue, failed, busy: null });
+      return;
+    }
+    const notify = await sendComplete(issue.scrimId);
+    setUploadIssue({ kind: "resolved", scrimId: issue.scrimId, scrimName: issue.scrimName, failed: [], notify });
   };
 
   const navButtonStyle = (isActive) => ({
@@ -708,6 +772,7 @@ function MainApp() {
       <Navbar />
       <ErrorBoundary>{renderView()}</ErrorBoundary>
       <ScrimModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleScrimSubmit} />
+      <UploadIssueBanner issue={uploadIssue} onRetry={retryFailedMatch} onDismiss={() => setUploadIssue(null)} />
     </div>
   );
 }
