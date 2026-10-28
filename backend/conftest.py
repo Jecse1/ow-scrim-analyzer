@@ -11,6 +11,8 @@ import tempfile
 _TMP = tempfile.mkdtemp(prefix="scrim_pytest_")
 os.environ["SCRIM_DB_PATH"] = os.path.join(_TMP, "data", "scrim.db")
 os.environ["SCRIM_ROWDATA_DIR"] = os.path.join(_TMP, "scrim_rowdata_log")
+# 응답 캐시 선채우기(cache.py) 끔 — 백그라운드 계산이 테스트 요청·DB 쓰기와 겹치지 않게. 선채우기 자체는 tests/test_cache.py 가 직접 켜서 검증.
+os.environ["CACHE_WARM"] = "0"
 
 
 def pytest_addoption(parser):

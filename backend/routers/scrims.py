@@ -609,6 +609,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     ))
             await db.commit()
             print(f"[DB] upload OK: match={match_id_val}")
+            _invalidate_response_cache()  # 커밋 직후(아래 meta 쓰기가 실패해도 캐시가 DB 보다 낡지 않게)
             # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
             _update_match_fields_in_meta(scrim_id, match_id_val, {
                 "source": "log",
@@ -619,7 +620,6 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 "precheck": {"warning_count": pre["warning_count"],
                              "codes": sorted(pre["counts"]["by_code"])},
             })
-            _invalidate_response_cache()
             return {"status": "success", "diff": diff, **pre_resp}
     except HTTPException:
         raise
@@ -1087,8 +1087,8 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
+    _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
     _update_match_wo_in_meta(scrim_id, match_id, wo, ws)
-    _invalidate_response_cache()
     return {"success": True, "match_id": match_id, "winner_override": wo or ""}
 
 
@@ -1145,6 +1145,8 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
+    _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
+
     # meta.json 동기화(rebuild 소스)
     def mutate(meta):
         changed = False
@@ -1161,7 +1163,6 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
                     m["result"] = m["result"].replace(rn_from, rn_to); changed = True
         return changed
     _update_meta_json(scrim_id, mutate)
-    _invalidate_response_cache()
     return {"success": True, "scrim_id": scrim_id,
             "renamed": {"from": rn_from, "to": rn_to} if rn_from else None}
 
@@ -1331,6 +1332,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
+    _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
     if meta_fields:
         _update_match_fields_in_meta(scrim_id, match_id, meta_fields)
     if swapped:
@@ -1346,7 +1348,6 @@ async def patch_match(match_id: str, body: MatchPatchInput):
         _rename_team_in_meta_match(scrim_id, match_id, p1, i1)
     if changed2:
         _rename_team_in_meta_match(scrim_id, match_id, p2, i2)
-    _invalidate_response_cache()
     resp = {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
             "swapped_with": swapped, "teams_swapped": did_swap,
             "exchanged_teams": did_exchange,

@@ -34,7 +34,11 @@ async def lifespan(app: FastAPI):
             print(f"[DB] Init failed: {e}")
     from config import DISCORD_WEBHOOK_URL  # 값은 출력하지 않는다(설정 여부만)
     print(f"[WEBHOOK] DISCORD_WEBHOOK_URL: {'설정됨' if DISCORD_WEBHOOK_URL else '미설정'}")
+    from cache import schedule_warm, cancel_warm
+    if _DB_AVAILABLE:
+        schedule_warm(delay=0)  # 기동 직후 응답 캐시 선채우기(cache.py, 백그라운드)
     yield
+    cancel_warm()
 
 
 app = FastAPI(lifespan=lifespan)

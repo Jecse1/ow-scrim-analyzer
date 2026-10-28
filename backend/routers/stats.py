@@ -24,8 +24,10 @@ from config import (
     MIN_SAMPLE_FOR_PERCENTILE_FIGHTS, MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
     PERCENTILE_MIN_POOL, TRADE_WINDOW_SEC, effective_video_delta,
 )
+from functools import partial
 from fastapi.concurrency import run_in_threadpool
-from cache import _response_cache_get, _response_cache_put, _json_bytes
+from fastapi.encoders import jsonable_encoder
+from cache import cache_get_or_compute, register_warmer, _json_bytes, _json_response
 from parsers.log_parser import resolve_map_type, is_match_level_map
 from serializers import (
     _db_event_to_dict, _db_player_stat_to_dict, _aggregate_match_stats, _db_session_to_dict,
@@ -40,25 +42,33 @@ from services.fight_records import _build_fight_records_payload
 router = APIRouter()
 
 
+async def _compute_scrims() -> bytes:
+    """/api/scrims 본문 bytes. 바이트는 기존(FastAPI 기본 직렬화: jsonable_encoder → JSONResponse)과 같다."""
+    from sqlalchemy.orm import selectinload
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(DBSession)
+            .where(DBSession.deleted_at.is_(None))
+            .options(
+                selectinload(DBSession.matches).selectinload(DBMatch.pauses),
+            )
+            .order_by(DBSession.date.desc(), DBSession.id.desc())
+        )
+        sessions = result.scalars().all()
+        for s in sessions:
+            s.matches = [m for m in (s.matches or []) if m.deleted_at is None]
+        data = [_db_session_to_dict(s, full=False) for s in sessions]
+    return _json_bytes(jsonable_encoder(data))
+
+
 @router.get("/api/scrims")
 async def get_scrim_list():
+    # 세션 목록(경량). 응답 캐시 키 "scrims" — 히트면 DB 왕복 없이 저장된 bytes 그대로(무효화 규칙은 다른 키와 같음).
+    # (docstring 이 아닌 주석: openapi 설명 불변)
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        from sqlalchemy.orm import selectinload
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
-                .options(
-                    selectinload(DBSession.matches).selectinload(DBMatch.pauses),
-                )
-                .order_by(DBSession.date.desc(), DBSession.id.desc())
-            )
-            sessions = result.scalars().all()
-            for s in sessions:
-                s.matches = [m for m in (s.matches or []) if m.deleted_at is None]
-            return [_db_session_to_dict(s, full=False) for s in sessions]
+        return _json_response(await cache_get_or_compute("scrims", _compute_scrims))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -108,26 +118,25 @@ def _db_session_to_dict_events_only(s: "DBSession") -> dict:
     }
 
 
+async def _compute_full_events() -> bytes:
+    async with AsyncSessionLocal() as db:
+        sessions = await load_stat_sessions(db, events=True, player_stats=True)
+    for s in sessions:
+        # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
+        s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
+    # 변환·직렬화는 스레드풀(로더 출력은 DB 세션과 무관한 행 객체라 루프 밖에서 읽어도 안전)
+    return await run_in_threadpool(
+        lambda: _json_bytes([_db_session_to_dict_events_only(s) for s in sessions]))
+
+
 @router.get("/api/scrims/full-events")
 async def get_scrims_full_events():
     """UltimateStats, FirstKillStats, FirstDeathStats, dynamicPlayersData 전용.
     stats + rounds.events 포함. fights/pauses/timeline/fight_metrics 제외."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
-    cache_key = "full-events"
-    cached = _response_cache_get(cache_key)
-    if cached is not None:
-        return cached
     try:
-        async with AsyncSessionLocal() as db:
-            sessions = await load_stat_sessions(db, events=True, player_stats=True)
-        for s in sessions:
-            # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
-            s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
-        # 변환·직렬화는 스레드풀(로더 출력은 DB 세션과 무관한 행 객체라 루프 밖에서 읽어도 안전)
-        body = await run_in_threadpool(
-            lambda: _json_bytes([_db_session_to_dict_events_only(s) for s in sessions]))
-        return _response_cache_put(cache_key, body)
+        return _json_response(await cache_get_or_compute("full-events", _compute_full_events))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -249,6 +258,13 @@ async def get_first_fights():
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
 
+async def _compute_fight_records(base_team: str) -> bytes:
+    async with AsyncSessionLocal() as db:
+        sessions = await load_stat_sessions(db, events=True, pauses=True)
+    # 변환(한타 계산)·직렬화는 스레드풀
+    return await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(sessions, base_team)))
+
+
 @router.get("/api/fight-records")
 async def get_fight_records(base_team: str = BASE_TEAM):
     """한타 분석(베타) 탭 전용. 모든 한타를 평탄 리스트로 반환하고 프론트가 기간별 집계만 수행.
@@ -258,18 +274,37 @@ async def get_fight_records(base_team: str = BASE_TEAM):
     """
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
-    cache_key = f"fight-records:{base_team}"
-    cached = _response_cache_get(cache_key)
-    if cached is not None:
-        return cached
     try:
-        async with AsyncSessionLocal() as db:
-            sessions = await load_stat_sessions(db, events=True, pauses=True)
-        # 변환(한타 계산)·직렬화는 스레드풀
-        body = await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(sessions, base_team)))
-        return _response_cache_put(cache_key, body)
+        return _json_response(await cache_get_or_compute(
+            f"fight-records:{base_team}", partial(_compute_fight_records, base_team)))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+
+async def _compute_player_fight_stats(base_team: str) -> bytes:
+    async with AsyncSessionLocal() as db:
+        sessions = await load_stat_sessions(db, events=True, player_stats=True)
+    for _s in sessions:
+        # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
+        _s.matches = [m for m in (_s.matches or [])
+                      if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
+
+    def _build() -> bytes:  # 집계·직렬화 — 스레드풀
+        items = compute_player_fight_stats(sessions, base_team)
+
+        payload = {
+            "meta": {
+                "base_team": base_team,
+                "min_sample_for_percentile_fights": MIN_SAMPLE_FOR_PERCENTILE_FIGHTS,
+                "min_sample_for_percentile_rounds": MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
+                "percentile_min_pool": PERCENTILE_MIN_POOL,
+                "items": len(items),
+            },
+            "items": list(items.values()),
+        }
+        return _json_bytes(payload)
+
+    return await run_in_threadpool(_build)
 
 
 @router.get("/api/player-fight-stats")
@@ -285,33 +320,16 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
     """
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
-    cache_key = f"player-fight-stats:{base_team}"
-    cached = _response_cache_get(cache_key)
-    if cached is not None:
-        return cached
     try:
-        async with AsyncSessionLocal() as db:
-            sessions = await load_stat_sessions(db, events=True, player_stats=True)
-        for _s in sessions:
-            # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
-            _s.matches = [m for m in (_s.matches or [])
-                          if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
-
-        def _build() -> bytes:  # 집계·직렬화 — 스레드풀
-            items = compute_player_fight_stats(sessions, base_team)
-
-            payload = {
-                "meta": {
-                    "base_team": base_team,
-                    "min_sample_for_percentile_fights": MIN_SAMPLE_FOR_PERCENTILE_FIGHTS,
-                    "min_sample_for_percentile_rounds": MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
-                    "percentile_min_pool": PERCENTILE_MIN_POOL,
-                    "items": len(items),
-                },
-                "items": list(items.values()),
-            }
-            return _json_bytes(payload)
-
-        return _response_cache_put(cache_key, await run_in_threadpool(_build))
+        return _json_response(await cache_get_or_compute(
+            f"player-fight-stats:{base_team}", partial(_compute_player_fight_stats, base_team)))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
+
+
+# 선채우기 대상·순서(cache.py): 목록 → 전체 이벤트 → 한타 기록(기준 팀) → 선수 한타 통계(기준 팀).
+# summary 4종은 fight-records 키를 공유하므로 따로 등록하지 않는다.
+register_warmer("scrims", _compute_scrims)
+register_warmer("full-events", _compute_full_events)
+register_warmer(f"fight-records:{BASE_TEAM}", partial(_compute_fight_records, BASE_TEAM))
+register_warmer(f"player-fight-stats:{BASE_TEAM}", partial(_compute_player_fight_stats, BASE_TEAM))

@@ -11,7 +11,7 @@ schemas.py         요청 Pydantic 모델
 schemas_summary.py 응답 Pydantic 모델(/api/summary/* · /api/sessions/{id}/complete 계약)
 schemas_roster.py  응답 Pydantic 모델(POST /api/logs/roster — 등록 전 로그 명단)
 serializers.py     DB ORM → dict 직렬화(_db_*_to_dict)
-cache.py           응답 캐시(_RESPONSE_CACHE + get/put/invalidate, _json_bytes 직렬화 — 스레드풀에서 호출 가능) — 단일 객체
+cache.py           응답 캐시(_RESPONSE_CACHE, 키 scrims·full-events·fight-records:*·player-fight-stats:*) · cache_get_or_compute(단일 비행) · 세대 번호(무효화 중 계산 폐기) · 지연 선채우기(register_warmer 순서) · _json_bytes
 parsers/log_parser.py     parse_overwatch_log · assign_persistent_slots · 맵/팀/시간 헬퍼 · 역할점수
 services/fight_analysis.py (기존) compute_fights · format_fights_for_api
 services/fight_metrics.py  build_fight_summaries · compute_fight_metrics · _fight_to_record · _fightlab_*

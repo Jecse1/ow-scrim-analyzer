@@ -75,6 +75,10 @@ python3.11 -m venv venv          # 또는 python3 -m venv venv
   env** 에 넣는다(디스코드 봇 프로세스가 아님). 비워 두면 `POST /api/sessions/{id}/complete` 가 발송 없이
   `webhook:"disabled"` 로 응답한다. 값은 비밀로 취급 — 기동 로그에는 `설정됨/미설정`만 찍히고, 발송 실패 로그에도
   상태 코드·예외 클래스명만 남는다. 저장소·문서에 실제 값을 적지 않는다. 계약: [SUMMARY_API.md](SUMMARY_API.md).
+- **`CACHE_WARM`·`CACHE_WARM_DELAY_SEC`**(선택, `backend/cache.py`): 응답 캐시 선채우기. 기본은 켬(`1`) —
+  기동 직후와 DB 변경(등록·업로드·수정·삭제) 뒤 `CACHE_WARM_DELAY_SEC`(기본 5)초 동안 추가 변경이 없으면
+  scrims → full-events → fight-records → player-fight-stats 를 하나씩 계산해 둔다. pm2 로그 `[CACHE] warm <key> <ms>`.
+  `CACHE_WARM=0` 이면 끈다(첫 요청이 계산).
 
 - **프론트**: 환경변수가 아니라 `frontend/src/config.js`의 상수
   (`APP_NAME`, `BASE_TEAM`)를 직접 수정한 뒤 재빌드해 반영한다.
