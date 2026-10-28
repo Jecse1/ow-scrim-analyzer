@@ -5,7 +5,7 @@ main.py 의 @app 엔드포인트를 APIRouter 로 이동(경로·메서드·함�
 @app.->@router. 만 변경). main 은 include_router(router) 로 등록.
 services/routers → main import 금지: 필요한 전역은 하위 모듈에서 직접 import.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 # DB 접근(가용성 가드는 main 과 독립적으로 자체 판정 — main import 금지 규칙)
 _DB_IMPORT_ERROR = None
@@ -27,7 +27,7 @@ from config import (
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
-from cache import cache_get_or_compute, register_warmer, _json_bytes, _json_response
+from cache import cached_json_response, register_warmer, _json_bytes, _json_bytes_list
 from parsers.log_parser import resolve_map_type, is_match_level_map
 from serializers import (
     _db_event_to_dict, _db_player_stat_to_dict, _aggregate_match_stats, _db_session_to_dict,
@@ -62,13 +62,13 @@ async def _compute_scrims() -> bytes:
 
 
 @router.get("/api/scrims")
-async def get_scrim_list():
+async def get_scrim_list(request: Request):
     # 세션 목록(경량). 응답 캐시 키 "scrims" — 히트면 DB 왕복 없이 저장된 bytes 그대로(무효화 규칙은 다른 키와 같음).
     # (docstring 이 아닌 주석: openapi 설명 불변)
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        return _json_response(await cache_get_or_compute("scrims", _compute_scrims))
+        return await cached_json_response(request, "scrims", _compute_scrims)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -125,18 +125,18 @@ async def _compute_full_events() -> bytes:
         # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
         s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
     # 변환·직렬화는 스레드풀(로더 출력은 DB 세션과 무관한 행 객체라 루프 밖에서 읽어도 안전)
-    return await run_in_threadpool(
-        lambda: _json_bytes([_db_session_to_dict_events_only(s) for s in sessions]))
+    # 세션 단위로 직렬화해 이어 붙인다(바이트 동일) — 27MB 를 한 번에 json.dumps 하면 그동안 GIL 을 놓지 않아 루프가 멈춘다
+    return await run_in_threadpool(_json_bytes_list, sessions, _db_session_to_dict_events_only)
 
 
 @router.get("/api/scrims/full-events")
-async def get_scrims_full_events():
+async def get_scrims_full_events(request: Request):
     """UltimateStats, FirstKillStats, FirstDeathStats, dynamicPlayersData 전용.
     stats + rounds.events 포함. fights/pauses/timeline/fight_metrics 제외."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        return _json_response(await cache_get_or_compute("full-events", _compute_full_events))
+        return await cached_json_response(request, "full-events", _compute_full_events)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -266,7 +266,7 @@ async def _compute_fight_records(base_team: str) -> bytes:
 
 
 @router.get("/api/fight-records")
-async def get_fight_records(base_team: str = BASE_TEAM):
+async def get_fight_records(request: Request, base_team: str = BASE_TEAM):
     """한타 분석(베타) 탭 전용. 모든 한타를 평탄 리스트로 반환하고 프론트가 기간별 집계만 수행.
     - 한타 그룹핑/승자: compute_fights 재사용(미수정). 라운드 단위로 계산(기존 UltimateStats와 동일).
     - 승자 판정: 생존자 수 비교(fight_analysis.py). 무승부(동수)는 winner='unknown' → 프론트 집계 제외.
@@ -275,8 +275,8 @@ async def get_fight_records(base_team: str = BASE_TEAM):
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        return _json_response(await cache_get_or_compute(
-            f"fight-records:{base_team}", partial(_compute_fight_records, base_team)))
+        return await cached_json_response(
+            request, f"fight-records:{base_team}", partial(_compute_fight_records, base_team))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -308,7 +308,7 @@ async def _compute_player_fight_stats(base_team: str) -> bytes:
 
 
 @router.get("/api/player-fight-stats")
-async def get_player_fight_stats(base_team: str = BASE_TEAM):
+async def get_player_fight_stats(request: Request, base_team: str = BASE_TEAM):
     """선수별 한타/라운드 지표의 원자료.
     - 한타 지표: 라운드별 compute_fights 결과에서 선수·영웅 단위로 집계.
       · fights(한타 수)는 그 라운드에 player_stats 엔트리가 있는 선수(=출전)에게 라운드의 한타 수를 부여.
@@ -321,8 +321,8 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        return _json_response(await cache_get_or_compute(
-            f"player-fight-stats:{base_team}", partial(_compute_player_fight_stats, base_team)))
+        return await cached_json_response(
+            request, f"player-fight-stats:{base_team}", partial(_compute_player_fight_stats, base_team))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 

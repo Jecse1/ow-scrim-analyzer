@@ -28,7 +28,7 @@ except Exception as _e:
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
 from config import BASE_TEAM
-from cache import cache_get_or_compute, _json_bytes
+from cache import cache_get_json_bytes, _json_bytes
 from serializers import _db_match_to_dict
 from services.fight_records import _build_fight_records_payload
 from services.summary import (
@@ -110,7 +110,7 @@ async def _load(base_team: str) -> tuple[dict, list]:
                 "matches": [_db_match_to_dict(m, full=False) for m in (s.matches or []) if m.deleted_at is None],
             } for s in sessions]
         # 아래 계산·디코드는 DB 세션을 돌려준 뒤(캐시 히트면 계산 없음, 미스면 단일 비행) 스레드풀에서
-        body = await cache_get_or_compute(cache_key, _compute_fight_records)
+        body = await cache_get_json_bytes(cache_key, _compute_fight_records)  # 캐시는 gzip — 풀어서(스레드풀)
         payload = await run_in_threadpool(json.loads, body)
         return payload, scrims
     except HTTPException:
