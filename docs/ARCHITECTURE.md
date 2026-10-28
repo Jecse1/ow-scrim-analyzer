@@ -16,7 +16,7 @@ parsers/log_parser.py     parse_overwatch_log · assign_persistent_slots · 맵/
 services/fight_analysis.py (기존) compute_fights · format_fights_for_api
 services/fight_metrics.py  build_fight_summaries · compute_fight_metrics · _fight_to_record · _fightlab_*
 services/stats.py          calculate_pure_stats · compute_player_fight_stats
-services/fight_records.py  _build_fight_records_payload (/api/fight-records 본문 — routers/stats.py 에서 이동, 바이트 동일)
+services/fight_records.py  _build_fight_records_payload (/api/fight-records 본문 — routers/stats.py 에서 이동, 바이트 동일) · _match_fight_core(매치 단위 한타 core, 증분 저장 대비 경계)
 services/summary.py        집계 정의 정본(D1~D8): summarize_maps/opponents/period/ults · summarize_session · format_session_message
 services/discord_webhook.py 웹후크 비동기 발송(asyncio.create_task, 예외 전부 내부 처리)
 game_data/__init__.py      게임데이터 파생 + canonical_map_name(프론트 gameData.js canonicalMapName 과 동일 규칙)
@@ -24,6 +24,7 @@ routers/stats.py           GET scrims · full-events · first-fights · fight-re
 routers/scrims.py          등록/업로드/삭제/rebuild/상세(scrims·matches) · 등록 전 명단(/api/logs/roster) · 세션 완료 알림(/complete) + 파일 I/O 헬퍼
 routers/summary.py         GET /api/summary/{maps,opponents,period,ults} (읽기 전용, /api/fight-records 응답 캐시 재사용 — 같은 키·같은 무효화) — 계약: docs/SUMMARY_API.md
 db/ (기존)          database.py(엔진·세션·기동 시 멱등 스키마 보정 _COLUMN_PATCHES — alembic 미사용) · models.py(ORM)
+db/stat_rows.py            load_stat_sessions — 통계 캐시 미스 경로(fight-records·full-events·player-fight-stats·summary)용 컬럼 SELECT 로더(ORM 객체 생성 없음, 정렬·값은 ORM 로드와 동일)
 scripts/api_snapshot.py    기존 조회 API 응답 바이트·openapi 스냅샷/비교(리팩토링 회귀 증명, DB 사본으로 기동)
 ```
 

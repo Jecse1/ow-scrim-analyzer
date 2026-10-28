@@ -14,9 +14,19 @@ from services.fight_analysis import compute_fights
 from services.fight_metrics import _fight_to_record
 
 
+def _match_fight_core(m) -> list:
+    """한 로그 매치의 라운드별 한타 core — m.rounds 와 같은 순서·같은 길이의 compute_fights 결과 리스트.
+    입력은 그 매치의 행들(m.team1_name/team2_name, m.rounds[].events)뿐이고 base_team·세션·VOD 등 메타와 무관하다.
+    증분 저장(매치 단위 저장) 도입 시 이 출력을 그대로 저장·재사용할 수 있도록 경계를 둔 것."""
+    t1, t2 = m.team1_name, m.team2_name
+    return [compute_fights([_db_event_to_dict(ev) for ev in (r.events or [])], t1, t2)
+            for r in (m.rounds or [])]
+
+
 def _build_fight_records_payload(sessions, base_team: str) -> dict:
-    """sessions: rounds.events·pauses 를 selectinload 한 DBSession 목록(date DESC, id DESC).
-    반환: /api/fight-records 응답 dict {meta, records, match_summaries}."""
+    """sessions: rounds.events·pauses 가 붙은 세션 목록(date DESC, id DESC) — db/stat_rows.load_stat_sessions 출력
+    또는 같은 관계를 selectinload 한 DBSession.
+    반환: /api/fight-records 응답 dict {meta, records, match_summaries}. 한타는 매치마다 _match_fight_core 출력을 이어 붙인다."""
     records: list = []
     match_summaries: list = []  # 매치 단위 요약(수기 포함) — 맵별 승패·상대별 전적·표본 N/M 표기용
     skipped_matches = 0
@@ -50,11 +60,10 @@ def _build_fight_records_payload(sessions, base_team: str) -> dict:
             })
             if (getattr(m, 'source', None) or 'log') != 'log':
                 continue  # 수기 매치 — 한타 레코드 없음
-            for r in (m.rounds or []):
-                ev_dicts = [_db_event_to_dict(ev) for ev in (r.events or [])]
+            for r, round_fights in zip(m.rounds or [], _match_fight_core(m)):
                 r_delta = effective_video_delta(
                     getattr(r, "video_delta_sec", None), map_type, r.round_number)
-                for f in compute_fights(ev_dicts, t1, t2):
+                for f in round_fights:
                     records.append(_fight_to_record(f, our_side, t1, t2, s, m, map_type,
                                                     r.round_number, effective_delta=r_delta))
 

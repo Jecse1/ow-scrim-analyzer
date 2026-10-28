@@ -12,6 +12,7 @@ _DB_IMPORT_ERROR = None
 try:
     from sqlalchemy import select
     from db.database import AsyncSessionLocal
+    from db.stat_rows import load_stat_sessions
     from db.models import Session as DBSession, Match as DBMatch, Pause as DBPause, Round as DBRound, PlayerStat as DBPlayerStat, Event as DBEvent
     _DB_AVAILABLE = True
 except Exception as _e:
@@ -117,20 +118,8 @@ async def get_scrims_full_events():
     if cached is not None:
         return cached
     try:
-        from sqlalchemy.orm import selectinload
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
-                .options(
-                    selectinload(DBSession.matches).options(
-                        selectinload(DBMatch.rounds).selectinload(DBRound.player_stats),
-                        selectinload(DBMatch.rounds).selectinload(DBRound.events),
-                    )
-                )
-                .order_by(DBSession.date.desc(), DBSession.id.desc())
-            )
-            sessions = result.scalars().all()
+            sessions = await load_stat_sessions(db, events=True, player_stats=True)
             for s in sessions:
                 # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
                 s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
@@ -271,18 +260,8 @@ async def get_fight_records(base_team: str = BASE_TEAM):
     if cached is not None:
         return cached
     try:
-        from sqlalchemy.orm import selectinload
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
-                .options(
-                    selectinload(DBSession.matches).selectinload(DBMatch.rounds).selectinload(DBRound.events),
-                    selectinload(DBSession.matches).selectinload(DBMatch.pauses),
-                )
-                .order_by(DBSession.date.desc(), DBSession.id.desc())
-            )
-            sessions = result.scalars().all()
+            sessions = await load_stat_sessions(db, events=True, pauses=True)
 
             payload = _build_fight_records_payload(sessions, base_team)
             return _response_cache_store(cache_key, payload)
@@ -308,20 +287,8 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
     if cached is not None:
         return cached
     try:
-        from sqlalchemy.orm import selectinload
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
-                .options(
-                    selectinload(DBSession.matches).options(
-                        selectinload(DBMatch.rounds).selectinload(DBRound.events),
-                        selectinload(DBMatch.rounds).selectinload(DBRound.player_stats),
-                    )
-                )
-                .order_by(DBSession.date.desc(), DBSession.id.desc())
-            )
-            sessions = result.scalars().all()
+            sessions = await load_stat_sessions(db, events=True, player_stats=True)
             for _s in sessions:
                 # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
                 _s.matches = [m for m in (_s.matches or [])

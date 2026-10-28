@@ -19,7 +19,8 @@ _DB_IMPORT_ERROR = None
 try:
     from sqlalchemy import select
     from db.database import AsyncSessionLocal
-    from db.models import Session as DBSession, Match as DBMatch, Round as DBRound
+    from db.models import Session as DBSession, Match as DBMatch
+    from db.stat_rows import load_stat_sessions
     _DB_AVAILABLE = True
 except Exception as _e:
     _DB_AVAILABLE = False
@@ -88,28 +89,21 @@ async def _load(base_team: str) -> tuple[dict, list]:
     try:
         from sqlalchemy.orm import selectinload
         async with AsyncSessionLocal() as db:
+            # 세션 목록용으로는 매치·퍼즈만 읽는다(라운드·이벤트 불필요) — 히트·미스 공통.
+            result = await db.execute(
+                select(DBSession)
+                .where(DBSession.deleted_at.is_(None))
+                .options(selectinload(DBSession.matches).selectinload(DBMatch.pauses))
+                .order_by(DBSession.date.desc(), DBSession.id.desc())
+            )
+            sessions = result.scalars().all()
             if cached is not None:
-                # 캐시 히트: 세션 목록용으로 매치·퍼즈만 읽는다(라운드·이벤트 불필요).
-                result = await db.execute(
-                    select(DBSession)
-                    .where(DBSession.deleted_at.is_(None))
-                    .options(selectinload(DBSession.matches).selectinload(DBMatch.pauses))
-                    .order_by(DBSession.date.desc(), DBSession.id.desc())
-                )
-                sessions = result.scalars().all()
                 body = cached.body
             else:
-                result = await db.execute(
-                    select(DBSession)
-                    .where(DBSession.deleted_at.is_(None))
-                    .options(
-                        selectinload(DBSession.matches).selectinload(DBMatch.rounds).selectinload(DBRound.events),
-                        selectinload(DBSession.matches).selectinload(DBMatch.pauses),
-                    )
-                    .order_by(DBSession.date.desc(), DBSession.id.desc())
-                )
-                sessions = result.scalars().all()
-                body = _response_cache_store(cache_key, _build_fight_records_payload(sessions, base_team)).body
+                # 캐시 미스: /api/fight-records 와 같은 컬럼 SELECT 로더 → 같은 빌더 → 같은 키에 저장.
+                rows = await load_stat_sessions(db, events=True, pauses=True)
+                body = _response_cache_store(cache_key, _build_fight_records_payload(rows, base_team)).body
+                del rows
             payload = json.loads(body)
             scrims = [{
                 "id": s.id, "scrim_name": s.scrim_name, "date": s.date,
