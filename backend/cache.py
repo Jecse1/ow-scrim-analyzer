@@ -24,12 +24,16 @@ def _response_cache_get(key: str):
     return Response(content=body, media_type="application/json")
 
 
-def _response_cache_store(key: str, payload) -> Response:
-    """payload를 JSON bytes로 1회 직렬화해 캐시하고 그 bytes로 응답을 만든다.
-    직렬화 옵션은 FastAPI(Starlette) JSONResponse.render와 동일 — 응답 바이트 불변."""
-    body = json.dumps(
+def _json_bytes(payload) -> bytes:
+    """캐시·응답용 JSON 직렬화. 옵션은 FastAPI(Starlette) JSONResponse.render와 동일 — 응답 바이트 불변.
+    순수 함수라 스레드풀에서 호출해도 된다(빌더와 함께 이벤트 루프 밖에서 실행)."""
+    return json.dumps(
         payload, ensure_ascii=False, allow_nan=False, indent=None, separators=(",", ":")
     ).encode("utf-8")
+
+
+def _response_cache_put(key: str, body: bytes) -> Response:
+    """이미 직렬화된 bytes 를 캐시하고 그 bytes 로 응답을 만든다(이벤트 루프에서 호출)."""
     _RESPONSE_CACHE[key] = body
     return Response(content=body, media_type="application/json")
 

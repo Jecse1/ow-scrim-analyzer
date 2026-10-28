@@ -24,7 +24,8 @@ from config import (
     MIN_SAMPLE_FOR_PERCENTILE_FIGHTS, MIN_SAMPLE_FOR_PERCENTILE_ROUNDS,
     PERCENTILE_MIN_POOL, TRADE_WINDOW_SEC, effective_video_delta,
 )
-from cache import _response_cache_get, _response_cache_store
+from fastapi.concurrency import run_in_threadpool
+from cache import _response_cache_get, _response_cache_put, _json_bytes
 from parsers.log_parser import resolve_map_type, is_match_level_map
 from serializers import (
     _db_event_to_dict, _db_player_stat_to_dict, _aggregate_match_stats, _db_session_to_dict,
@@ -120,11 +121,13 @@ async def get_scrims_full_events():
     try:
         async with AsyncSessionLocal() as db:
             sessions = await load_stat_sessions(db, events=True, player_stats=True)
-            for s in sessions:
-                # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
-                s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
-            payload = [_db_session_to_dict_events_only(s) for s in sessions]
-            return _response_cache_store(cache_key, payload)
+        for s in sessions:
+            # 수기(source='manual') 매치 제외 — 이 응답은 로그 표본(이벤트) 전용
+            s.matches = [m for m in (s.matches or []) if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
+        # 변환·직렬화는 스레드풀(로더 출력은 DB 세션과 무관한 행 객체라 루프 밖에서 읽어도 안전)
+        body = await run_in_threadpool(
+            lambda: _json_bytes([_db_session_to_dict_events_only(s) for s in sessions]))
+        return _response_cache_put(cache_key, body)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -262,9 +265,9 @@ async def get_fight_records(base_team: str = BASE_TEAM):
     try:
         async with AsyncSessionLocal() as db:
             sessions = await load_stat_sessions(db, events=True, pauses=True)
-
-            payload = _build_fight_records_payload(sessions, base_team)
-            return _response_cache_store(cache_key, payload)
+        # 변환(한타 계산)·직렬화는 스레드풀
+        body = await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(sessions, base_team)))
+        return _response_cache_put(cache_key, body)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
@@ -289,11 +292,12 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
     try:
         async with AsyncSessionLocal() as db:
             sessions = await load_stat_sessions(db, events=True, player_stats=True)
-            for _s in sessions:
-                # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
-                _s.matches = [m for m in (_s.matches or [])
-                              if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
+        for _s in sessions:
+            # 수기(source='manual') 매치 제외 — 선수 통계는 로그 표본 전용
+            _s.matches = [m for m in (_s.matches or [])
+                          if m.deleted_at is None and (getattr(m, 'source', None) or 'log') == 'log']
 
+        def _build() -> bytes:  # 집계·직렬화 — 스레드풀
             items = compute_player_fight_stats(sessions, base_team)
 
             payload = {
@@ -306,6 +310,8 @@ async def get_player_fight_stats(base_team: str = BASE_TEAM):
                 },
                 "items": list(items.values()),
             }
-            return _response_cache_store(cache_key, payload)
+            return _json_bytes(payload)
+
+        return _response_cache_put(cache_key, await run_in_threadpool(_build))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB error: {e}")

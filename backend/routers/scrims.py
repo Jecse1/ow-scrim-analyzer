@@ -13,6 +13,7 @@ import tempfile
 import threading
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
+from fastapi.concurrency import run_in_threadpool
 
 _DB_IMPORT_ERROR = None
 try:
@@ -504,14 +505,10 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             c_t1 = db_match.team1_name
             c_t2 = db_match.team2_name
 
-            # 사전 검사(경고 수집 전용 — 거부하지 않음). 파서가 조용히 버릴 줄을 응답·meta·서버 로그에 남긴다.
-            pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
-            print(f"[PRECHECK] {scrim_id} #{match_index}{' (dry_run)' if is_dry else ''}: {precheck_summary(pre)}")
+            # 사전 검사·파싱·계산(DB 쓰기 전 구간)은 CPU 작업 — 스레드풀에서 돌려 이벤트 루프를 막지 않는다.
+            pre, parsed, target_match, game_setup_sec = await run_in_threadpool(
+                _parse_upload_log, log_text, enc_fallback, c_t1, c_t2, scrim_id, match_index, is_dry)
             pre_resp = {"warnings": pre["warnings"], "warning_count": pre["warning_count"]}
-
-            parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
-            target_match: dict = {}
-            calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
             # 로그로 승자를 못 가린 무승부면 사유(판정 경로)를 응답에 싣는다(경고 표시용 — 저장·판정 무관).
             _wpath = (target_match.get("winner_detail") or {}).get("path") or ""
             if target_match.get("winner") == "Draw" and _wpath.startswith("undetermined"):
@@ -552,16 +549,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             db_match.winner_detail = json.dumps(target_match.get("winner_detail"), ensure_ascii=False) if target_match.get("winner_detail") else None
             db_match.winner_source = derive_winner_source(db_match)
 
-            # 신규 방식: setup_complete의 real_timestamp 추출 → game_setup_sec 저장
-            # -2 보정 없이 real_ts 그대로 저장. events.timestamp는 이미 (real_ts - 2)이므로
-            # 빼면 자연스럽게 2초 전 점프 효과 발생 (사용자 의도 유지)
-            game_setup_sec = None
-            for _line in log_text.splitlines():
-                if ",setup_complete," in _line:
-                    _real_ts = parse_log_timestamp(_line.strip())
-                    game_setup_sec = max(0, _real_ts)
-                    break
-            db_match.game_setup_sec = game_setup_sec
+            db_match.game_setup_sec = game_setup_sec  # _parse_upload_log 에서 추출
 
             await db.execute(sa_delete(DBEvent).where(DBEvent.match_id == match_id_val))
             await db.execute(sa_delete(DBPlayerStat).where(DBPlayerStat.match_id == match_id_val))
@@ -639,6 +627,30 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
 
+def _parse_upload_log(log_text: str, enc_fallback: bool, c_t1: str, c_t2: str,
+                      scrim_id: str, match_index: int, is_dry: bool):
+    """upload_match_log 의 파싱·계산 구간(동기, 스레드풀 실행). DB·파일 접근 없음.
+    반환: (사전 검사 결과, parse_overwatch_log 결과, calculate_pure_stats 로 채운 매치 dict, game_setup_sec)."""
+    # 사전 검사(경고 수집 전용 — 거부하지 않음). 파서가 조용히 버릴 줄을 응답·meta·서버 로그에 남긴다.
+    pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
+    print(f"[PRECHECK] {scrim_id} #{match_index}{' (dry_run)' if is_dry else ''}: {precheck_summary(pre)}")
+
+    parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
+    target_match: dict = {}
+    calculate_pure_stats(parsed, target_match, match_label=f"{scrim_id} #{match_index}")
+
+    # 신규 방식: setup_complete의 real_timestamp 추출 → game_setup_sec 저장
+    # -2 보정 없이 real_ts 그대로 저장. events.timestamp는 이미 (real_ts - 2)이므로
+    # 빼면 자연스럽게 2초 전 점프 효과 발생 (사용자 의도 유지)
+    game_setup_sec = None
+    for _line in log_text.splitlines():
+        if ",setup_complete," in _line:
+            _real_ts = parse_log_timestamp(_line.strip())
+            game_setup_sec = max(0, _real_ts)
+            break
+    return pre, parsed, target_match, game_setup_sec
+
+
 # 명단 추출용 임시 팀명. 로그 필드는 ',' 로 나뉘므로 ',' 를 포함한 값은 어떤 원시 팀 라벨·선수명과도 같을 수 없다.
 _ROSTER_PLACEHOLDER = {1: "__roster,team1__", 2: "__roster,team2__"}
 
@@ -667,6 +679,12 @@ async def extract_log_roster(file: UploadFile = File(...)):
     선수 기록이 하나도 없으면(빈 파일·로그 아님) 422.
     """
     content = await file.read()
+    # 디코딩·사전 검사·파싱·명단 조립은 CPU 작업 — 스레드풀에서 돌려 이벤트 루프(다른 요청)를 막지 않는다.
+    return await run_in_threadpool(_extract_roster_from_bytes, content)
+
+
+def _extract_roster_from_bytes(content: bytes) -> dict:
+    """extract_log_roster 본문(동기). HTTPException 은 그대로 호출자에게 전달된다."""
     log_text, enc_fallback = _decode_log_bytes(content)
     pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
     warnings = list(pre["warnings"])

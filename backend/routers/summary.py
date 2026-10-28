@@ -14,6 +14,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 
 _DB_IMPORT_ERROR = None
 try:
@@ -27,7 +28,7 @@ except Exception as _e:
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
 from config import BASE_TEAM
-from cache import _response_cache_get, _response_cache_store
+from cache import _response_cache_get, _response_cache_put, _json_bytes
 from serializers import _db_match_to_dict
 from services.fight_records import _build_fight_records_payload
 from services.summary import (
@@ -97,20 +98,22 @@ async def _load(base_team: str) -> tuple[dict, list]:
                 .order_by(DBSession.date.desc(), DBSession.id.desc())
             )
             sessions = result.scalars().all()
-            if cached is not None:
-                body = cached.body
-            else:
-                # 캐시 미스: /api/fight-records 와 같은 컬럼 SELECT 로더 → 같은 빌더 → 같은 키에 저장.
-                rows = await load_stat_sessions(db, events=True, pauses=True)
-                body = _response_cache_store(cache_key, _build_fight_records_payload(rows, base_team)).body
-                del rows
-            payload = json.loads(body)
             scrims = [{
                 "id": s.id, "scrim_name": s.scrim_name, "date": s.date,
                 "start_time": s.start_time or "", "end_time": s.end_time or "",
                 "matches": [_db_match_to_dict(m, full=False) for m in (s.matches or []) if m.deleted_at is None],
             } for s in sessions]
-            return payload, scrims
+            # 캐시 미스: /api/fight-records 와 같은 컬럼 SELECT 로더 → 같은 빌더 → 같은 키에 저장.
+            rows = await load_stat_sessions(db, events=True, pauses=True) if cached is None else None
+        # 아래 계산·디코드는 DB 세션을 돌려준 뒤 스레드풀에서(이벤트 루프 비차단)
+        if cached is not None:
+            body = cached.body
+        else:
+            body = await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(rows, base_team)))
+            _response_cache_put(cache_key, body)
+            del rows
+        payload = await run_in_threadpool(json.loads, body)
+        return payload, scrims
     except HTTPException:
         raise
     except Exception as e:
@@ -123,7 +126,8 @@ async def get_summary_maps(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO
                            base_team: str = _BASE_Q):
     f, t = _resolve_period(frm, to)
     payload, scrims = await _load(base_team)
-    out = summarize_maps(payload["records"], payload["match_summaries"], f, t, opponent=opponent, scrims=scrims)
+    out = await run_in_threadpool(summarize_maps, payload["records"], payload["match_summaries"], f, t,
+                                  opponent=opponent, scrims=scrims)
     return {"meta": _meta(base_team, f, t, POPULATION_FIGHT_MATCHES_PLUS_MANUAL), **out}
 
 
@@ -132,7 +136,8 @@ async def get_summary_opponents(frm: Optional[str] = _FROM_Q, to: Optional[str] 
                                 base_team: str = _BASE_Q):
     f, t = _resolve_period(frm, to)
     payload, scrims = await _load(base_team)
-    out = summarize_opponents(payload["records"], payload["match_summaries"], f, t, scrims=scrims)
+    out = await run_in_threadpool(summarize_opponents, payload["records"], payload["match_summaries"], f, t,
+                                  scrims=scrims)
     return {"meta": _meta(base_team, f, t, POPULATION_FIGHT_MATCHES_PLUS_MANUAL), **out}
 
 
@@ -141,7 +146,7 @@ async def get_summary_period(frm: Optional[str] = _FROM_Q, to: Optional[str] = _
                              base_team: str = _BASE_Q):
     f, t = _resolve_period(frm, to)
     _, scrims = await _load(base_team)
-    out = summarize_period(scrims, f, t, base_team=base_team)
+    out = await run_in_threadpool(summarize_period, scrims, f, t, base_team=base_team)
     return {"meta": _meta(base_team, f, t, POPULATION_ALL_MATCHES), **out}
 
 
@@ -155,6 +160,6 @@ async def get_summary_ults(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO
                            base_team: str = _BASE_Q):
     f, t = _resolve_period(frm, to)
     payload, _ = await _load(base_team)
-    out = summarize_ults(payload["records"], f, t, opponent=opponent,
-                         response_window=response_window, min_sample=min_sample, limit=limit)
+    out = await run_in_threadpool(summarize_ults, payload["records"], f, t, opponent=opponent,
+                                  response_window=response_window, min_sample=min_sample, limit=limit)
     return {"meta": _meta(base_team, f, t, POPULATION_LOG_FIGHTS), **out}
