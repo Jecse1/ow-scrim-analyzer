@@ -151,6 +151,7 @@ export default {
   ubPartialTitle: "部分比赛日志未能上传 — 会话已保存（失败 {n} 场）", ubPartialHint: "为失败的比赛重新选择日志文件即可只重新上传该场。全部上传后发送 Discord 通知。",
   ubRetry: "重试失败的比赛", ubRetrying: "上传中…", ubResolvedTitle: "之前失败的比赛日志已全部上传", ubDismiss: "关闭", ubSession: "会话",
   ubNetwork: "请求未到达服务器（网络错误，或附加后文件已更改 — 请重新选择）",
+  ubSlowTitle: "服务器计算时间较长，请稍后刷新", ubSlowHint: "未能获取统计数据（响应超时或网络错误）。服务器会继续计算，稍后重新加载通常即可立即打开。", ubReload: "重新加载",
   notifyLabel: "Discord 通知：", notifySent: "已请求发送", notifyDisabled: "未设置", notifyFailed: "失败", notifyNotSent: "未发送通知",
   // UltimateStats
   ultFivePlus: "5个以上", ultTotal: "总计", ultValue: "价值", ultLowSampleNote: "样本不足（少于5次）· 仅供参考",

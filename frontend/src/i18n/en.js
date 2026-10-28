@@ -151,6 +151,7 @@ export default {
   ubPartialTitle: "Some match logs were not uploaded — the session was saved ({n} failed)", ubPartialHint: "Select the log file again for a failed match to upload just that match. The Discord notice is sent once all are uploaded.",
   ubRetry: "Retry failed match", ubRetrying: "Uploading…", ubResolvedTitle: "All previously failed match logs are uploaded", ubDismiss: "Close", ubSession: "Session",
   ubNetwork: "The request did not reach the server (network error, or the file changed after it was attached — select it again)",
+  ubSlowTitle: "The server is taking longer to compute. Please refresh in a moment", ubSlowHint: "Statistics data could not be loaded (response timed out or network error). The server keeps computing, so reloading shortly usually opens it right away.", ubReload: "Reload",
   notifyLabel: "Discord notice: ", notifySent: "requested", notifyDisabled: "not configured", notifyFailed: "failed", notifyNotSent: "notice not sent",
   // UltimateStats
   ultFivePlus: "5+", ultTotal: "Total", ultValue: "Value", ultLowSampleNote: "Low sample (under 5) · reference",

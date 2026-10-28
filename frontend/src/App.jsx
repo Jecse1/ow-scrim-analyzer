@@ -8,7 +8,7 @@ import { ThemeProvider, useTheme, themes, FIXED_COLORS } from "./ThemeContext";
 import { LanguageProvider, useLanguage } from "./LanguageContext";
 import { VodProvider, useVod } from "./VodPlayerContext";
 import { computeFights } from "./utils/fightAnalysis";
-import { fetchCached, invalidateApiCache } from "./utils/apiCache";
+import { fetchCached, invalidateApiCache, onLoadError } from "./utils/apiCache";
 import { APP_NAME } from "./config";
 import { precheckLine } from "./utils/precheckText";
 
@@ -73,6 +73,11 @@ function MainApp() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadIssue, setUploadIssue] = useState(null); // 등록 후 업로드 실패 배너(UploadIssueBanner)
+  const [loadIssue, setLoadIssue] = useState(null); // 통계 요청 504·네트워크 오류 배너(같은 배너, kind 'slow')
+  useEffect(() => onLoadError(() => setLoadIssue({ kind: "slow" })), []);
+  // 배너의 다시 불러오기: 페이지 새로고침은 대시보드로 돌아가므로, 지금 화면만 다시 마운트해 실패한 요청을 다시 보낸다
+  // (fetchCached 는 실패한 URL 을 캐시에서 뺀다 — 성공한 응답은 그대로 재사용)
+  const [reloadKey, setReloadKey] = useState(0);
   
   const [allScrims, setAllScrims] = useState([]);
 
@@ -128,7 +133,7 @@ function MainApp() {
       .then((data) => { if (alive) setAllScrims(data || []); })
       .catch((err) => console.error("❌ Failed to fetch all scrims:", err));
     return () => { alive = false; };
-  }, [currentView]);
+  }, [currentView, reloadKey]);
 
   const dynamicPlayersData = useMemo(() => {
     if (!allScrims || allScrims.length === 0) return [];
@@ -770,9 +775,11 @@ function MainApp() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: theme.bg, color: theme.text, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <Navbar />
-      <ErrorBoundary>{renderView()}</ErrorBoundary>
+      <ErrorBoundary key={reloadKey}>{renderView()}</ErrorBoundary>
       <ScrimModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleScrimSubmit} />
-      <UploadIssueBanner issue={uploadIssue} onRetry={retryFailedMatch} onDismiss={() => setUploadIssue(null)} />
+      {/* 업로드 결과(재시도 대기일 수 있음)가 먼저, 닫으면 통계 로딩 실패 배너 */}
+      <UploadIssueBanner issue={uploadIssue || loadIssue} onRetry={retryFailedMatch} onReload={() => { setLoadIssue(null); setReloadKey((k) => k + 1); }}
+        onDismiss={() => (uploadIssue ? setUploadIssue(null) : setLoadIssue(null))} />
     </div>
   );
 }

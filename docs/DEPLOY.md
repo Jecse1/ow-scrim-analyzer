@@ -129,9 +129,16 @@ module.exports = { apps: [{
 `/etc/nginx/sites-available/scrim` :
 
 ```nginx
+# 응답 시간 기록: combined 뒤에 rt=$request_time(nginx 전체) urt=$upstream_response_time(백엔드) 를 덧붙인다.
+# 앞부분은 combined 그대로라 goaccess --log-format=COMBINED 파싱도 그대로 된다(뒤 필드는 무시).
+log_format scrim_timed '$remote_addr - $remote_user [$time_local] "$request" '
+                       '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
+                       'rt=$request_time urt=$upstream_response_time';
+
 server {
     listen 80;
     server_name _;
+    access_log /var/log/nginx/access.log scrim_timed;
 
     root /home/<user>/app/frontend/dist;
     index index.html;
@@ -170,6 +177,14 @@ server {
 sudo ln -s /etc/nginx/sites-available/scrim /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+느린 API 확인 — `/api/` 요청은 기본 `proxy_read_timeout` 60초를 넘으면 504 가 된다. `rt` 는 nginx 가 요청을 받은 뒤 응답을 다 보낼
+때까지, `urt` 는 백엔드가 응답할 때까지(초). 백엔드에 닿지 않은 요청은 `urt=-`.
+
+```bash
+# 백엔드 응답이 5초 넘은 /api/ 요청
+awk '/"(GET|POST|PATCH|DELETE) \/api\// { for (i = NF; i > 0; i--) if ($i ~ /^urt=/) { split($i, a, "="); if (a[2] + 0 > 5) print; break } }' /var/log/nginx/access.log
 ```
 
 ## 7. DB 백업 (sqlite .backup 일일 cron)

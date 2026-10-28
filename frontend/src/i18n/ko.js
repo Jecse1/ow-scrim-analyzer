@@ -151,6 +151,7 @@ export default {
   ubPartialTitle: "일부 매치의 로그가 올라가지 않았습니다 — 세션은 저장됨 (실패 {n}건)", ubPartialHint: "실패한 매치의 로그 파일을 다시 선택하면 그 매치만 다시 올립니다. 모두 올라가면 디스코드 알림을 보냅니다.",
   ubRetry: "실패 매치 재시도", ubRetrying: "업로드 중…", ubResolvedTitle: "실패했던 매치 로그를 모두 올렸습니다", ubDismiss: "닫기", ubSession: "세션",
   ubNetwork: "서버에 요청이 닿지 않았습니다(네트워크 오류, 또는 첨부 후 파일이 바뀜 — 파일을 다시 선택하세요)",
+  ubSlowTitle: "서버 계산이 길어졌습니다. 잠시 후 새로고침해 주세요", ubSlowHint: "통계 데이터를 받지 못했습니다(응답 시간 초과 또는 네트워크 오류). 서버는 계산을 이어 가므로 잠시 뒤 다시 불러오면 대개 바로 열립니다.", ubReload: "다시 불러오기",
   notifyLabel: "디스코드 알림: ", notifySent: "전송 요청됨", notifyDisabled: "미설정", notifyFailed: "실패", notifyNotSent: "알림 미발송",
   // UltimateStats
   ultFivePlus: "5개 이상", ultTotal: "총합", ultValue: "가치", ultLowSampleNote: "표본 부족 (5회 미만) · 참고용",

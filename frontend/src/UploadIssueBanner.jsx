@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertCircle, CheckCircle2, RotateCcw, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { formatFailReason } from "./utils/registerFlow";
@@ -7,15 +7,19 @@ import { formatFailReason } from "./utils/registerFlow";
 // 등록 후 업로드 결과 배너. 화면 아래 고정 — 모달을 닫고 다른 화면으로 옮겨도 닫기 전까지 남는다.
 // issue: { kind: 'cancelled'|'partial'|'resolved', scrimId, scrimName, failed: [{ index, map, reason }],
 //          deleted?, busy?, notify? } | null
+//      | { kind: 'slow' } — 통계 요청이 504·네트워크 오류로 실패(utils/apiCache onLoadError). 다시 불러오기 버튼만 있다.
 // onRetry(index, file): 실패 매치의 파일을 다시 골랐을 때(App 이 그 매치만 다시 올린다)
-const UploadIssueBanner = ({ issue, onRetry, onDismiss }) => {
+// onReload(): 'slow' 의 다시 불러오기 버튼(App 이 지금 화면을 다시 마운트)
+const UploadIssueBanner = ({ issue, onRetry, onReload, onDismiss }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   if (!issue) return null;
 
   const ok = issue.kind === "resolved";
+  const slow = issue.kind === "slow";
   const accent = ok ? theme.success : issue.kind === "cancelled" ? theme.danger : theme.warning;
-  const title = issue.kind === "cancelled" ? t.ubCancelledTitle
+  const title = slow ? t.ubSlowTitle
+    : issue.kind === "cancelled" ? t.ubCancelledTitle
     : issue.kind === "partial" ? t.ubPartialTitle.replace("{n}", issue.failed.length)
     : t.ubResolvedTitle;
   const Icon = ok ? CheckCircle2 : AlertCircle;
@@ -31,13 +35,25 @@ const UploadIssueBanner = ({ issue, onRetry, onDismiss }) => {
         <Icon size={18} color={accent} style={{ flexShrink: 0, marginTop: 1 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700 }}>{title}</div>
-          <div style={{ fontSize: "12px", color: theme.textSub, marginTop: "2px" }}>{t.ubSession}: {issue.scrimName} ({issue.scrimId})</div>
+          {slow ? (
+            <>
+              <div style={{ fontSize: "12px", color: theme.textSub, marginTop: "6px" }}>{t.ubSlowHint}</div>
+              <button onClick={onReload} style={{
+                display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "10px", padding: "6px 12px", borderRadius: "8px",
+                border: `1px solid ${theme.borderHighlight}`, background: theme.surfaceHighlight, color: theme.text, fontSize: "13px", fontWeight: 600, cursor: "pointer",
+              }}>
+                <RefreshCw size={13} /> {t.ubReload}
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: "12px", color: theme.textSub, marginTop: "2px" }}>{t.ubSession}: {issue.scrimName} ({issue.scrimId})</div>
+          )}
           {issue.kind === "cancelled" && issue.deleted === false && (
             <div style={{ fontSize: "13px", color: theme.danger, marginTop: "6px" }}>{t.ubDeleteFailed}</div>
           )}
           {issue.kind === "partial" && <div style={{ fontSize: "12px", color: theme.textSub, marginTop: "6px" }}>{t.ubPartialHint}</div>}
           {ok && issue.notify && <div style={{ fontSize: "13px", marginTop: "6px" }}>{t.notifyLabel}{issue.notify}</div>}
-          {!ok && issue.failed.length > 0 && (
+          {!ok && !slow && issue.failed.length > 0 && (
             <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
               {issue.failed.map((f) => (
                 <li key={f.index} style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
