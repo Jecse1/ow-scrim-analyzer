@@ -209,7 +209,9 @@ def test_gzip_cached_body_sent_as_is_without_double_compression():
         assert r.content == raw                              # 한 번 풀면 원본(이중 압축이면 gzip 바이트가 나온다)
         r2 = c.get("/api/scrims", headers={"Accept-Encoding": "identity"})
         assert "content-encoding" not in r2.headers and r2.content == raw
-        assert r.headers["etag"] == r2.headers["etag"] and r.headers["vary"] == "Accept-Encoding"
+        assert r.headers["etag"] == r2.headers["etag"]
+        # Starlette 버전에 따라 CORSMiddleware 가 Origin 을 덧붙인다(1.10: "Accept-Encoding, Origin")
+        assert "Accept-Encoding" in [v.strip() for v in r.headers["vary"].split(",")]
         assert r.headers["cache-control"] == "no-cache"
 
 
