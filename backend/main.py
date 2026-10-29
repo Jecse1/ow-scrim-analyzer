@@ -39,8 +39,12 @@ async def lifespan(app: FastAPI):
     from cache import schedule_warm, cancel_warm
     if _DB_AVAILABLE:
         schedule_warm(delay=0)  # 기동 직후 응답 캐시 선채우기(cache.py, 백그라운드)
+        from services.abilities import schedule_auto_backfill
+        schedule_auto_backfill()  # 스킬 저장소가 비어 있으면 선채우기 완료 후 백필
     yield
     cancel_warm()
+    from services.abilities import cancel_backfill
+    cancel_backfill()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -74,6 +78,9 @@ app.include_router(scrims_router)
 # 집계 조회(봇·외부용). 경로 /api/summary/* — 위 라우터들과 접두가 겹치지 않아 순서 무관.
 from routers.summary import router as summary_router
 app.include_router(summary_router)
+# 스킬 사용(ability) — 경로 /api/admin/backfill-abilities 등, 기존 경로와 겹치지 않음.
+from routers.abilities import router as abilities_router
+app.include_router(abilities_router)
 
 # 드래프트 플랜(플랜 전용 테이블·캐시. 경로 /api/plans/* — 기존 라우터와 충돌 없음)
 try:

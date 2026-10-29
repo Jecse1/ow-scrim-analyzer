@@ -33,7 +33,7 @@ from serializers import _db_match_to_dict, _db_session_to_dict
 from parsers.log_parser import parse_overwatch_log, parse_log_timestamp, time_str_to_seconds
 from parsers.log_precheck import precheck_log_text, precheck_summary
 from services.winner_source import derive_winner_source
-from services.abilities import extract_abilities, store_match_abilities, forget_match_abilities
+from services.abilities import extract_abilities, store_match_abilities, forget_match_abilities, start_backfill
 from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
 from services.summary import summarize_session, format_session_message
@@ -973,6 +973,7 @@ async def rebuild_database():
 
             await db.commit()
             print(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
+            start_backfill(force=True)  # 스킬 저장소도 재파싱한 매치 단위로 교체(백그라운드, 응답을 기다리게 하지 않음)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB rebuild failed: {e}")
 

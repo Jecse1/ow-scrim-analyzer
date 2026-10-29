@@ -14,6 +14,8 @@ os.environ["SCRIM_ROWDATA_DIR"] = os.path.join(_TMP, "scrim_rowdata_log")
 os.environ["ABILITY_DB_PATH"] = os.path.join(_TMP, "data", "ability_uses.db")  # 스킬 사용 저장소(db/ability_store.py)
 # 응답 캐시 선채우기(cache.py) 끔 — 백그라운드 계산이 테스트 요청·DB 쓰기와 겹치지 않게. 선채우기 자체는 tests/test_cache.py 가 직접 켜서 검증.
 os.environ["CACHE_WARM"] = "0"
+# 스킬 저장소 자동 백필 끔 — 기동마다 백그라운드 백필이 테스트 데이터와 겹치지 않게. 백필은 tests/test_ability_backfill.py 가 직접 부른다.
+os.environ["ABILITY_AUTO_BACKFILL"] = "0"
 
 
 def pytest_addoption(parser):

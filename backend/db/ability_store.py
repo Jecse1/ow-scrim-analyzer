@@ -16,9 +16,11 @@ scrim.db 의 ORM·로더와 연결하지 않는다(relationship 없음) — 기�
 """
 import os
 import sqlite3
+import time
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.abspath(os.environ.get("ABILITY_DB_PATH") or os.path.join(_BACKEND_DIR, "data", "ability_uses.db"))
+LAST_TX_MS = 0.0   # 직전 replace_match 의 쓰기 트랜잭션(BEGIN IMMEDIATE → COMMIT) 시간 — 백필 잠금 실측용
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS ability_matches (
@@ -76,9 +78,11 @@ def _forget(con: sqlite3.Connection, mkey: int) -> None:
 
 def replace_match(match_id: str, data: dict) -> int:
     """매치 1개의 스킬 데이터를 통째로 바꾼다(업로드·로그 교체·백필 공용). 반환 = 저장한 사용 수."""
+    global LAST_TX_MS
     uses = data.get("uses") or []
     con = _connect()
     try:
+        t0 = time.perf_counter()
         con.execute("BEGIN IMMEDIATE")
         row = con.execute("SELECT mkey FROM ability_matches WHERE match_id = ?", (match_id,)).fetchone()
         n1 = sum(1 for u in uses if u["slot"] == 1)
@@ -100,6 +104,7 @@ def replace_match(match_id: str, data: dict) -> int:
             "INSERT OR REPLACE INTO ability_hero_time(mkey, team_slot, player_name, hero_name, seconds) VALUES (?,?,?,?,?)",
             [(mkey, h["team_slot"], h["player_name"], h["hero_name"], h["seconds"]) for h in (data.get("hero_time") or [])])
         con.execute("COMMIT")
+        LAST_TX_MS = (time.perf_counter() - t0) * 1000
         return len(uses)
     except BaseException:
         if con.in_transaction:
@@ -126,6 +131,15 @@ def forget_matches(match_ids) -> int:
                 n += 1
             con.execute("COMMIT")
         return n
+    finally:
+        con.close()
+
+
+def processed_match_ids() -> set:
+    """이미 처리한(행이 있는) 매치 id — 백필이 건너뛸 대상."""
+    con = _connect()
+    try:
+        return {r[0] for r in con.execute("SELECT match_id FROM ability_matches")}
     finally:
         con.close()
 
