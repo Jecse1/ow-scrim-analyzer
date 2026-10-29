@@ -304,7 +304,8 @@ def scenes(meta: dict, p: dict) -> dict:
 
     seconds = None
     if hero:
-        mkeys = {keys[mid][0]: mid for mid in logged}
+        # 분모 범위 = 사용 행과 같은 조건(매치 필터 + 그 선수의 우리/상대·상대팀) — player_stats 등장 여부는 따지지 않는다
+        mkeys = {mk: mid for mid, (mk, has) in keys.items() if has and mid in meta and _match_ok(meta[mid], p)}
         seconds = 0.0
         for mkey, pl, h, sec in ability_store.hero_seconds([player] if player else None, [hero]):
             mid = mkeys.get(mkey)

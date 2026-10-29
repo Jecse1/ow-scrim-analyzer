@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import {
-  LayoutDashboard, History, Users, BarChart3, Moon, Sun, Upload, AlertCircle, Globe, User, Zap, Skull, Crosshair, Swords, Map as MapIcon, ChevronDown, Ban, Menu, X, Network
+  LayoutDashboard, History, Users, BarChart3, Moon, Sun, Upload, AlertCircle, Globe, User, Zap, Skull, Crosshair, Swords, Map as MapIcon, ChevronDown, Ban, Menu, X, Network, Sparkles
 } from "lucide-react";
 
 import { ThemeProvider, useTheme, themes, FIXED_COLORS } from "./ThemeContext";
@@ -26,6 +26,7 @@ import KillDeathStats from "./KillDeathStats";
 import FirstFightStats from "./FirstFightStats";
 import FightLabStats from "./FightLabStats";
 import UltimateAnalysisStats from "./UltimateAnalysisStats";
+import SkillScenesStats from "./SkillScenesStats";
 import MapAnalysisStats from "./MapAnalysisStats";
 import BanpickApp from "./banpick/BanpickApp";
 import PlansHome from "./plans/PlansHome";
@@ -340,6 +341,7 @@ function MainApp() {
   const goKillDeath = () => { setCurrentView("killdeath"); setActiveScrimId(null); setActiveMatchId(null); };
   const goFirstFight = () => { setCurrentView("firstfight"); setActiveScrimId(null); setActiveMatchId(null); };
   const goUltAnalysis = () => { setCurrentView("ultanalysis"); setActiveScrimId(null); setActiveMatchId(null); };
+  const goSkillScenes = () => { setCurrentView("skillscenes"); setActiveScrimId(null); setActiveMatchId(null); };
   const goFightLab = () => { setCurrentView("fightlab"); setActiveScrimId(null); setActiveMatchId(null); };
   const goMapAnalysis = () => { setCurrentView("mapanalysis"); setActiveScrimId(null); setActiveMatchId(null); };
   const goPersonal = () => { setCurrentView("personal"); setActiveScrimId(null); setActiveMatchId(null); };
@@ -531,6 +533,7 @@ function MainApp() {
         { key: "mapanalysis", label: t.navMapAnalysis, Icon: MapIcon, onSelect: goMapAnalysis },
         { key: "fightlab", label: t.navFightLab, Icon: FlaskConical, onSelect: goFightLab },
         { key: "ultanalysis", label: t.navUltAnalysis, Icon: Crosshair, onSelect: goUltAnalysis },
+        { key: "skillscenes", label: t.navSkillScenes, Icon: Sparkles, onSelect: goSkillScenes },
       ],
     },
     { key: "banpick", label: t.navBanpick, Icon: Ban, onSelect: goBanpick, activeViews: ["banpick"] },
@@ -761,6 +764,7 @@ function MainApp() {
     if (currentView === "firstfight") return <FirstFightStats />;
     if (currentView === "fightlab") return <FightLabStats />;
     if (currentView === "ultanalysis") return <UltimateAnalysisStats />;
+    if (currentView === "skillscenes") return <SkillScenesStats />;
     if (currentView === "mapanalysis") return <MapAnalysisStats onGoSession={goToScrim} />;
     if (currentView === "banpick") return <BanpickApp />;
     if (currentView === "plans") return <PlansHome onOpenMap={goPlanCanvas} onPrint={goPlanPrint} />;
