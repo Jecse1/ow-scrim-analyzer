@@ -171,8 +171,8 @@ def test_search_tokens_and_same_name(data):
     d = c.get("/api/abilities/search", params={"player": "A2", "hero": "트레이서", "limit": 50}).json()
     assert d["total"] == 128 and len(d["rows"]) == 50 and d["truncated"] is True
     assert c.get("/api/abilities/search").status_code == 400
-    assert aq.parse_query("someone 오리사 방어 강화") == {"player": "someone", "hero": "오리사", "skill": "방어 강화"}
-    assert aq.parse_query("Fortify someone") == {"player": "someone", "hero": None, "skill": "Fortify"}
+    assert aq.parse_query("someone 오리사 방어 강화") == {"player": "someone", "hero": "오리사", "skill": "방어 강화", "key": None}
+    assert aq.parse_query("Fortify someone") == {"player": "someone", "hero": None, "skill": "Fortify", "key": None}
 
 
 def test_etag_304(data):
@@ -191,3 +191,60 @@ def test_etag_304(data):
     assert r2.status_code == 200 and r2.headers["etag"] != etag
     o2 = c.get("/api/abilities/options", headers={"If-None-Match": oetag})
     assert o2.status_code == 200 and o2.headers["etag"] != oetag
+
+
+# ── 키 토큰(좌클릭·우클릭·shift·e·q·근접) ─────────────────────────────────────
+
+@pytest.mark.parametrize("tok,key", [
+    ("좌클릭", "Primary Fire"), ("좌", "Primary Fire"), ("LMB", "Primary Fire"),
+    ("우클릭", "Secondary Fire"), ("우", "Secondary Fire"), ("RMB", "Secondary Fire"),
+    ("쉬프트", "Ability 1"), ("shift", "Ability 1"), ("Shift", "Ability 1"),
+    ("e", "Ability 2"), ("E", "Ability 2"),
+    ("q", "Ultimate"), ("Q", "Ultimate"), ("궁", "Ultimate"), ("궁극기", "Ultimate"),
+    ("근접", "Melee"), ("v", "Melee"), ("V", "Melee"),
+])
+def test_key_tokens(tok, key):
+    assert aq.parse_query(f"someone {tok}") == {"player": "someone", "hero": None, "skill": None, "key": key}
+    assert aq.parse_query(f"{tok} 트레이서")["key"] == key
+
+
+def test_single_char_not_misread():
+    for t in ("e", "q", "v", "좌", "우", "E"):
+        assert aq.parse_query(t) == {"player": t, "hero": None, "skill": None, "key": None}   # 홀로 오면 선수명
+    assert aq.parse_query("e q") == {"player": "e q", "hero": None, "skill": None, "key": None}
+    assert aq.parse_query("someone e")["key"] == "Ability 2"                                  # 선수 토큰이 있으면 키
+    assert aq.parse_query("트레이서 e") == {"player": None, "hero": "트레이서", "skill": None, "key": "Ability 2"}
+    assert aq.parse_query("우클릭") == {"player": None, "hero": None, "skill": None, "key": "Secondary Fire"}  # 두 글자 이상은 늘 키
+
+
+def _search(c, q):
+    r = c.get("/api/abilities/search", params={"q": q})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_key_equals_skill_name(data):
+    c, m = data
+    by_key, by_name = _search(c, "a2 트레이서 shift"), _search(c, "a2 트레이서 점멸")
+    assert by_key["total"] == by_name["total"] == 128 and by_key["rows"] == by_name["rows"]
+    assert by_key["resolved"]["skills"] == by_name["resolved"]["skills"] == [{"hero": "트레이서", "ability": "Ability 1"}]
+    assert by_key["sources"] == by_name["sources"] == {"ability_uses": True, "kills": True, "ultimate_starts": False, "use_records": True}
+    # 우클릭 = 그 영웅의 Secondary Fire 이름(오리사 투창): 사용 기록 없음 → 결정타만
+    rk, rn = _search(c, "someone 오리사 우클릭"), _search(c, "someone 오리사 투창")
+    assert rk["resolved"]["skills"] == rn["resolved"]["skills"] == [{"hero": "오리사", "ability": "Secondary Fire"}]
+    assert rk["sources"] == rn["sources"] == {"ability_uses": False, "kills": True, "ultimate_starts": False, "use_records": False}
+    assert rk["rows"] == rn["rows"] == []
+
+
+def test_key_without_hero_and_ultimate(data):
+    c, m = data
+    d = _search(c, "a2 shift")                       # 영웅 없이 키 → 모든 영웅의 그 슬롯(A2 는 트레이서뿐)
+    assert d["total"] == 128 and d["resolved"]["skills"] == [{"hero": None, "ability": "Ability 1"}]
+    d = _search(c, "a2 q")                           # 궁극기: 사용 장면은 ultimate_start(프론트 결합), 이 응답 rows 는 없음
+    assert d["rows"] == [] and d["sources"] == {"ability_uses": False, "kills": True, "ultimate_starts": True, "use_records": True}
+    d = _search(c, "a2 근접")
+    assert d["rows"] == [] and d["sources"]["use_records"] is False
+    d = c.get("/api/abilities/search", params={"player": "A2", "key": "e"}).json()   # 개별 인자 key
+    assert d["resolved"]["skills"] == [{"hero": None, "ability": "Ability 2"}] and d["total"] == 0
+    d = c.get("/api/abilities/search", params={"player": "A2", "key": "Ability 1"}).json()
+    assert d["total"] == 128

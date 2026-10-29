@@ -6,7 +6,8 @@ GET  /api/admin/backfill-abilities : 진행 상태(done/total, 저장 수, 매�
 GET  /api/abilities/options        : 선수 → 플레이한 영웅(사용 수·원문 시간) → 스킬1·2 이름. 응답 캐시(단일 비행·gzip·ETag)에 얹고
                                      키와 ETag 에 스킬 저장소 세대를 붙인다(백필은 응답 캐시를 무효화하지 않으므로).
 GET  /api/abilities/scenes         : 필터 조회(100행 페이지). 저장하지 않고 ETag(응답 캐시 세대 + 스킬 저장소 세대)·304 만.
-GET  /api/abilities/search         : 하이라이트 검색(선수 부분 일치·영웅·스킬명/별칭, 최신순 상한 300). ETag·304 같은 규칙.
+GET  /api/abilities/search         : 하이라이트 검색(선수 부분 일치·영웅·스킬명/별칭/키 토큰, 최신순 상한 300). ETag·304 같은 규칙.
+                                     key = 좌클릭·우클릭·shift·e·q·근접 등(또는 "Ability 1" 같은 원래 키). sources 로 결정타·궁극기 결합 안내.
 진행 로그는 서버 로그 "[ABILITY] backfill n/N". 구현은 services/abilities.py · services/ability_query.py.
 """
 from typing import Optional
@@ -86,10 +87,10 @@ async def ability_scenes(request: Request,
 @router.get("/api/abilities/search")
 async def ability_search(request: Request, q: Optional[str] = None,
                          player: Optional[str] = None, hero: Optional[str] = None, skill: Optional[str] = None,
-                         date_from: Optional[str] = None, date_to: Optional[str] = None, map: Optional[str] = None,
+                         key: Optional[str] = None, date_from: Optional[str] = None, date_to: Optional[str] = None, map: Optional[str] = None,
                          video_only: bool = False, limit: int = Query(aq.SEARCH_LIMIT, ge=1, le=aq.SEARCH_LIMIT)):
-    if not (q or player or hero or skill):
-        raise HTTPException(status_code=400, detail="q, player, hero, skill 중 하나는 필요합니다")
-    p = {"q": q, "player": player, "hero": hero, "skill": skill, "date_from": date_from, "date_to": date_to,
+    if not (q or player or hero or skill or key):
+        raise HTTPException(status_code=400, detail="q, player, hero, skill, key 중 하나는 필요합니다")
+    p = {"q": q, "player": player, "hero": hero, "skill": skill, "key": key, "date_from": date_from, "date_to": date_to,
          "map": map, "video_only": video_only, "limit": limit, "side": "all"}
     return await _etag_response(request, lambda meta: aq.search(meta, p))

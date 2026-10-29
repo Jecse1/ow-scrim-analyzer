@@ -134,9 +134,25 @@ def skill_names(hero: str) -> dict:
     return out
 
 
+# 키 토큰(정규화 → 킬 ability 문자열과 같은 키). 스킬 이름과 동등하게 해석한다.
+KEY_TOKENS = {
+    "좌클릭": "Primary Fire", "좌": "Primary Fire", "lmb": "Primary Fire",
+    "우클릭": "Secondary Fire", "우": "Secondary Fire", "rmb": "Secondary Fire",
+    "쉬프트": "Ability 1", "shift": "Ability 1",
+    "e": "Ability 2",
+    "q": "Ultimate", "궁": "Ultimate", "궁극기": "Ultimate",
+    "근접": "Melee", "v": "Melee",
+}
+# 한 글자 키 토큰 — 영웅·선수 토큰이 함께 있을 때만 키로 본다(아니면 선수명 부분 일치 그대로).
+SINGLE_CHAR_KEYS = {"e", "q", "v", "좌", "우"}
+USE_KEYS = ("Ability 1", "Ability 2")   # 스킬 사용 기록(ability_uses)이 있는 키
+
+
 def parse_query(q: str) -> dict:
-    """하이라이트 검색 문구 → {"player","hero","skill"}. 스킬명(공백 포함 가능)을 가장 긴 연속 토큰부터 찾아 떼고,
-    남은 토큰은 영웅이면 영웅, 아니면 선수(여러 개면 공백으로 이어 붙임)."""
+    """하이라이트 검색 문구 → {"player","hero","skill","key"}.
+    1) 스킬명(공백 포함 가능)을 가장 긴 연속 토큰부터 찾아 뗀다. 2) 두 글자 이상 키 토큰(우클릭·shift·궁극기 등).
+    3) 남은 토큰 중 첫 영웅. 4) 한 글자 키 토큰(e·q·v·좌·우)은 영웅이나 다른 선수 토큰이 있을 때만 키, 아니면 선수.
+    5) 나머지는 선수(여러 개면 공백으로 이어 붙임). 스킬명이 있으면 키 토큰은 쓰지 않는다."""
     toks = (q or "").split()
     used = [False] * len(toks)
     skill = None
@@ -151,15 +167,25 @@ def parse_query(q: str) -> dict:
                 break
         if skill:
             break
-    hero, rest = None, []
-    for t, u in zip(toks, used):
-        if u:
-            continue
-        if hero is None and resolve_hero(t):
+    key = None
+    for i, t in enumerate(toks):
+        n = _norm(t)
+        if not used[i] and n in KEY_TOKENS and n not in SINGLE_CHAR_KEYS:
+            used[i] = True
+            key = key or KEY_TOKENS[n]
+    hero = None
+    for i, t in enumerate(toks):
+        if not used[i] and hero is None and resolve_hero(t):
             hero = resolve_hero(t)
-        else:
-            rest.append(t)
-    return {"player": " ".join(rest) or None, "hero": hero, "skill": skill}
+            used[i] = True
+    rest = [(i, t) for i, t in enumerate(toks) if not used[i]]
+    singles = [(i, t) for i, t in rest if _norm(t) in SINGLE_CHAR_KEYS]
+    others = [(i, t) for i, t in rest if _norm(t) not in SINGLE_CHAR_KEYS]
+    if singles and (hero or others):
+        key = key or KEY_TOKENS[_norm(singles[0][1])]
+        rest = others
+    return {"player": " ".join(t for _, t in rest) or None, "hero": hero, "skill": skill,
+            "key": None if skill else key}
 
 
 # ── 공통 필터 ─────────────────────────────────────────────────────────────────
@@ -341,24 +367,48 @@ def options(meta: dict, base_team: str) -> dict:
 
 # ── 하이라이트 검색 ───────────────────────────────────────────────────────────
 
+def _sources(cands) -> dict:
+    """결과 소스 안내(STEP 5 화면이 킬 결정타·궁극기 사용을 붙일 때 쓰는 값).
+    ability_uses = 스킬 사용 장면(이 응답 rows), kills = 그 키의 결정타(full-events kill.ability),
+    ultimate_starts = 궁극기 사용(ultimate_start), use_records = 사용 기록이 있는 키인지(좌클릭·우클릭·근접은 없음)."""
+    if cands is None:
+        return {"ability_uses": True, "kills": False, "ultimate_starts": False, "use_records": True}
+    keys = {k for _, k in cands}
+    au, ult = bool(keys & set(USE_KEYS)), "Ultimate" in keys
+    return {"ability_uses": au, "kills": bool(keys), "ultimate_starts": ult, "use_records": au or ult}
+
+
 def search(meta: dict, p: dict) -> dict:
-    """선수(부분 일치)·영웅·스킬명으로 스킬 사용 장면 최신순 상한 SEARCH_LIMIT."""
+    """선수(부분 일치)·영웅·스킬명/키 토큰으로 스킬 사용 장면 최신순 상한 SEARCH_LIMIT."""
     parsed = parse_query(p.get("q") or "")
     player_q = p.get("player") or parsed["player"]
     hero = resolve_hero(p.get("hero")) if p.get("hero") else parsed["hero"]
     skill = p.get("skill") or parsed["skill"]
+    key = None if skill else (KEY_TOKENS.get(_norm(p.get("key"))) or p.get("key") if p.get("key") else parsed["key"])
     limit = max(1, min(int(p.get("limit") or SEARCH_LIMIT), SEARCH_LIMIT))
     resolved = {"player_query": player_q, "hero": hero, "skill": skill, "skills": [], "players": []}
-    empty = {"total": 0, "limit": limit, "truncated": False, "resolved": resolved, "matches": {}, "rows": []}
-
-    pairs = None
+    cands = None
     if skill:
         cands = resolve_skill(skill, hero)
+    elif key:
+        cands = [(hero, key)]
+        resolved["key"] = key
+    if cands is not None:
         resolved["skills"] = [{"hero": h, "ability": k} for h, k in cands]
-        pairs = {(h, int(k[-1])) for h, k in cands if k in ("Ability 1", "Ability 2")}
-        if not pairs:   # 궁극기 이름(별칭 포함)이거나 그 영웅의 스킬이 아님 → 스킬 사용 장면 없음(킬 결합은 프론트)
+    empty = {"total": 0, "limit": limit, "truncated": False, "resolved": resolved, "sources": _sources(cands),
+             "matches": {}, "rows": []}
+
+    pairs, slots = None, None
+    heroes = [hero] if hero else None
+    if cands is not None:
+        use = [(h, int(k[-1])) for h, k in cands if k in USE_KEYS]
+        if not use:   # 궁극기·좌클릭·우클릭·근접 또는 그 영웅의 스킬이 아님 → 스킬 사용 장면 없음(결정타·궁극기 결합은 프론트)
             return empty
-    if not (player_q or hero or skill):
+        slots = sorted({s for _, s in use})
+        if all(h is not None for h, _ in use):
+            pairs = set(use)
+            heroes = sorted({h for h, _ in use})
+    if not (player_q or hero or skill or key):
         return empty
     players = None
     if player_q:
@@ -367,11 +417,10 @@ def search(meta: dict, p: dict) -> dict:
         resolved["players"] = sorted(players, key=str.casefold)
         if not players:
             return empty
-    heroes = sorted({h for h, _ in pairs}) if pairs else ([hero] if hero else None)
-    slots = sorted({s for _, s in pairs}) if pairs else None
     rows, _, _ = _collect(meta, p, players, heroes, slots, pairs)
     rows.sort(key=lambda r: _sort_key(r, meta, True))
     top = rows[:limit]
     return {"total": len(rows), "limit": limit, "truncated": len(rows) > limit, "resolved": resolved,
+            "sources": _sources(cands),
             "matches": {mid: _match_public(meta[mid]) for mid in dict.fromkeys(r["match_id"] for r in top)},
             "rows": top}
