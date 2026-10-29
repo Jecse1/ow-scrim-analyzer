@@ -16,11 +16,22 @@ scrim.db 의 ORM·로더와 연결하지 않는다(relationship 없음) — 기�
 """
 import os
 import sqlite3
+import threading
 import time
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.abspath(os.environ.get("ABILITY_DB_PATH") or os.path.join(_BACKEND_DIR, "data", "ability_uses.db"))
 LAST_TX_MS = 0.0   # 직전 replace_match 의 쓰기 트랜잭션(BEGIN IMMEDIATE → COMMIT) 시간 — 백필 잠금 실측용
+# 저장소 세대: 쓰기(교체·정리)마다 +1. 조회 응답의 ETag·선택지 캐시 키에 응답 캐시 세대와 함께 쓴다
+# (백필은 응답 캐시를 무효화하지 않으므로 이 세대가 없으면 304 가 낡은 내용을 돌려줄 수 있다). 프로세스 안에서만 의미.
+GEN = 0
+_GEN_LOCK = threading.Lock()
+
+
+def _bump() -> None:
+    global GEN
+    with _GEN_LOCK:
+        GEN += 1
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS ability_matches (
@@ -105,6 +116,7 @@ def replace_match(match_id: str, data: dict) -> int:
             [(mkey, h["team_slot"], h["player_name"], h["hero_name"], h["seconds"]) for h in (data.get("hero_time") or [])])
         con.execute("COMMIT")
         LAST_TX_MS = (time.perf_counter() - t0) * 1000
+        _bump()
         return len(uses)
     except BaseException:
         if con.in_transaction:
@@ -130,6 +142,8 @@ def forget_matches(match_ids) -> int:
                 con.execute("DELETE FROM ability_matches WHERE mkey = ?", (row[0],))
                 n += 1
             con.execute("COMMIT")
+        if n:
+            _bump()
         return n
     finally:
         con.close()
@@ -153,5 +167,78 @@ def match_status(match_id: str) -> "dict | None":
             return None
         stored = con.execute("SELECT COUNT(*) FROM ability_uses WHERE mkey = ?", (row[0],)).fetchone()[0]
         return {"has_log": bool(row[1]), "n1": row[2], "n2": row[3], "stored": stored}
+    finally:
+        con.close()
+
+
+# ── 조회(routers/abilities.py · services/ability_query.py) ──────────────────────
+
+def _in(col: str, values) -> tuple:
+    vals = list(values)
+    return f"{col} IN ({','.join('?' * len(vals))})", vals
+
+
+def match_keys() -> dict:
+    """match_id → (mkey, has_log)."""
+    con = _connect()
+    try:
+        return {r[0]: (r[1], bool(r[2])) for r in con.execute("SELECT match_id, mkey, has_log FROM ability_matches")}
+    finally:
+        con.close()
+
+
+def fetch_uses(players=None, heroes=None, slots=None) -> list:
+    """에코 복제 중 행(copy_hero)을 뺀 사용 행. 인자는 정확 일치 목록(None = 제한 없음).
+    반환 튜플: (player_name, hero_name, slot, mkey, game_time, round_no, timestamp, team_slot, is_setup)."""
+    where, args = ["copy_hero IS NULL"], []
+    for col, vals in (("player_name", players), ("hero_name", heroes), ("slot", slots)):
+        if vals is not None:
+            if not vals:
+                return []
+            w, a = _in(col, vals)
+            where.append(w)
+            args += a
+    con = _connect()
+    try:
+        return con.execute(
+            "SELECT player_name, hero_name, slot, mkey, game_time, round_no, timestamp, team_slot, is_setup "
+            f"FROM ability_uses WHERE {' AND '.join(where)}", args).fetchall()
+    finally:
+        con.close()
+
+
+def hero_seconds(players=None, heroes=None) -> list:
+    """(mkey, player_name, hero_name, seconds) — 원문 영웅별 플레이 시간."""
+    where, args = [], []
+    for col, vals in (("player_name", players), ("hero_name", heroes)):
+        if vals is not None:
+            if not vals:
+                return []
+            w, a = _in(col, vals)
+            where.append(w)
+            args += a
+    con = _connect()
+    try:
+        return con.execute("SELECT mkey, player_name, hero_name, seconds FROM ability_hero_time"
+                           + (f" WHERE {' AND '.join(where)}" if where else ""), args).fetchall()
+    finally:
+        con.close()
+
+
+def use_counts() -> list:
+    """(player_name, hero_name, slot, mkey, 횟수) — 에코 복제 중 행 제외. 선택지 집계용."""
+    con = _connect()
+    try:
+        return con.execute("SELECT player_name, hero_name, slot, mkey, COUNT(*) FROM ability_uses "
+                           "WHERE copy_hero IS NULL GROUP BY player_name, hero_name, slot, mkey").fetchall()
+    finally:
+        con.close()
+
+
+def player_names() -> list:
+    """원문 플레이 시간이 있는 선수 이름(검색의 선수 부분 일치 후보)."""
+    con = _connect()
+    try:
+        return [r[0] for r in con.execute("SELECT DISTINCT player_name FROM ability_hero_time")]
     finally:
         con.close()

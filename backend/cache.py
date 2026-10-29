@@ -61,8 +61,9 @@ def _json_bytes_list(items: list, encode_item) -> bytes:
     return b"[" + b",".join(_json_bytes(encode_item(x)) for x in items) + b"]"
 
 
-def _etag(gen: int) -> str:
-    return f'W/"{_BOOT_ID}-{gen}"'
+def _etag(gen: int, extra: str = "") -> str:
+    # extra: 응답 캐시 세대 밖의 버전을 함께 쓰는 응답용(스킬 저장소 세대 — routers/abilities.py). 기본값이면 기존과 같다.
+    return f'W/"{_BOOT_ID}-{gen}{extra}"'
 
 
 def _accepts_gzip(request) -> bool:
@@ -83,17 +84,18 @@ async def cache_get_or_compute(key: str, compute) -> tuple:
     return await asyncio.shield(task)
 
 
-async def cached_json_response(request, key: str, compute) -> Response:
+async def cached_json_response(request, key: str, compute, etag_extra: str = "") -> Response:
     """캐시 키의 응답. If-None-Match 가 현재 세대 ETag 와 같으면 304(계산 없음), 아니면 캐시(또는 단일 비행 계산)
-    결과를 gzip 그대로/풀어서 보낸다. 무효화로 버려진(낡은 세대) 결과에는 ETag 를 붙이지 않는다."""
+    결과를 gzip 그대로/풀어서 보낸다. 무효화로 버려진(낡은 세대) 결과에는 ETag 를 붙이지 않는다.
+    etag_extra: 키 자체가 다른 버전을 담을 때(예: 스킬 저장소 세대) ETag 에도 같은 버전을 붙인다."""
     headers = {"Vary": "Accept-Encoding", "Cache-Control": "no-cache"}
-    etag = _etag(_GEN)
+    etag = _etag(_GEN, etag_extra)
     inm = request.headers.get("if-none-match")
     if inm and etag in [t.strip() for t in inm.split(",")]:
         return Response(status_code=304, headers={**headers, "ETag": etag})
     gz, gen = await cache_get_or_compute(key, compute)
     if gen == _GEN:
-        headers["ETag"] = _etag(gen)
+        headers["ETag"] = _etag(gen, etag_extra)
     if _accepts_gzip(request):
         return Response(content=gz, media_type="application/json", headers={**headers, "Content-Encoding": "gzip"})
     return Response(content=await run_in_threadpool(gzip.decompress, gz), media_type="application/json", headers=headers)
