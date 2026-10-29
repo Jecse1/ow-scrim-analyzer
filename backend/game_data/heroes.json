@@ -509,6 +509,11 @@
         "Ability 2": "수정 발사",
         "Ultimate": "판옵티콘"
       },
+      "skillsEn": {
+        "Ability 1": "Sonic Repulsors",
+        "Ability 2": "Crystal Charge",
+        "Ultimate": "Panopticon"
+      },
       "koreanHeroMap": {
         "도미나": "Domina"
       },
@@ -538,6 +543,11 @@
         "Ability 1": "추진기",
         "Ability 2": "융합 연발총",
         "Ultimate": "한계 돌파"
+      },
+      "skillsEn": {
+        "Ability 1": "Propulsors",
+        "Ability 2": "Fusion Repeater",
+        "Ultimate": "Limit Break"
       },
       "koreanHeroMap": {
         "디몬": "D.Mon"
@@ -1254,7 +1264,22 @@
       "role": "damage",
       "image": "안란",
       "aliases": [],
-      "skills": null,
+      "skills": {
+        "Ability 1": "맹염 질주",
+        "Ability 2": "춤추는 불꽃",
+        "Ultimate": "불사조 승천"
+      },
+      "skillsEn": {
+        "Ability 1": "Inferno Rush",
+        "Ability 2": "Dancing Blaze",
+        "Ultimate": "Vermillion Ascent"
+      },
+      "skillAliases": {
+        "Ultimate": [
+          "불사조 부활",
+          "Vermillion Revival"
+        ]
+      },
       "koreanHeroMap": {
         "안란": "Anran"
       },
@@ -1276,7 +1301,16 @@
       "role": "damage",
       "image": "엠레",
       "aliases": [],
-      "skills": null,
+      "skills": {
+        "Ability 1": "사이펀 블라스터",
+        "Ability 2": "사이버 파편 수류탄",
+        "Ultimate": "오버라이드 프로토콜"
+      },
+      "skillsEn": {
+        "Ability 1": "Siphon Blaster",
+        "Ability 2": "Cyber Frag",
+        "Ultimate": "Override Protocol"
+      },
       "koreanHeroMap": {
         "엠레": "Emre"
       },
@@ -1302,6 +1336,11 @@
         "Ability 1": "피하기",
         "Ability 2": "조이라이드",
         "Ultimate": "광란의 살육"
+      },
+      "skillsEn": {
+        "Ability 1": "Evade",
+        "Ability 2": "Joyride",
+        "Ultimate": "Satsuriku Spree"
       },
       "koreanHeroMap": {
         "시온": "Shion"
@@ -1736,6 +1775,11 @@
         "Ability 2": "속박 사슬",
         "Ultimate": "결계 성역"
       },
+      "skillsEn": {
+        "Ability 1": "Katashiro Return",
+        "Ability 2": "Binding Chain",
+        "Ultimate": "Kekkai Sanctuary"
+      },
       "koreanHeroMap": {
         "미즈키": "Mizuki"
       },
@@ -1762,6 +1806,11 @@
         "Ability 1": "생명줄",
         "Ability 2": "골골대기",
         "Ultimate": "납치한다냥"
+      },
+      "skillsEn": {
+        "Ability 1": "Lifeline",
+        "Ability 2": "Purr",
+        "Ultimate": "Catnapper"
       },
       "koreanHeroMap": {
         "제트팩 캣": "Jetpack Cat"
@@ -1790,6 +1839,11 @@
         "Ability 2": "진동 폭약",
         "Ultimate": "개척자"
       },
+      "skillsEn": {
+        "Ability 1": "Anchor Drone",
+        "Ability 2": "Tremor Charge",
+        "Ultimate": "Trailblazer"
+      },
       "koreanHeroMap": {
         "시에라": "Sierra"
       },
@@ -1813,7 +1867,16 @@
       "role": "damage",
       "image": "프레야",
       "aliases": [],
-      "skills": null,
+      "skills": {
+        "Ability 1": "재빠른 돌진",
+        "Ability 2": "상승기류",
+        "Ultimate": "올가미 사격"
+      },
+      "skillsEn": {
+        "Ability 1": "Quick Dash",
+        "Ability 2": "Updraft",
+        "Ultimate": "Bola Shot"
+      },
       "koreanHeroMap": {},
       "roleForms": [
         "프레야",
@@ -1838,6 +1901,11 @@
         "Ability 1": "소용돌이 질주",
         "Ability 2": "치솟는 베기",
         "Ultimate": "갈라내는 칼날"
+      },
+      "skillsEn": {
+        "Ability 1": "Whirlwind Dash",
+        "Ability 2": "Soaring Slice",
+        "Ultimate": "Sundering Blade"
       },
       "koreanHeroMap": {},
       "roleForms": [
@@ -1865,6 +1933,11 @@
         "Ability 2": "수호의 파도",
         "Ultimate": "해일 폭발"
       },
+      "skillsEn": {
+        "Ability 1": "Rushing Torrent",
+        "Ability 2": "Guardian Wave",
+        "Ultimate": "Tidal Blast"
+      },
       "koreanHeroMap": {},
       "roleForms": [
         "우양",
@@ -1889,6 +1962,11 @@
         "Ability 1": "추진형 장막",
         "Ability 2": "활기 드론",
         "Ultimate": "구제"
+      },
+      "skillsEn": {
+        "Ability 1": "Shrouded Momentum",
+        "Ability 2": "Invigorating Drones",
+        "Ultimate": "Deliverance"
       },
       "koreanHeroMap": {},
       "roleForms": [
