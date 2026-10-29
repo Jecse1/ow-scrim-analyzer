@@ -12,7 +12,7 @@ import { fetchCached } from "./utils/apiCache";
 import { useVod, vodClickProps } from "./VodPlayerContext";
 import { getDisplayName, getMapDisplayName, canonicalMapName, getHeroImageSrc } from "./gameData";
 import { tpl } from "./FightLabStats";
-import { scenesQuery, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers, pickStep, currentStep, activeFilterCount } from "./utils/skillScenes";
+import { scenesQuery, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers, pickStep, currentStep, activeFilterCount, visibleHeroes, withMatchHeads } from "./utils/skillScenes";
 
 const API_BASE = "";
 
@@ -29,6 +29,7 @@ export default function SkillScenesStats() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);   // 모바일 보조 필터 접기(데스크톱은 항상 펼침)
+  const [heroesExpanded, setHeroesExpanded] = useState(false);   // 1분 미만 영웅 카드 펼침
   const reqSeq = useRef(0);
 
   useEffect(() => {
@@ -53,7 +54,12 @@ export default function SkillScenesStats() {
   }, [scrims]);
 
   const set = (patch) => setF((prev) => ({ ...prev, page: 1, ...patch }));
-  const pick = (key, value) => setF((prev) => pickStep(prev, key, value));   // 위 단계를 바꾸면 아래 단계 초기화
+  // 선수 → 최다 플레이 영웅 + 스킬1, 영웅 → 스킬1 자동 선택(utils/skillScenes pickStep)
+  const pick = (key, value) => {
+    const top = key === "player" ? (options?.players || []).find((x) => x.name === value)?.heroes?.[0]?.hero : undefined;
+    if (key === "player") setHeroesExpanded(false);
+    setF((prev) => pickStep(prev, key, value, top));
+  };
 
   const ready = f.player && f.hero && f.slot;
   useEffect(() => {
@@ -92,6 +98,7 @@ export default function SkillScenesStats() {
   if (!options) return <div style={{ padding: 40, textAlign: "center", color: theme.textSub }}>{t.loading}</div>;
 
   const summary = data?.summary;
+  const nCols = f.group ? 4 : 3;   // 라운드 · 게임 시간 · (횟수) · VOD
   const rows = data?.rows || [];
   const meta = data?.meta;
 
@@ -117,7 +124,10 @@ export default function SkillScenesStats() {
           <ScrollX isMobile={isMobile} fade={theme.surface}>
             {/* 영웅 카드: 서버 options 순서 = 플레이 시간 내림차순 */}
             <div role="group" aria-label={t.skHero} style={{ display: "flex", gap: 8, flexWrap: isMobile ? "nowrap" : "wrap", paddingBottom: isMobile ? 4 : 0 }}>
-              {playerEntry.heroes.map((h) => {
+              {(() => {
+                const { shown, hidden } = visibleHeroes(playerEntry.heroes, f.hero, heroesExpanded);
+                const more = hidden > 0 || heroesExpanded;
+                return [...shown.map((h) => {
                 const on = f.hero === h.hero;
                 return (
                   <button key={h.hero} type="button" aria-pressed={on} onClick={() => pick("hero", h.hero)} title={getDisplayName(h.hero)}
@@ -129,7 +139,14 @@ export default function SkillScenesStats() {
                     <span style={{ fontSize: 11, color: theme.textSub, fontVariantNumeric: "tabular-nums" }}>{fmtPlayTime(h.seconds)}</span>
                   </button>
                 );
-              })}
+                }), more && (
+                  <button key="__more" type="button" aria-expanded={heroesExpanded} onClick={() => setHeroesExpanded((v) => !v)}
+                    style={{ ...choice(false), width: 88, flexShrink: 0, padding: "8px 6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, borderStyle: "dashed" }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{heroesExpanded ? <ChevronUp size={18} /> : `+${hidden}`}</span>
+                    <span style={{ fontSize: 11, color: theme.textSub }}>{heroesExpanded ? t.skCollapse : t.skHeroUnder1m}</span>
+                  </button>
+                )];
+              })()}
             </div>
           </ScrollX>
         ))}
@@ -233,24 +250,36 @@ export default function SkillScenesStats() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: isMobile ? 12 : 13, minWidth: isMobile ? 0 : 640 }}>
                 <thead>
                   <tr style={{ background: theme.surfaceHighlight, color: theme.textSub, textAlign: "left" }}>
-                    {[t.skColDate, ...(isMobile ? [] : [t.skColSession]), t.skColMap, t.skColRound, t.skColTime, ...(f.group ? [t.skColCount] : []), t.skColVod].map((h) => (
+                    {[t.skColRound, t.skColTime, ...(f.group ? [t.skColCount] : []), t.skColVod].map((h) => (
                       <th key={h} style={{ padding: cellPad, fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 && (
-                    <tr><td colSpan={(f.group ? 7 : 6) - (isMobile ? 1 : 0)} style={{ padding: 32, textAlign: "center", color: theme.textSub }}>{loading ? t.loading : t.skEmpty}</td></tr>
+                    <tr><td colSpan={nCols} style={{ padding: 32, textAlign: "center", color: theme.textSub }}>{loading ? t.loading : t.skEmpty}</td></tr>
                   )}
-                  {rows.map((r, i) => {
+                  {withMatchHeads(rows).map((x) => {
+                    if (x.head) {
+                      // 매치 머리줄: 날짜 · 세션 · 맵 #n — 이 매치 사용 수(서버 matches[id].uses, 페이지·묶기와 무관)
+                      const m = data.matches[x.match_id] || {};
+                      return (
+                        <tr key={x.key} style={{ borderTop: `1px solid ${theme.border}`, background: theme.bg }}>
+                          <td colSpan={nCols} style={{ padding: cellPad }}>
+                            <span style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 800 }}>{[m.date, m.scrim_name, `${getMapDisplayName(m.map_name)} #${m.match_index}`].filter(Boolean).join(" · ")}</span>
+                              {m.uses != null && <span style={{ fontSize: 12, color: theme.textSub, fontVariantNumeric: "tabular-nums" }}>{t.skUses} {m.uses.toLocaleString()}</span>}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const { row: r, i } = x;
                     const m = data.matches[r.match_id] || {};
                     const url = sceneVodUrl(m, r);
                     const mapLabel = `${getMapDisplayName(m.map_name)} #${m.match_index}`;
                     return (
                       <tr key={`${r.match_id}-${r.game_time}-${i}`} style={{ borderTop: `1px solid ${theme.border}` }}>
-                        <td style={{ padding: cellPad, whiteSpace: "nowrap" }}>{m.date}</td>
-                        {!isMobile && <td style={{ padding: cellPad }}>{m.scrim_name}</td>}
-                        <td style={{ padding: cellPad, whiteSpace: "nowrap" }}>{mapLabel}</td>
                         <td style={{ padding: cellPad, whiteSpace: "nowrap" }}>{r.round_no ? tpl(t.skRoundTpl, { n: r.round_no }) : "-"}</td>
                         <td style={{ padding: cellPad, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                           {fmtClock(r.game_time)}{r.count > 1 ? ` ~ ${fmtClock(r.last_game_time)}` : ""}

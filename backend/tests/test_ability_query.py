@@ -99,6 +99,16 @@ def test_page_boundaries(data):
     assert asc["rows"][0]["match_id"] == m["m1"] and asc["rows"][0]["game_time"] == 0
 
 
+def test_match_uses(data):
+    # matches[id].uses = 그 매치의 전체 사용 수(페이지·묶기와 무관) — 결과 표 매치 머리줄
+    c, m = data
+    p1, p2 = _scenes(c, **A2T), _scenes(c, **A2T, page=2)
+    assert {k: v["uses"] for k, v in p1["matches"].items()} == {m["m2"]: 123}
+    assert {k: v["uses"] for k, v in p2["matches"].items()} == {m["m2"]: 123, m["m1"]: 5}   # 페이지 경계에서 이어진 m2 도 전체 수
+    g = _scenes(c, **A2T, group="true")
+    assert {k: v["uses"] for k, v in g["matches"].items()} == {m["m2"]: 123, m["m1"]: 5}
+
+
 def test_filters(data):
     c, m = data
     assert _scenes(c, **A2T, date_from="2026-11-01")["summary"]["uses"] == 123

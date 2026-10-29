@@ -18,6 +18,7 @@
   matches[match_id] 의 video_url·video_offset·game_setup_sec·pauses 가 buildVideoLink 입력 그대로다.
 """
 import re
+from collections import Counter
 
 from config import effective_video_delta
 from db import ability_store
@@ -284,6 +285,7 @@ def scenes(meta: dict, p: dict) -> dict:
     rows, keys, mk2mid = _collect(meta, p, [player] if player else None, [hero] if hero else None,
                                   [slot] if slot else None)
     uses = len(rows)
+    match_uses = Counter(r["match_id"] for r in rows)   # 매치별 사용 수(묶기 전) — 결과 표 매치 머리줄
     if p.get("group"):
         rows = _group(rows)
     desc = (p.get("sort") or "date_desc") != "date_asc"
@@ -320,7 +322,8 @@ def scenes(meta: dict, p: dict) -> dict:
                  "total_rows": len(rows), "pages": (len(rows) + PAGE_SIZE - 1) // PAGE_SIZE},
         "summary": {"uses": uses, "hero_seconds": round(seconds, 2) if seconds is not None else None, "per10": per10,
                     "matches": len({r["match_id"] for r in rows}), "log_matches": len(logged), "no_log_matches": no_log},
-        "matches": {mid: _match_public(meta[mid]) for mid in dict.fromkeys(r["match_id"] for r in page_rows)},
+        "matches": {mid: {**_match_public(meta[mid]), "uses": match_uses[mid]}
+                    for mid in dict.fromkeys(r["match_id"] for r in page_rows)},
         "rows": page_rows,
     }
 

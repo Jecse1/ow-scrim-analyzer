@@ -32,12 +32,35 @@ export function skillLabel(heroSkills, hero, slot, lang, t) {
   return `${skillName(heroSkills, hero, slot, lang, t)} · ${SKILL_KEYS[slot]}`;
 }
 
-// 단계 선택: 위 단계를 바꾸면 아래 단계는 비운다(선수 → 영웅 → 스킬). 같은 값을 다시 고르면 그대로.
-export function pickStep(f, key, value) {
+// 단계 선택(선수 → 영웅 → 스킬). 같은 값을 다시 고르면 그대로.
+// 선수를 고르면 최다 플레이 영웅(topHero) + 스킬1, 영웅을 바꾸면 스킬1 을 자동 선택해 결과를 바로 보인다.
+export function pickStep(f, key, value, topHero) {
   if (f[key] === value) return f;
-  if (key === "player") return { ...f, page: 1, player: value, hero: "", slot: "" };
-  if (key === "hero") return { ...f, page: 1, hero: value, slot: "" };
+  if (key === "player") return { ...f, page: 1, player: value, hero: topHero || "", slot: topHero ? 1 : "" };
+  if (key === "hero") return { ...f, page: 1, hero: value, slot: value ? 1 : "" };
   return { ...f, page: 1, [key]: value };
+}
+
+export const MIN_HERO_CARD_SEC = 60;   // 영웅 카드 기본 표시 하한(1분 미만은 "+n" 으로 접음)
+
+// 영웅 카드 표시 목록: 접힘이면 1분 미만은 숨기되 선택 중인 영웅은 남긴다. hidden = 숨긴 수
+export function visibleHeroes(heroes, selected, expanded) {
+  const all = heroes || [];
+  if (expanded) return { shown: all, hidden: 0 };
+  const shown = all.filter((h) => h.seconds >= MIN_HERO_CARD_SEC || h.hero === selected);
+  return { shown, hidden: all.length - shown.length };
+}
+
+// 결과 행 → 매치 머리줄을 끼운 목록. 매치가 바뀔 때마다(페이지 첫 행 포함) 머리줄 1개. 행 순서는 그대로.
+export function withMatchHeads(rows) {
+  const out = [];
+  let prev = null;
+  rows.forEach((r, i) => {
+    if (r.match_id !== prev) out.push({ head: true, match_id: r.match_id, key: `h-${r.match_id}-${i}` });
+    out.push({ head: false, row: r, i });
+    prev = r.match_id;
+  });
+  return out;
 }
 
 // 지금 골라야 할 단계: player → hero → slot, 다 골랐으면 null

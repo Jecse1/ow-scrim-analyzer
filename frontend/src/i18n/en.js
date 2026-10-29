@@ -457,6 +457,8 @@ export default {
   skPickSkillNext: "Pick a skill",
   skUsesTpl: "{n} uses",
   skFilters: "Filters",
+  skHeroUnder1m: "under 1m",
+  skCollapse: "Collapse",
 
   // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
   osSrcUse: "Use",
