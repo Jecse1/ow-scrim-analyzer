@@ -27,8 +27,30 @@ export function skillName(heroSkills, hero, slot, lang, t) {
   return n || (slot === 1 ? t.skSkill1Fallback : t.skSkill2Fallback);
 }
 
+// 스킬 버튼 라벨 "점멸 · Shift" (이름 없으면 "스킬1 · Shift")
 export function skillLabel(heroSkills, hero, slot, lang, t) {
-  return `${skillName(heroSkills, hero, slot, lang, t)} (${SKILL_KEYS[slot]})`;
+  return `${skillName(heroSkills, hero, slot, lang, t)} · ${SKILL_KEYS[slot]}`;
+}
+
+// 단계 선택: 위 단계를 바꾸면 아래 단계는 비운다(선수 → 영웅 → 스킬). 같은 값을 다시 고르면 그대로.
+export function pickStep(f, key, value) {
+  if (f[key] === value) return f;
+  if (key === "player") return { ...f, page: 1, player: value, hero: "", slot: "" };
+  if (key === "hero") return { ...f, page: 1, hero: value, slot: "" };
+  return { ...f, page: 1, [key]: value };
+}
+
+// 지금 골라야 할 단계: player → hero → slot, 다 골랐으면 null
+export function currentStep(f) {
+  if (!f.player) return "player";
+  if (!f.hero) return "hero";
+  if (!f.slot) return "slot";
+  return null;
+}
+
+// 보조 필터 중 기본값이 아닌 것의 수(모바일 "필터" 접기 버튼에 표시)
+export function activeFilterCount(f) {
+  return [f.dateFrom, f.dateTo, f.opponent, f.map, f.group, f.sort && f.sort !== "date_desc"].filter(Boolean).length;
 }
 
 // 게임 시계(초) → m:ss

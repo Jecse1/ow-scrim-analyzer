@@ -4,15 +4,15 @@
 // VOD 링크는 기존 buildVideoLink 그대로(utils/skillScenes.sceneVodUrl) — 리드 보정 추가 없음.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Calendar, ChevronLeft, ChevronRight, Info, PlayCircle, Sparkles } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Info, PlayCircle, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { useIsMobile, ScrollX } from "./utils/responsive";
 import { fetchCached } from "./utils/apiCache";
 import { useVod, vodClickProps } from "./VodPlayerContext";
-import { getDisplayName, getMapDisplayName, canonicalMapName } from "./gameData";
+import { getDisplayName, getMapDisplayName, canonicalMapName, getHeroImageSrc } from "./gameData";
 import { tpl } from "./FightLabStats";
-import { scenesQuery, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers } from "./utils/skillScenes";
+import { scenesQuery, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers, pickStep, currentStep, activeFilterCount } from "./utils/skillScenes";
 
 const API_BASE = "";
 
@@ -25,9 +25,10 @@ export default function SkillScenesStats() {
   const [options, setOptions] = useState(null);
   const [optError, setOptError] = useState(false);
   const [scrims, setScrims] = useState([]);
-  const [f, setF] = useState({ player: "", hero: "", slot: 1, dateFrom: "", dateTo: "", opponent: "", map: "", group: false, sort: "date_desc", page: 1 });
+  const [f, setF] = useState({ player: "", hero: "", slot: "", dateFrom: "", dateTo: "", opponent: "", map: "", group: false, sort: "date_desc", page: 1 });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);   // 모바일 보조 필터 접기(데스크톱은 항상 펼침)
   const reqSeq = useRef(0);
 
   useEffect(() => {
@@ -52,10 +53,7 @@ export default function SkillScenesStats() {
   }, [scrims]);
 
   const set = (patch) => setF((prev) => ({ ...prev, page: 1, ...patch }));
-  const pickPlayer = (name) => {
-    const p = (options?.players || []).find((x) => x.name === name);
-    set({ player: name, hero: p?.heroes?.[0]?.hero || "", slot: 1 });   // 플레이 시간이 가장 긴 영웅부터
-  };
+  const pick = (key, value) => setF((prev) => pickStep(prev, key, value));   // 위 단계를 바꾸면 아래 단계 초기화
 
   const ready = f.player && f.hero && f.slot;
   useEffect(() => {
@@ -73,9 +71,20 @@ export default function SkillScenesStats() {
   const ctl = { background: theme.bg, color: theme.text, border: `1px solid ${theme.border}`, padding: "8px 10px", borderRadius: 8, minHeight: 38, colorScheme: theme.mode === "dark" ? "dark" : "light" };
   const cellPad = isMobile ? "8px 6px" : "8px 12px";
   const label = { fontSize: 12, fontWeight: 700, color: theme.textSub, marginBottom: 4 };
-  const field = (lbl, node, grow) => (
-    <label style={{ display: "flex", flexDirection: "column", minWidth: isMobile ? "100%" : grow ? 180 : 130, flex: grow ? "1 1 180px" : "0 0 auto" }}>
-      <span style={label}>{lbl}</span>{node}
+  // 1단(주 선택) — 크게
+  const section = (lbl, node) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}><span style={{ ...label, marginBottom: 0 }}>{lbl}</span>{node}</div>
+  );
+  const hint = { fontSize: 13, color: theme.textSub, padding: "10px 12px", border: `1px dashed ${theme.border}`, borderRadius: 10, background: theme.bg };
+  const choice = (on, enabled = true) => ({
+    background: on ? theme.surfaceHighlight : theme.bg, color: theme.text, border: `2px solid ${on ? theme.primary : theme.border}`,
+    borderRadius: 10, cursor: enabled ? "pointer" : "default", opacity: enabled ? 1 : 0.45,
+  });
+  // 2단(보조 필터) — 작게 한 줄, 라벨·컨트롤 높이 통일
+  const ctlSm = { ...ctl, padding: "4px 8px", minHeight: 32, height: 32, fontSize: 12, boxSizing: "border-box" };
+  const small = (lbl, node) => (
+    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, fontSize: 12, fontWeight: 700, color: theme.textSub }}>
+      <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>{lbl}</span>{node}
     </label>
   );
 
@@ -93,63 +102,126 @@ export default function SkillScenesStats() {
         <p style={{ margin: "6px 0 0", fontSize: 13, color: theme.textSub }}>{t.skIntro}</p>
       </div>
 
-      <div style={{ ...card, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-        {field(t.skPlayer, (
-          <select value={f.player} onChange={(e) => pickPlayer(e.target.value)} style={ctl}>
+      <div style={{ ...card, display: "flex", flexDirection: "column", gap: 16 }}>
+        {section(t.skPlayer, (
+          <select value={f.player} onChange={(e) => pick("player", e.target.value)} aria-label={t.skPlayer}
+            style={{ ...ctl, fontSize: 15, minHeight: 44, width: isMobile ? "100%" : 420, maxWidth: "100%" }}>
             <option value="">{t.skPickPlayer}</option>
             {ours.length > 0 && <optgroup label={t.skOurs}>{ours.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</optgroup>}
             {others.length > 0 && <optgroup label={t.skOthers}>{others.map((p) => <option key={p.name} value={p.name}>{p.name}{p.teams.length ? ` · ${p.teams.join("/")}` : ""}</option>)}</optgroup>}
-          </select>), true)}
-        {field(t.skHero, (
-          <select value={f.hero} onChange={(e) => set({ hero: e.target.value })} style={ctl} disabled={!playerEntry}>
-            {(playerEntry?.heroes || []).map((h) => <option key={h.hero} value={h.hero}>{getDisplayName(h.hero)} · {fmtPlayTime(h.seconds)}</option>)}
           </select>))}
-        {field(t.skSkill, (
-          <select value={f.slot} onChange={(e) => set({ slot: Number(e.target.value) })} style={ctl} disabled={!f.hero}>
-            {[1, 2].map((s) => <option key={s} value={s}>{f.hero ? skillLabel(heroSkills, f.hero, s, language, t) : s}</option>)}
-          </select>))}
-        {field(<span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Calendar size={12} /> {t.dateFilter}</span>, (
-          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <input type="date" value={f.dateFrom} onChange={(e) => set({ dateFrom: e.target.value })} style={{ ...ctl, flex: "1 1 0", minWidth: 0, width: isMobile ? "auto" : 140 }} aria-label={t.startDate} />
-            <span style={{ color: theme.textSub }}>~</span>
-            <input type="date" value={f.dateTo} onChange={(e) => set({ dateTo: e.target.value })} style={{ ...ctl, flex: "1 1 0", minWidth: 0, width: isMobile ? "auto" : 140 }} aria-label={t.endDate} />
-          </span>))}
-        {field(t.skOpponent, (
-          <select value={f.opponent} onChange={(e) => set({ opponent: e.target.value })} style={ctl}>
-            <option value="">{t.skAll}</option>
-            {teams.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
-          </select>))}
-        {field(t.skMap, (
-          <select value={f.map} onChange={(e) => set({ map: e.target.value })} style={ctl}>
-            <option value="">{t.skAll}</option>
-            {maps.map((m) => <option key={m} value={m}>{getMapDisplayName(m)}</option>)}
-          </select>))}
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, minHeight: 38, cursor: "pointer" }}>
-          <input type="checkbox" checked={f.group} onChange={(e) => set({ group: e.target.checked })} /> {t.skGroupToggle}
-        </label>
-        <select value={f.sort} onChange={(e) => set({ sort: e.target.value })} style={ctl} aria-label={t.skSort}>
-          <option value="date_desc">{t.skSortNewest}</option>
-          <option value="date_asc">{t.skSortOldest}</option>
-        </select>
-      </div>
 
-      <div style={{ fontSize: 12, color: theme.textSub, display: "flex", gap: 6, alignItems: "flex-start" }}>
-        <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} /> <span>{t.skKeyHint}</span>
+        {section(t.skHero, !playerEntry ? (
+          <div style={hint}>{t.skPickPlayerFirst}</div>
+        ) : (
+          <ScrollX isMobile={isMobile} fade={theme.surface}>
+            {/* 영웅 카드: 서버 options 순서 = 플레이 시간 내림차순 */}
+            <div role="group" aria-label={t.skHero} style={{ display: "flex", gap: 8, flexWrap: isMobile ? "nowrap" : "wrap", paddingBottom: isMobile ? 4 : 0 }}>
+              {playerEntry.heroes.map((h) => {
+                const on = f.hero === h.hero;
+                return (
+                  <button key={h.hero} type="button" aria-pressed={on} onClick={() => pick("hero", h.hero)} title={getDisplayName(h.hero)}
+                    style={{ ...choice(on), width: 88, flexShrink: 0, padding: "8px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 52, height: 52, borderRadius: 8, overflow: "hidden", background: theme.surfaceHighlight, display: "block" }}>
+                      <img src={getHeroImageSrc(h.hero)} alt="" width={52} height={52} style={{ display: "block", objectFit: "cover" }} onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getDisplayName(h.hero)}</span>
+                    <span style={{ fontSize: 11, color: theme.textSub, fontVariantNumeric: "tabular-nums" }}>{fmtPlayTime(h.seconds)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </ScrollX>
+        ))}
+
+        {section(t.skSkill, (
+          <div role="group" aria-label={t.skSkill} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[1, 2].map((s) => {
+              const he = playerEntry?.heroes?.find((h) => h.hero === f.hero);
+              const on = !!he && f.slot === s;
+              return (
+                <button key={s} type="button" aria-pressed={on} disabled={!he} onClick={() => pick("slot", s)}
+                  style={{ ...choice(on, !!he), minHeight: 44, padding: "8px 16px", fontSize: 14, fontWeight: 700, flex: isMobile ? "1 1 0" : "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <span>{skillLabel(heroSkills, f.hero, s, language, t)}</span>
+                  {he && <span style={{ fontSize: 11, fontWeight: 600, color: theme.textSub, fontVariantNumeric: "tabular-nums" }}>{tpl(t.skUsesTpl, { n: (s === 1 ? he.uses1 : he.uses2).toLocaleString() })}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+
+        <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          {isMobile && (
+            <button type="button" aria-label={t.skFilters} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((v) => !v)}
+              style={{ ...ctlSm, alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontWeight: 700 }}>
+              <SlidersHorizontal size={14} /> {t.skFilters}
+              {activeFilterCount(f) > 0 && <span style={{ color: theme.primary }}>{activeFilterCount(f)}</span>}
+              {filtersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
+          {(!isMobile || filtersOpen) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 8 : "8px 16px", alignItems: "center" }}>
+              {small(<><Calendar size={12} /> {t.dateFilter}</>, (
+                <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                  <input type="date" value={f.dateFrom} onChange={(e) => set({ dateFrom: e.target.value })} style={{ ...ctlSm, width: 132 }} aria-label={t.startDate} />
+                  <span>~</span>
+                  <input type="date" value={f.dateTo} onChange={(e) => set({ dateTo: e.target.value })} style={{ ...ctlSm, width: 132 }} aria-label={t.endDate} />
+                </span>))}
+              {small(t.skOpponent, (
+                <select value={f.opponent} onChange={(e) => set({ opponent: e.target.value })} style={ctlSm}>
+                  <option value="">{t.skAll}</option>
+                  {teams.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
+                </select>))}
+              {small(t.skMap, (
+                <select value={f.map} onChange={(e) => set({ map: e.target.value })} style={ctlSm}>
+                  <option value="">{t.skAll}</option>
+                  {maps.map((m) => <option key={m} value={m}>{getMapDisplayName(m)}</option>)}
+                </select>))}
+              {small(t.skSort, (
+                <select value={f.sort} onChange={(e) => set({ sort: e.target.value })} style={ctlSm}>
+                  <option value="date_desc">{t.skSortNewest}</option>
+                  <option value="date_asc">{t.skSortOldest}</option>
+                </select>))}
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, fontSize: 12, fontWeight: 700, color: theme.text, cursor: "pointer" }}>
+                <input type="checkbox" checked={f.group} onChange={(e) => set({ group: e.target.checked })} /> {t.skGroupToggle}
+              </label>
+            </div>
+          )}
+        </div>
       </div>
 
       {!ready ? (
-        <div style={{ ...card, textAlign: "center", color: theme.textSub, padding: 40 }}>{options.players.length ? t.skPickPlayer : t.skNoData}</div>
+        <div style={{ ...card, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 13, color: theme.textSub, flexWrap: "wrap" }}>
+          {!options.players.length ? t.skNoData : (() => {
+            // 단계 안내: 1. 선수 › 2. 영웅 › 3. 스킬 — 지금 단계 강조
+            const cur = currentStep(f);
+            const steps = [["player", t.skPlayer], ["hero", t.skHero], ["slot", t.skSkill]];
+            const curIdx = steps.findIndex(([k]) => k === cur);
+            const msg = { player: t.skPickPlayer, hero: t.skPickHeroNext, slot: t.skPickSkillNext }[cur];
+            return (
+              <>
+                {steps.map(([k, lbl], i) => (
+                  <React.Fragment key={k}>
+                    {i > 0 && <ChevronRight size={12} />}
+                    <span style={{ fontWeight: i === curIdx ? 800 : 600, color: i === curIdx ? theme.primary : i < curIdx ? theme.text : theme.textSub }}>{`${i + 1}. ${lbl}`}</span>
+                  </React.Fragment>
+                ))}
+                <span style={{ marginLeft: 6 }}>— {msg}</span>
+              </>
+            );
+          })()}
+        </div>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(2, minmax(0, 260px))", gap: 12 }}>
-            <div style={card}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(2, minmax(0, 220px))", gap: 10 }}>
+            <div style={{ ...card, padding: "10px 14px" }}>
               <div style={label}>{t.skUses}</div>
-              <div style={{ fontSize: 26, fontWeight: 900 }}>{summary ? summary.uses.toLocaleString() : "-"}</div>
+              <div style={{ fontSize: 20, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>{summary ? summary.uses.toLocaleString() : "-"}</div>
             </div>
-            <div style={card}>
+            <div style={{ ...card, padding: "10px 14px" }}>
               <div style={label}>{t.skPer10}</div>
-              <div style={{ fontSize: 26, fontWeight: 900 }}>{summary?.per10 != null ? summary.per10.toFixed(1) : "-"}</div>
-              {summary?.hero_seconds != null && <div style={{ fontSize: 11, color: theme.textSub, marginTop: 4 }}>{tpl(t.skPlayTimeNote, { time: fmtPlayTime(summary.hero_seconds) })}</div>}
+              <div style={{ fontSize: 20, fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>{summary?.per10 != null ? summary.per10.toFixed(1) : "-"}</div>
+              {summary?.hero_seconds != null && <div style={{ fontSize: 11, color: theme.textSub, marginTop: 2 }}>{tpl(t.skPlayTimeNote, { time: fmtPlayTime(summary.hero_seconds) })}</div>}
             </div>
           </div>
           {summary?.no_log_matches > 0 && (
@@ -210,6 +282,10 @@ export default function SkillScenesStats() {
           )}
         </>
       )}
+
+      <div style={{ fontSize: 12, color: theme.textSub, display: "flex", gap: 6, alignItems: "flex-start" }}>
+        <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} /> <span>{t.skKeyHint}</span>
+      </div>
     </div>
   );
 }

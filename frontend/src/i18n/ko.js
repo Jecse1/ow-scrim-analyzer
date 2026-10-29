@@ -452,6 +452,11 @@ export default {
   skSkill2Fallback: "스킬2",
   skRoundTpl: "{n}R",
   skLoadFail: "스킬 데이터를 불러오지 못했습니다",
+  skPickPlayerFirst: "선수를 먼저 고르세요",
+  skPickHeroNext: "영웅을 고르세요",
+  skPickSkillNext: "스킬을 고르세요",
+  skUsesTpl: "{n}회",
+  skFilters: "필터",
 
   // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
   osSrcUse: "사용",

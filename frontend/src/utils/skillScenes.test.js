@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scenesQuery, skillName, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers } from "./skillScenes";
+import { scenesQuery, skillName, skillLabel, fmtClock, fmtPlayTime, sceneVodUrl, splitPlayers, pickStep, currentStep, activeFilterCount } from "./skillScenes";
 import { buildVideoLink } from "./videoLink";
 import ko from "../i18n/ko";
 
@@ -19,9 +19,10 @@ describe("scenesQuery", () => {
 
 describe("스킬 라벨", () => {
   it("언어별 이름 + 키, 이름이 없으면 스킬1/2", () => {
-    expect(skillLabel(SKILLS, "트레이서", 1, "ko", ko)).toBe("점멸 (Shift)");
-    expect(skillLabel(SKILLS, "트레이서", 2, "en", ko)).toBe("Recall (E)");
+    expect(skillLabel(SKILLS, "트레이서", 1, "ko", ko)).toBe("점멸 · Shift");
+    expect(skillLabel(SKILLS, "트레이서", 2, "en", ko)).toBe("Recall · E");
     expect(skillName(SKILLS, "미지", 1, "ko", ko)).toBe(ko.skSkill1Fallback);
+    expect(skillLabel(SKILLS, "", 1, "ko", ko)).toBe(`${ko.skSkill1Fallback} · Shift`);
     expect(skillName(SKILLS, "없는영웅", 2, "zh", ko)).toBe(ko.skSkill2Fallback);
   });
 });
@@ -56,5 +57,31 @@ describe("splitPlayers", () => {
     const r = splitPlayers([{ name: "A", ours: true }, { name: "B", ours: false }, { name: "C", ours: true }]);
     expect(r.ours.map((p) => p.name)).toEqual(["A", "C"]);
     expect(r.others.map((p) => p.name)).toEqual(["B"]);
+  });
+});
+
+describe("단계 선택", () => {
+  const base = { player: "", hero: "", slot: "", dateFrom: "2026-10-01", opponent: "T1", page: 3 };
+  it("선수·영웅을 바꾸면 아래 단계를 비우고 보조 필터는 유지한다", () => {
+    const a = pickStep(base, "player", "A2");
+    expect(a).toMatchObject({ player: "A2", hero: "", slot: "", dateFrom: "2026-10-01", opponent: "T1", page: 1 });
+    const b = pickStep({ ...a, hero: "트레이서", slot: 2 }, "hero", "겐지");
+    expect(b).toMatchObject({ player: "A2", hero: "겐지", slot: "" });
+    const c = pickStep({ ...b, slot: 1 }, "player", "B1");
+    expect(c).toMatchObject({ player: "B1", hero: "", slot: "" });
+  });
+  it("같은 값을 다시 고르면 바뀌지 않는다", () => {
+    const f = { ...base, player: "A2", hero: "트레이서", slot: 1 };
+    expect(pickStep(f, "hero", "트레이서")).toBe(f);
+  });
+  it("현재 단계", () => {
+    expect(currentStep(base)).toBe("player");
+    expect(currentStep({ ...base, player: "A2" })).toBe("hero");
+    expect(currentStep({ ...base, player: "A2", hero: "트레이서" })).toBe("slot");
+    expect(currentStep({ ...base, player: "A2", hero: "트레이서", slot: 2 })).toBe(null);
+  });
+  it("기본값이 아닌 보조 필터 수", () => {
+    expect(activeFilterCount({ sort: "date_desc", group: false })).toBe(0);
+    expect(activeFilterCount({ dateFrom: "2026-10-01", map: "일리오스", group: true, sort: "date_asc" })).toBe(4);
   });
 });

@@ -452,6 +452,11 @@ export default {
   skSkill2Fallback: "技能2",
   skRoundTpl: "第{n}回合",
   skLoadFail: "无法加载技能数据",
+  skPickPlayerFirst: "请先选择选手",
+  skPickHeroNext: "请选择英雄",
+  skPickSkillNext: "请选择技能",
+  skUsesTpl: "{n}次",
+  skFilters: "筛选",
 
   // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
   osSrcUse: "使用",
