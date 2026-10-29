@@ -188,8 +188,8 @@
       },
       "skillsZh": {
         "Ability 1": "强化防御",
-        "Ability 2": "能量标枪",
-        "Ultimate": "大地涌动"
+        "Ultimate": "大地涌动",
+        "Secondary Fire": "能量标枪"
       },
       "koreanHeroMap": {
         "오리사": "Orisa"
@@ -660,9 +660,8 @@
         "order": 18
       },
       "skillsZh": {
-        "Ability 1": "强袭模式",
-        "Ability 2": "A-36战术手雷",
-        "Ultimate": "火炮模式"
+        "Ultimate": "火炮模式",
+        "Secondary Fire": "A-36战术手雷"
       }
     },
     {
@@ -802,8 +801,8 @@
       },
       "skillsZh": {
         "Ultimate": "巨龙之魂",
-        "Ability 1": "岚",
-        "Ability 2": "音"
+        "Ability 1": "音",
+        "Ability 2": "岚"
       },
       "koreanHeroMap": {
         "한조": "Hanzo"
@@ -1493,9 +1492,7 @@
         "Secondary Fire": "Barrier Shield"
       },
       "skillsZh": {
-        "Ability 1": "盾击",
-        "Ultimate": "集结",
-        "Ability 2": "流星飞锤"
+        "Ultimate": "集结"
       },
       "koreanHeroMap": {
         "브리기테": "Brigitte"
