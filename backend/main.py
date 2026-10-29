@@ -32,6 +32,8 @@ async def lifespan(app: FastAPI):
             print("[DB] Initialized successfully")
         except Exception as e:
             print(f"[DB] Init failed: {e}")
+    from services.abilities import init_ability_store
+    init_ability_store()  # 스킬 사용 저장소(별도 SQLite 파일) 멱등 생성
     from config import DISCORD_WEBHOOK_URL  # 값은 출력하지 않는다(설정 여부만)
     print(f"[WEBHOOK] DISCORD_WEBHOOK_URL: {'설정됨' if DISCORD_WEBHOOK_URL else '미설정'}")
     from cache import schedule_warm, cancel_warm

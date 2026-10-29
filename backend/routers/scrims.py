@@ -33,6 +33,7 @@ from serializers import _db_match_to_dict, _db_session_to_dict
 from parsers.log_parser import parse_overwatch_log, parse_log_timestamp, time_str_to_seconds
 from parsers.log_precheck import precheck_log_text, precheck_summary
 from services.winner_source import derive_winner_source
+from services.abilities import extract_abilities, store_match_abilities, forget_match_abilities
 from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
 from services.summary import summarize_session, format_session_message
@@ -529,6 +530,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             if is_dry:
                 # 파싱만 — DB·파일 무변경. 프론트가 diff를 보여주고 adopt를 정해 재호출한다.
                 return {"status": "dry_run", "source": prev_source, "diff": diff, **pre_resp}
+            ability = await extract_abilities(log_text, parsed)  # 스킬 사용 줄(별도 저장소) — 저장은 커밋 뒤
 
             if prev_source == "manual" and (adopt or "parsed") == "keep":
                 # 수기값 유지: 맵은 수기값 그대로, 수기 winner는 winner_override로 이동(파싱 원본은 winner 컬럼에)
@@ -609,6 +611,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     ))
             await db.commit()
             print(f"[DB] upload OK: match={match_id_val}")
+            await store_match_abilities(match_id_val, ability)  # 로그 교체면 그 매치 스킬 행을 통째로 바꾼다
             _invalidate_response_cache()  # 커밋 직후(아래 meta 쓰기가 실패해도 캐시가 DB 보다 낡지 않게)
             # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
             _update_match_fields_in_meta(scrim_id, match_id_val, {
@@ -1425,6 +1428,7 @@ async def delete_session(scrim_id: str):
                             m.deleted_at = now
                     await db.commit()
                     print(f"[DB] soft-delete session: {scrim_id}")
+                    await forget_match_abilities([m.id for m in (sess.matches or [])])
         except HTTPException:
             raise
         except Exception as e:
@@ -1444,6 +1448,7 @@ async def delete_sessions_batch(req: BatchDeleteRequest):
 
     deleted_ids: list[str] = []
     failed_ids: list[str] = []
+    _ability_forget: list[str] = []   # 스킬 저장소에서 정리할 매치 id
 
     # 1. DB soft delete
     if _DB_AVAILABLE:
@@ -1464,10 +1469,12 @@ async def delete_sessions_batch(req: BatchDeleteRequest):
                             if m.deleted_at is None:
                                 m.deleted_at = now
                         deleted_ids.append(sid)
+                        _ability_forget.extend(m.id for m in (sess.matches or []))
                     else:
                         failed_ids.append(sid)
                 await db.commit()
             print(f"[DB] soft-delete sessions batch: {deleted_ids}")
+            await forget_match_abilities(_ability_forget)
         except Exception as e:
             print(f"[DB] delete_sessions_batch failed: {e}")
             # Fallback: treat all as to-delete via JSON only
@@ -1510,6 +1517,7 @@ async def delete_match(match_id: str):
                     m.deleted_at = datetime.utcnow()
                     await db.commit()
                     print(f"[DB] soft-delete match: {match_id}")
+                    await forget_match_abilities([match_id])
         except Exception as e:
             print(f"[DB] delete_match failed: {e}")
 
@@ -1550,6 +1558,7 @@ async def delete_matches_batch(req: BatchDeleteRequest):
                         failed_ids.append(mid)
                 await db.commit()
             print(f"[DB] soft-delete matches batch: {[x[2] for x in db_deleted]}")
+            await forget_match_abilities([x[2] for x in db_deleted])
         except Exception as e:
             print(f"[DB] delete_matches_batch failed: {e}")
             db_deleted = [(None, None, mid) for mid in req.ids]
