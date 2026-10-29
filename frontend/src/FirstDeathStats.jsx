@@ -43,7 +43,11 @@ const getAbilityName = (heroName, abilityRaw) => {
     const cleanAbility = String(abilityRaw).trim();
     if (cleanAbility === '0' || cleanAbility === 'null') return '기본 발사';
     if (cleanAbility.toLowerCase().includes('primary')) return '기본 발사';
-    if (cleanAbility.toLowerCase().includes('secondary')) return '보조 발사';
+    if (cleanAbility.toLowerCase().includes('secondary')) {
+        // heroes.json 에 "Secondary Fire" 이름이 있는 영웅만 "이름 (우클릭)", 없으면 기존 라벨
+        const sec = (HERO_SKILL_MAP[getDisplayName(heroName)] || HERO_SKILL_MAP[heroName] || {})['Secondary Fire'];
+        return sec ? `${sec} (우클릭)` : '보조 발사';
+    }
     if (cleanAbility.toLowerCase().includes('melee')) return '근접 공격';
     
     const displayHero = getDisplayName(heroName);

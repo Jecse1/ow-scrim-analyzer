@@ -19,12 +19,14 @@
       "skills": {
         "Ability 1": "부스터",
         "Ability 2": "마이크로 미사일",
-        "Ultimate": "자폭"
+        "Ultimate": "자폭",
+        "Secondary Fire": "방어 매트릭스"
       },
       "skillsEn": {
         "Ability 1": "Boosters",
         "Ability 2": "Micro Missiles",
-        "Ultimate": "Self-Destruct"
+        "Ultimate": "Self-Destruct",
+        "Secondary Fire": "Defense Matrix"
       },
       "skillsZh": {
         "Ability 1": "推进器",
@@ -57,12 +59,14 @@
       "skills": {
         "Ability 1": "지진 강타",
         "Ability 2": "파워 블락",
-        "Ultimate": "파멸의 일격"
+        "Ultimate": "파멸의 일격",
+        "Secondary Fire": "로켓 펀치"
       },
       "skillsEn": {
         "Ability 1": "Seismic Slam",
         "Ability 2": "Power Block",
-        "Ultimate": "Meteor Strike"
+        "Ultimate": "Meteor Strike",
+        "Secondary Fire": "Rocket Punch"
       },
       "skillsZh": {
         "Ability 1": "裂地重拳",
@@ -95,12 +99,14 @@
       "skills": {
         "Ability 1": "지휘의 외침",
         "Ability 2": "육식 도살",
-        "Ultimate": "광란"
+        "Ultimate": "광란",
+        "Secondary Fire": "톱니칼"
       },
       "skillsEn": {
         "Ability 1": "Commanding Shout",
         "Ability 2": "Carnage",
-        "Ultimate": "Rampage"
+        "Ultimate": "Rampage",
+        "Secondary Fire": "Jagged Blade"
       },
       "koreanHeroMap": {
         "정커퀸": "Junker Queen"
@@ -170,13 +176,15 @@
       "aliases": [],
       "skills": {
         "Ability 1": "방어 강화",
-        "Ability 2": "투창",
-        "Ultimate": "대지의 창"
+        "Ability 2": "수호의 창",
+        "Ultimate": "대지의 창",
+        "Secondary Fire": "투창"
       },
       "skillsEn": {
         "Ability 1": "Fortify",
-        "Ability 2": "Energy Javelin",
-        "Ultimate": "Terra Surge"
+        "Ability 2": "Javelin Spin",
+        "Ultimate": "Terra Surge",
+        "Secondary Fire": "Energy Javelin"
       },
       "skillsZh": {
         "Ability 1": "强化防御",
@@ -209,12 +217,14 @@
       "skills": {
         "Ability 1": "네메시스 형태",
         "Ability 2": "탐식의 소용돌이",
-        "Ultimate": "절멸"
+        "Ultimate": "절멸",
+        "Secondary Fire": "공허 방벽"
       },
       "skillsEn": {
         "Ability 1": "Nemesis Form",
         "Ability 2": "Ravenous Vortex",
-        "Ultimate": "Annihilation"
+        "Ultimate": "Annihilation",
+        "Secondary Fire": "Void Barrier"
       },
       "skillsZh": {
         "Ultimate": "湮灭",
@@ -247,12 +257,14 @@
       "skills": {
         "Ability 1": "돌진",
         "Ability 2": "화염 강타",
-        "Ultimate": "대지분쇄"
+        "Ultimate": "대지분쇄",
+        "Secondary Fire": "방벽 방패"
       },
       "skillsEn": {
         "Ability 1": "Charge",
         "Ability 2": "Fire Strike",
-        "Ultimate": "Earthshatter"
+        "Ultimate": "Earthshatter",
+        "Secondary Fire": "Barrier Field"
       },
       "skillsZh": {
         "Ability 1": "冲锋",
@@ -285,12 +297,14 @@
       "skills": {
         "Ability 1": "사슬 갈고리",
         "Ability 2": "숨 돌리기",
-        "Ultimate": "돼재앙"
+        "Ultimate": "돼재앙",
+        "Secondary Fire": "쓰레기 압축기"
       },
       "skillsEn": {
         "Ability 1": "Chain Hook",
         "Ability 2": "Take a Breather",
-        "Ultimate": "Whole Hog"
+        "Ultimate": "Whole Hog",
+        "Secondary Fire": "Trash Compactor"
       },
       "skillsZh": {
         "Ability 1": "链钩",
@@ -323,12 +337,14 @@
       "skills": {
         "Ability 1": "키네틱 손아귀",
         "Ability 2": "강착",
-        "Ultimate": "중력 붕괴"
+        "Ultimate": "중력 붕괴",
+        "Secondary Fire": "실험용 방벽"
       },
       "skillsEn": {
         "Ability 1": "Kinetic Grasp",
         "Ability 2": "Accretion",
-        "Ultimate": "Gravitic Flux"
+        "Ultimate": "Gravitic Flux",
+        "Secondary Fire": "Experimental Barrier"
       },
       "skillsZh": {
         "Ability 1": "动能撷取",
@@ -399,12 +415,14 @@
       "skills": {
         "Ability 1": "구르기",
         "Ability 2": "적응형 보호막",
-        "Ultimate": "지뢰밭"
+        "Ultimate": "지뢰밭",
+        "Secondary Fire": "갈고리 고정"
       },
       "skillsEn": {
         "Ability 1": "Roll",
         "Ability 2": "Adaptive Shield",
-        "Ultimate": "Minefield"
+        "Ultimate": "Minefield",
+        "Secondary Fire": "Grappling Claw"
       },
       "koreanHeroMap": {
         "레킹볼": "Wrecking Ball"
@@ -475,12 +493,14 @@
       "skills": {
         "Ability 1": "가시",
         "Ability 2": "매복",
-        "Ultimate": "폭우"
+        "Ultimate": "폭우",
+        "Secondary Fire": "날카로운 저항"
       },
       "skillsEn": {
         "Ability 1": "Spike Guard",
         "Ability 2": "Violent Leap",
-        "Ultimate": "Downpour"
+        "Ultimate": "Downpour",
+        "Secondary Fire": "Spike Guard"
       },
       "koreanHeroMap": {
         "해저드": "Hazard"
@@ -507,12 +527,14 @@
       "skills": {
         "Ability 1": "소닉 리펄서",
         "Ability 2": "수정 발사",
-        "Ultimate": "판옵티콘"
+        "Ultimate": "판옵티콘",
+        "Secondary Fire": "방벽 배열"
       },
       "skillsEn": {
         "Ability 1": "Sonic Repulsors",
         "Ability 2": "Crystal Charge",
-        "Ultimate": "Panopticon"
+        "Ultimate": "Panopticon",
+        "Secondary Fire": "Barrier Array"
       },
       "koreanHeroMap": {
         "도미나": "Domina"
@@ -542,12 +564,14 @@
       "skills": {
         "Ability 1": "추진기",
         "Ability 2": "융합 연발총",
-        "Ultimate": "한계 돌파"
+        "Ultimate": "한계 돌파",
+        "Secondary Fire": "파워 배리어"
       },
       "skillsEn": {
         "Ability 1": "Propulsors",
         "Ability 2": "Fusion Repeater",
-        "Ultimate": "Limit Break"
+        "Ultimate": "Limit Break",
+        "Secondary Fire": "Power Barrier"
       },
       "koreanHeroMap": {
         "디몬": "D.Mon"
@@ -611,14 +635,16 @@
       "image": "바스티온",
       "aliases": [],
       "skills": {
-        "Ability 1": "설정: 강습",
-        "Ability 2": "A-36 전술 수류탄",
-        "Ultimate": "설정: 포격"
+        "Ability 1": "재설정",
+        "Ability 2": "자가 수리",
+        "Ultimate": "설정: 포격",
+        "Secondary Fire": "A-36 전술 수류탄"
       },
       "skillsEn": {
-        "Ability 1": "Configuration: Assault",
-        "Ability 2": "A-36 Tactical Grenade",
-        "Ultimate": "Configuration: Artillery"
+        "Ability 1": "Reconfigure",
+        "Ability 2": "Self-Repair",
+        "Ultimate": "Configuration: Artillery",
+        "Secondary Fire": "A-36 Tactical Grenade"
       },
       "koreanHeroMap": {
         "바스티온": "Bastion"
@@ -689,12 +715,14 @@
       "skills": {
         "Ability 1": "비행",
         "Ability 2": "광선 집중",
-        "Ultimate": "복제"
+        "Ultimate": "복제",
+        "Secondary Fire": "점착 폭탄"
       },
       "skillsEn": {
         "Ability 1": "Flight",
         "Ability 2": "Focusing Beam",
-        "Ultimate": "Duplicate"
+        "Ultimate": "Duplicate",
+        "Secondary Fire": "Sticky Bombs"
       },
       "skillsZh": {
         "Ability 1": "飞行",
@@ -763,13 +791,13 @@
       "image": "한조",
       "aliases": [],
       "skills": {
-        "Ability 1": "폭풍 화살",
-        "Ability 2": "음파 화살",
+        "Ability 1": "음파 화살",
+        "Ability 2": "폭풍 화살",
         "Ultimate": "용의 일격"
       },
       "skillsEn": {
-        "Ability 1": "Storm Arrows",
-        "Ability 2": "Sonic Arrow",
+        "Ability 1": "Sonic Arrow",
+        "Ability 2": "Storm Arrows",
         "Ultimate": "Dragonstrike"
       },
       "skillsZh": {
@@ -879,12 +907,14 @@
       "skills": {
         "Ability 1": "점프 추진기",
         "Ability 2": "충격탄",
-        "Ultimate": "포화"
+        "Ultimate": "포화",
+        "Secondary Fire": "급속 추진"
       },
       "skillsEn": {
         "Ability 1": "Jump Jet",
         "Ability 2": "Concussive Blast",
-        "Ultimate": "Barrage"
+        "Ultimate": "Barrage",
+        "Secondary Fire": "Jet Dash"
       },
       "skillsZh": {
         "Ultimate": "火箭弹幕",
@@ -917,12 +947,14 @@
       "skills": {
         "Ability 1": "망령화",
         "Ability 2": "그림자 밟기",
-        "Ultimate": "죽음의 꽃"
+        "Ultimate": "죽음의 꽃",
+        "Secondary Fire": "긴박한 방아쇠"
       },
       "skillsEn": {
         "Ability 1": "Wraith Form",
         "Ability 2": "Shadow Step",
-        "Ultimate": "Death Blossom"
+        "Ultimate": "Death Blossom",
+        "Secondary Fire": "Dire Triggers"
       },
       "skillsZh": {
         "Ability 1": "幽灵形态",
@@ -996,12 +1028,14 @@
       "skills": {
         "Ability 1": "질주",
         "Ability 2": "생체장",
-        "Ultimate": "전술 조준경"
+        "Ultimate": "전술 조준경",
+        "Secondary Fire": "나선 로켓"
       },
       "skillsEn": {
         "Ability 1": "Sprint",
         "Ability 2": "Biotic Field",
-        "Ultimate": "Tactical Visor"
+        "Ultimate": "Tactical Visor",
+        "Secondary Fire": "Helix Rocket"
       },
       "skillsZh": {
         "Ability 1": "疾跑",
@@ -1037,12 +1071,14 @@
       "skills": {
         "Ability 1": "사이버 스페이스",
         "Ability 2": "위치변환기",
-        "Ultimate": "EMP"
+        "Ultimate": "EMP",
+        "Secondary Fire": "긴급 패치"
       },
       "skillsEn": {
         "Ability 1": "Cyber Space",
         "Ability 2": "Translocator",
-        "Ultimate": "EMP"
+        "Ultimate": "EMP",
+        "Secondary Fire": "Hotfix"
       },
       "skillsZh": {
         "Ability 1": "Cyber Space",
@@ -1192,12 +1228,14 @@
       "skills": {
         "Ability 1": "잠복",
         "Ability 2": "드릴 돌진",
-        "Ultimate": "지각 충격"
+        "Ultimate": "지각 충격",
+        "Secondary Fire": "드릴 돌진"
       },
       "skillsEn": {
         "Ability 1": "Burrow",
         "Ability 2": "Drill Dash",
-        "Ultimate": "Tectonic Shock"
+        "Ultimate": "Tectonic Shock",
+        "Secondary Fire": "Drill Dash"
       },
       "koreanHeroMap": {
         "벤처": "Venture"
@@ -1335,12 +1373,14 @@
       "skills": {
         "Ability 1": "피하기",
         "Ability 2": "조이라이드",
-        "Ultimate": "광란의 살육"
+        "Ultimate": "광란의 살육",
+        "Secondary Fire": "처형"
       },
       "skillsEn": {
         "Ability 1": "Evade",
         "Ability 2": "Joyride",
-        "Ultimate": "Satsuriku Spree"
+        "Ultimate": "Satsuriku Spree",
+        "Secondary Fire": "Execution"
       },
       "koreanHeroMap": {
         "시온": "Shion"
@@ -1441,14 +1481,16 @@
       "image": "브리기테",
       "aliases": [],
       "skills": {
-        "Ability 1": "방패 밀쳐내기",
-        "Ability 2": "도리깨 투척",
-        "Ultimate": "집결"
+        "Ability 1": "도리깨 투척",
+        "Ability 2": "수리 팩",
+        "Ultimate": "집결",
+        "Secondary Fire": "방벽 방패"
       },
       "skillsEn": {
-        "Ability 1": "Shield Bash",
-        "Ability 2": "Whip Shot",
-        "Ultimate": "Rally"
+        "Ability 1": "Whip Shot",
+        "Ability 2": "Repair Pack",
+        "Ultimate": "Rally",
+        "Secondary Fire": "Barrier Shield"
       },
       "skillsZh": {
         "Ability 1": "盾击",
@@ -1512,14 +1554,16 @@
       "image": "주노",
       "aliases": [],
       "skills": {
-        "Ability 1": "글라이드 부스트",
+        "Ability 1": "글라이드 부스터",
         "Ability 2": "하이퍼 링",
-        "Ultimate": "궤도 광선"
+        "Ultimate": "궤도 광선",
+        "Secondary Fire": "펄사 어뢰"
       },
       "skillsEn": {
         "Ability 1": "Glide Boost",
         "Ability 2": "Hyper Ring",
-        "Ultimate": "Orbital Ray"
+        "Ultimate": "Orbital Ray",
+        "Secondary Fire": "Pulsar Torpedoes"
       },
       "koreanHeroMap": {
         "주노": "Juno"
@@ -1837,12 +1881,14 @@
       "skills": {
         "Ability 1": "앵커 드론",
         "Ability 2": "진동 폭약",
-        "Ultimate": "개척자"
+        "Ultimate": "개척자",
+        "Secondary Fire": "추적 사격"
       },
       "skillsEn": {
         "Ability 1": "Anchor Drone",
         "Ability 2": "Tremor Charge",
-        "Ultimate": "Trailblazer"
+        "Ultimate": "Trailblazer",
+        "Secondary Fire": "Tracking Shot"
       },
       "koreanHeroMap": {
         "시에라": "Sierra"

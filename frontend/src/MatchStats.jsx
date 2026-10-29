@@ -68,9 +68,9 @@ const getRoleIconSrc = (roleLabel) => {
 // [i18n zh] 슬롯 라벨(기본/보조/근접/기술1·2/궁극기)의 언어별 표기.
 //   스킬 고유명은 getSkillName(언어 인지, skillsZh→skillsEn→skills 폴백)으로 조회.
 const ABILITY_SLOT_LABELS = {
-    ko: { primary: '기본 발사', secondary: '보조 발사', melee: '근접 공격', a1: '기술 1', a2: '기술 2', ult: '궁극기' },
-    en: { primary: 'Primary Fire', secondary: 'Secondary Fire', melee: 'Melee', a1: 'Ability 1', a2: 'Ability 2', ult: 'Ultimate' },
-    zh: { primary: '普通攻击', secondary: '辅助攻击', melee: '近战攻击', a1: '技能 1', a2: '技能 2', ult: '大招' },
+    ko: { primary: '기본 발사', secondary: '보조 발사', melee: '근접 공격', a1: '기술 1', a2: '기술 2', ult: '궁극기', rmb: '우클릭' },
+    en: { primary: 'Primary Fire', secondary: 'Secondary Fire', melee: 'Melee', a1: 'Ability 1', a2: 'Ability 2', ult: 'Ultimate', rmb: 'RMB' },
+    zh: { primary: '普通攻击', secondary: '辅助攻击', melee: '近战攻击', a1: '技能 1', a2: '技能 2', ult: '大招', rmb: '右键' },
 };
 const getAbilityName = (heroName, abilityRaw, lang = 'ko') => {
     const L = ABILITY_SLOT_LABELS[lang] || ABILITY_SLOT_LABELS.ko;
@@ -78,7 +78,11 @@ const getAbilityName = (heroName, abilityRaw, lang = 'ko') => {
     const cleanAbility = String(abilityRaw).trim();
     if (cleanAbility === '0' || cleanAbility === 'null') return L.primary;
     if (cleanAbility.toLowerCase().includes('primary')) return L.primary;
-    if (cleanAbility.toLowerCase().includes('secondary')) return L.secondary;
+    if (cleanAbility.toLowerCase().includes('secondary')) {
+        // heroes.json 에 "Secondary Fire" 이름이 있는 영웅만 "이름 (우클릭)", 없으면 기존 라벨
+        const sec = getSkillName(heroName, 'Secondary Fire', lang);
+        return sec === 'Secondary Fire' ? L.secondary : `${sec} (${L.rmb})`;
+    }
     if (cleanAbility.toLowerCase().includes('melee')) return L.melee;
 
     const skillName = getSkillName(heroName, cleanAbility, lang);
