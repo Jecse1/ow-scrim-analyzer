@@ -451,5 +451,17 @@ export default {
   skSkill1Fallback: "技能1",
   skSkill2Fallback: "技能2",
   skRoundTpl: "第{n}回合",
-  skLoadFail: "无法加载技能数据"
+  skLoadFail: "无法加载技能数据",
+
+  // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
+  osSrcUse: "使用",
+  osSrcKill: "最后一击",
+  osSrcUlt: "大招",
+  osSkillNoUse: "无使用记录 — 仅显示最后一击场景",
+  osSkillLoading: "正在加载技能场景…",
+  osSkillFail: "技能搜索失败",
+  osSkillTruncatedTpl: "仅包含 {total} 个技能使用场景中最新的 {limit} 个",
+  osKeyLmb: "左键",
+  osKeyRmb: "右键",
+  osKeyMelee: "近战"
 };

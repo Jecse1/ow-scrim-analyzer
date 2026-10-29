@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchCached, invalidateApiCache } from "./utils/apiCache";
-import { ChevronLeft, RefreshCw, Search, X, Youtube, Zap, Skull, Trophy, Map as MapIcon, User, Filter, Calendar, Users, Sword, AlertOctagon, TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react";
+import { ChevronLeft, RefreshCw, Search, X, Youtube, Zap, Skull, Trophy, Map as MapIcon, User, Filter, Calendar, Users, Sword, AlertOctagon, TrendingUp, TrendingDown, Minus, ChevronRight, Sparkles, Info } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from "recharts";
 import { useTheme, FIXED_COLORS } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
@@ -10,13 +10,17 @@ import { computeFights } from './utils/fightAnalysis';
 import { buildMapSummary, manualToPseudoRecords } from './utils/mapSummary';
 import { buildVideoLink, hasVideo } from './utils/videoLink';
 import { useVod, vodClickProps } from './VodPlayerContext';
-import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey, canonicalMapName } from './gameData';
+import { getHeroImageSrc, getHeroByName, getDisplayName, getMapDisplayName, resolveMapEntry, findMapEntriesByPartial, normalizeMapKey, canonicalMapName, getSkillName } from './gameData';
+import { isSkillQuery, buildSkillMoments } from './utils/skillSearch';
 import { BASE_TEAM } from './config';
 import { MIN_LOST_FIGHTS } from './utils/analysisConstants';
 
 const API_BASE = import.meta.env.PROD ? "" : "";
 
-const KEYWORD_TYPES = { MAP: "MAP", HERO: "HERO", EVENT: "EVENT", RESULT: "RESULT", PLAYER: "PLAYER" };
+// SKILL: 스킬명·키 토큰 문구(예: "someone 오리사 우클릭") — 해석은 서버 /api/abilities/search, 장면 합치기는 utils/skillSearch.
+const KEYWORD_TYPES = { MAP: "MAP", HERO: "HERO", EVENT: "EVENT", RESULT: "RESULT", PLAYER: "PLAYER", SKILL: "SKILL" };
+// 키(슬롯) 표기 — 스킬 장면 카드의 "이름 (Shift)" 접미사
+const SKILL_KEYCAP = { 'Ability 1': 'Shift', 'Ability 2': 'E', 'Ultimate': 'Q' };
 const EVENT_KEYWORDS = { "궁극기": "ultimate_start", "궁": "ultimate_start", "ult": "ultimate_start", "처치": "kill", "킬": "kill", "kill": "kill", "죽음": "death", "데스": "death", "death": "death" };
 const RESULT_KEYWORDS = { "승리": "win", "승": "win", "win": "win", "패배": "loss", "패": "loss", "loss": "loss", "lose": "loss", "무승부": "draw", "무": "draw", "draw": "draw" };
 const KNOWN_HEROES = [ '디바', '둠피스트', '정커퀸', '마우가', '오리사', '라마트라', '라인하르트', '로드호그', '시그마', '윈스턴', '레킹볼', '자리야', '해저드', '애쉬', '바스티온', '캐서디', '에코', '겐지', '한조', '정크랫', '메이', '파라', '리퍼', '소전', '솔저76', '솜브라', '시메트라', '토르비욘', '트레이서', '위도우메이커', '벤처', '벤데타', '프레야', '시온', '아나', '바티스트', '브리기테', '일리아리', '주노', '키리코', '라이프위버', '루시우', '메르시', '모이라', '젠야타', '우양', '제트팩 캣', '미즈키', '엠레', '디몬', 'D.Mon' ];
@@ -157,6 +161,10 @@ export default function OverallStats({ onBack, onGoSessions }) {
   const [fightRecords, setFightRecords] = useState([]); // /api/fight-records — 요약 카드(맵 분석과 동일 소스)
   const [inputText, setInputText] = useState("");
   const [activeTags, setActiveTags] = useState([]);
+  // 스킬 태그 검색 결과(/api/abilities/search) — 스킬 태그가 없으면 null(기존 하이라이트 그대로)
+  const [skillSearch, setSkillSearch] = useState(null);
+  const [skillLoading, setSkillLoading] = useState(false);
+  const [skillFail, setSkillFail] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
   const [momentsVisible, setMomentsVisible] = useState(MOMENTS_PAGE_SIZE);
 
@@ -240,6 +248,13 @@ export default function OverallStats({ onBack, onGoSessions }) {
     const cleanText = text.trim();
     if (!cleanText) return;
     if (activeTags.some(t => t.label === cleanText)) { setInputText(""); return; }
+    // 스킬명·키 토큰이 든 문구는 스킬 태그 하나로(문구 해석은 서버). 이벤트·결과 키워드 단독("궁극기"·"궁"·"승" 등)과
+    // 스킬·키 토큰이 없는 입력은 아래 기존 분류 그대로 — 결과 무변경(utils/skillSearch.test.js 고정).
+    if (isSkillQuery(cleanText, [...Object.keys(EVENT_KEYWORDS), ...Object.keys(RESULT_KEYWORDS)])) {
+        setActiveTags([...activeTags.filter(tg => tg.type !== KEYWORD_TYPES.SKILL), { type: KEYWORD_TYPES.SKILL, value: cleanText, label: cleanText }]);
+        setInputText("");
+        return;
+    }
 
     let type = KEYWORD_TYPES.PLAYER;
     let value = cleanText;
@@ -290,6 +305,28 @@ export default function OverallStats({ onBack, onGoSessions }) {
     });
     return map;
   }, [matches]);
+
+  // 스킬 태그 → 서버 검색(스킬 사용 장면 + 해석 결과). 선수·영웅·맵 태그와 기간은 같은 조건으로 넘긴다. 영상 있는 매치만.
+  useEffect(() => {
+    const skillTag = activeTags.find(tg => tg.type === KEYWORD_TYPES.SKILL);
+    if (!skillTag) { setSkillSearch(null); setSkillFail(false); setSkillLoading(false); return; }
+    const pTag = activeTags.find(tg => tg.type === KEYWORD_TYPES.PLAYER);
+    const hTag = activeTags.find(tg => tg.type === KEYWORD_TYPES.HERO);
+    const mTag = activeTags.find(tg => tg.type === KEYWORD_TYPES.MAP);
+    const qs = new URLSearchParams({ q: skillTag.value, video_only: 'true' });
+    if (pTag) qs.set('player', pTag.label);
+    if (hTag) qs.set('hero', hTag.value);
+    if (mTag) qs.set('map', mTag.value);
+    if (startDate) qs.set('date_from', startDate);
+    if (endDate) qs.set('date_to', endDate);
+    let alive = true;
+    setSkillLoading(true); setSkillFail(false);
+    fetchCached(`${API_BASE}/api/abilities/search?${qs.toString()}`)
+      .then(d => { if (alive) setSkillSearch(d); })
+      .catch(() => { if (alive) { setSkillSearch(null); setSkillFail(true); } })
+      .finally(() => { if (alive) setSkillLoading(false); });
+    return () => { alive = false; };
+  }, [activeTags, startDate, endDate]);
 
   // 한타 통계 탭용 집계 (date+map 필터 적용, result 태그 무관)
   const overallFightStats = useMemo(() => {
@@ -630,6 +667,44 @@ export default function OverallStats({ onBack, onGoSessions }) {
     // fight 레벨 result로 moments 필터 (매치 레벨 필터와 독립)
     const filteredMoments = resultTag ? moments.filter(mo => mo.result === resultTag.value) : moments;
 
+    // 스킬 태그가 있으면 하이라이트 = 스킬 장면(서버 사용 장면 + 같은 스킬 결정타 + 궁극기면 ultimate_start), 시간순.
+    // 승패 배지는 위 기존 장면과 같은 규칙(그 시각이 속한 한타의 승자). 스킬 태그가 없으면 filteredMoments 그대로.
+    let finalMoments = filteredMoments;
+    if (activeTags.some(tg => tg.type === KEYWORD_TYPES.SKILL)) {
+        const skillText = (hero, key) => {
+            const cap = SKILL_KEYCAP[key] || (key === 'Secondary Fire' ? t.osKeyRmb : key === 'Primary Fire' ? t.osKeyLmb : t.osKeyMelee);
+            const name = getSkillName(hero, key);
+            return name && name !== key ? `${name} (${cap})` : cap;
+        };
+        const sm = buildSkillMoments(baseMatches.filter(m => hasVideo(m.video_url)), skillSearch)
+            .filter(x => baseTeam === 'All' || x.team === baseTeam)
+            .map((x, i) => {
+                const mFights = matchFightsMap[x.match.id] || [];
+                const mt1Name = x.match.team_1_name || '1팀';
+                const mt2Name = x.match.team_2_name || '2팀';
+                const fight = mFights.find(f => f.startTime <= x.timestamp && x.timestamp <= f.fixedEndTime);
+                let result = 'neutral';
+                if (fight) {
+                    const isT1 = x.team === mt1Name || x.team === '1팀' || x.team === 'Team 1';
+                    const isT2 = x.team === mt2Name || x.team === '2팀' || x.team === 'Team 2';
+                    if (fight.winner === 'Draw') result = 'draw';
+                    else if ((isT1 && fight.winner === mt1Name) || (isT2 && fight.winner === mt2Name)) result = 'win';
+                    else if (isT1 || isT2) result = 'loss';
+                }
+                const what = skillText(x.hero, x.ability);
+                const desc = x.source === 'kill' ? `${x.player} ${t.osKill} ➜ ${x.ev.target_name} · ${what}` : `${x.player} · ${what}`;
+                return {
+                    id: `${x.match.id}-${x.source}-${x.timestamp}-${i}`,
+                    matchName: x.match.map_name, desc, hero: x.hero, timestamp: x.timestamp,
+                    roundNumber: x.roundNumber, effectiveDelta: x.effectiveDelta,
+                    videoUrl: x.match.video_url, videoOffset: x.match.video_offset, gameSetupSec: x.match.game_setup_sec, pauses: x.match.pauses,
+                    type: x.source === 'kill' ? 'kill' : x.source === 'ult' ? 'ultimate_start' : 'ability_use',
+                    player_team: x.team, result, source: x.source,
+                };
+            });
+        finalMoments = resultTag ? sm.filter(mo => mo.result === resultTag.value) : sm;
+    }
+
     // 💡 평균 K/D/A를 계산할 때 한 팀 기준(5명)인지 전체(10명)인지 분류
     let statDivisor = 0;
     if (playerTag) statDivisor = totalGames; // 개인 검색 시
@@ -644,9 +719,9 @@ export default function OverallStats({ onBack, onGoSessions }) {
             avgDeaths: statDivisor > 0 ? (totalDeaths / statDivisor).toFixed(1) : 0,
             avgDmg: statDivisor > 0 ? (totalDmg / statDivisor).toFixed(0) : 0,
         },
-        heroStats: heroStatsArr, mapStats: mapStatsArr, moments: filteredMoments
+        heroStats: heroStatsArr, mapStats: mapStatsArr, moments: finalMoments
     };
-  }, [matches, activeTags, startDate, endDate, baseTeam, matchFightsMap]);
+  }, [matches, activeTags, startDate, endDate, baseTeam, matchFightsMap, skillSearch]);
 
   // 요약 탭 상단 카드 — 맵 분석 탭과 동일 소스(fight-records)·정의로 계산해 승률 정합 보장.
   // 기간: OverallStats 날짜 필터 사용. 추세: 시작일이 있으면 그 이전 전체를 이전 기간으로 비교.
@@ -667,6 +742,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
           case KEYWORD_TYPES.EVENT: return theme.warning;
           case KEYWORD_TYPES.RESULT: return theme.danger;
           case KEYWORD_TYPES.PLAYER: return theme.keywordPlayer;
+          case KEYWORD_TYPES.SKILL: return '#8b5cf6';
           default: return theme.textSub;
       }
   };
@@ -727,7 +803,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
             {activeTags.length === 0 && <span style={{fontSize:'13px', color: theme.textSub, paddingLeft:'4px', display:'flex', alignItems:'center', gap:'6px'}}><Filter size={12}/> {t.filterTip}</span>}
             {activeTags.map((tag, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: `${tagColor(tag.type)}20`, border: `1px solid ${tagColor(tag.type)}`, padding: '6px 12px', borderRadius: '20px', fontSize: '13px', color: tagColor(tag.type), fontWeight: 'bold' }}>
-                    {tag.type === KEYWORD_TYPES.MAP && <MapIcon size={12}/>}{tag.type === KEYWORD_TYPES.HERO && <Zap size={12}/>}{tag.type === KEYWORD_TYPES.PLAYER && <User size={12}/>}{tag.type === KEYWORD_TYPES.RESULT && <Trophy size={12}/>}
+                    {tag.type === KEYWORD_TYPES.MAP && <MapIcon size={12}/>}{tag.type === KEYWORD_TYPES.HERO && <Zap size={12}/>}{tag.type === KEYWORD_TYPES.PLAYER && <User size={12}/>}{tag.type === KEYWORD_TYPES.RESULT && <Trophy size={12}/>}{tag.type === KEYWORD_TYPES.SKILL && <Sparkles size={12}/>}
                     <span>{tag.type === KEYWORD_TYPES.MAP ? getMapDisplayName(tag.value) : tag.label}</span>
                     <button onClick={() => removeTag(idx)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', display:'flex', alignItems:'center' }}><X size={14} /></button>
                 </div>
@@ -760,6 +836,14 @@ export default function OverallStats({ onBack, onGoSessions }) {
             {activeTab === 'dashboard' && (
                 <div style={{ background: theme.surface, borderRadius: '16px', border: `1px solid ${theme.border}`, padding: '24px' }}>
                     <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '16px', display:'flex', alignItems:'center', gap:'8px' }}><Youtube size={20} color={theme.danger} />{t.highlights} ({filteredData.moments.length.toLocaleString()})</div>
+                    {activeTags.some(tg => tg.type === KEYWORD_TYPES.SKILL) && (skillLoading || skillFail || (skillSearch && (skillSearch.sources?.use_records === false || skillSearch.truncated))) && (
+                        <div style={{ fontSize: '12px', color: theme.textSub, marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {skillLoading && <span>{t.osSkillLoading}</span>}
+                            {skillFail && <span style={{ color: theme.danger }}>{t.osSkillFail}</span>}
+                            {!skillLoading && skillSearch?.sources?.use_records === false && <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Info size={12}/> {t.osSkillNoUse}</span>}
+                            {!skillLoading && skillSearch?.truncated && <span>{tpl(t.osSkillTruncatedTpl, { total: skillSearch.total.toLocaleString(), limit: skillSearch.limit })}</span>}
+                        </div>
+                    )}
                     {filteredData.moments.length > MAX_MOMENTS_RENDERED && (
                         <div style={{ fontSize: '12px', color: theme.textSub, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Filter size={12}/> {filteredData.moments.length.toLocaleString()}개 중 상위 {MAX_MOMENTS_RENDERED}개까지 표시합니다. 검색 필터로 범위를 좁혀 주세요.
@@ -789,7 +873,7 @@ export default function OverallStats({ onBack, onGoSessions }) {
                                         </div>
                                     </div>
                                     <div style={{ fontSize: '14px', fontWeight: 'bold', color: theme.text, display:'flex', alignItems:'center', gap:'6px' }}>
-                                        {moment.type === 'ultimate_start' && <Zap size={14} color={theme.warning}/>}{moment.type === 'kill' && <Skull size={14} color={theme.danger}/>}{moment.desc}
+                                        {moment.source && <span style={{ fontSize: '10px', border: `1px solid ${theme.borderHighlight}`, color: theme.textSub, padding: '1px 6px', borderRadius: '4px', fontWeight: 700, lineHeight: '1.4', flexShrink: 0 }}>{moment.source === 'use' ? t.osSrcUse : moment.source === 'kill' ? t.osSrcKill : t.osSrcUlt}</span>}{moment.type === 'ultimate_start' && <Zap size={14} color={theme.warning}/>}{moment.type === 'kill' && <Skull size={14} color={theme.danger}/>}{moment.type === 'ability_use' && <Sparkles size={14} color="#8b5cf6"/>}{moment.desc}
                                     </div>
                                 </a>
                             ))}

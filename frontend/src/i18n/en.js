@@ -451,5 +451,17 @@ export default {
   skSkill1Fallback: "Skill 1",
   skSkill2Fallback: "Skill 2",
   skRoundTpl: "R{n}",
-  skLoadFail: "Failed to load skill data"
+  skLoadFail: "Failed to load skill data",
+
+  // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
+  osSrcUse: "Use",
+  osSrcKill: "Final blow",
+  osSrcUlt: "Ultimate",
+  osSkillNoUse: "No usage records — final-blow scenes only",
+  osSkillLoading: "Loading skill scenes…",
+  osSkillFail: "Skill search failed",
+  osSkillTruncatedTpl: "Only the latest {limit} of {total} skill-use scenes are included",
+  osKeyLmb: "LMB",
+  osKeyRmb: "RMB",
+  osKeyMelee: "Melee"
 };

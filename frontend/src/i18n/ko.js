@@ -451,5 +451,17 @@ export default {
   skSkill1Fallback: "스킬1",
   skSkill2Fallback: "스킬2",
   skRoundTpl: "{n}R",
-  skLoadFail: "스킬 데이터를 불러오지 못했습니다"
+  skLoadFail: "스킬 데이터를 불러오지 못했습니다",
+
+  // 하이라이트 검색 — 스킬·키 문구(OverallStats.jsx)
+  osSrcUse: "사용",
+  osSrcKill: "결정타",
+  osSrcUlt: "궁극기",
+  osSkillNoUse: "사용 기록 없음 — 결정타 장면만",
+  osSkillLoading: "스킬 장면 불러오는 중…",
+  osSkillFail: "스킬 검색에 실패했습니다",
+  osSkillTruncatedTpl: "스킬 사용 장면 {total}개 중 최신 {limit}개만 포함",
+  osKeyLmb: "좌클릭",
+  osKeyRmb: "우클릭",
+  osKeyMelee: "근접"
 };
