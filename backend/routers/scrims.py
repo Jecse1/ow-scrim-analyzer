@@ -26,6 +26,7 @@ except Exception as _e:
     _DB_IMPORT_ERROR = f'{type(_e).__name__}: {_e}'
 
 from config import DATA_FILE, ROW_DATA_DIR, NUMERIC_FIELDS, BASE_TEAM
+from session_ids import require_session_id, is_valid_session_id, is_valid_hour, list_log_files
 import config as _config  # DISCORD_WEBHOOK_URL 은 호출 시점에 읽는다(테스트에서 교체 가능)
 from schemas import ScrimManualInput, BatchDeleteRequest, WinnerOverrideInput, SessionPatchInput, MatchPatchInput
 from cache import _invalidate_response_cache
@@ -73,9 +74,10 @@ def save_data(data):
 def _delete_scrim_files(scrim_id: str) -> list[str]:
     """scrim_id 관련 파일 전부 삭제, 실패한 파일 경로 반환"""
     warnings = []
+    # 로그는 '{id}_{n}.txt' 정확 일치만(glob 접두 일치는 형제 세션 '{id}_1' 의 로그까지 지운다)
     patterns = [
         f"{ROW_DATA_DIR}/{scrim_id}_meta.json",
-        *glob.glob(f"{ROW_DATA_DIR}/{scrim_id}_*.txt"),
+        *(path for _, path in list_log_files(ROW_DATA_DIR, scrim_id)),
     ]
     for path in patterns:
         if os.path.exists(path):
@@ -294,6 +296,9 @@ async def register_scrim_manual(request: Request):
     except Exception as e:
         print(f"❌ [DEBUG] Validation Error: {e}")
         raise HTTPException(status_code=422, detail=f"Validation Error: {str(e)}")
+    # 시각은 세션 ID(=파일명)에 그대로 들어간다 — 두 자리 00~23 만
+    if not (is_valid_hour(data.start_time) and is_valid_hour(data.end_time)):
+        raise HTTPException(status_code=422, detail="startHour/endHour must be 00-23")
 
     try:
         dt = datetime.strptime(data.date, "%Y-%m-%d")
@@ -316,6 +321,7 @@ async def register_scrim_manual(request: Request):
                 break
             counter += 1
             new_scrim_id = f"{base_id}_{counter}"
+    require_session_id(new_scrim_id)
 
     processed_matches = []
     
@@ -479,7 +485,16 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
       'keep'   = 맵은 수기값 유지, 파싱 winner/score는 컬럼에 저장하고 수기 winner를 winner_override로 이동(원본 보존 규칙과 일관)."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
+    require_session_id(scrim_id)
     await _raise_if_session_deleted(scrim_id)  # 원문 파일을 쓰기 전에 거른다
+    # 매치 존재 확인도 파일 쓰기 전에 — 없는(삭제된) 매치에 원문 파일이 남지 않게
+    async with AsyncSessionLocal() as db:
+        _exists = (await db.execute(
+            select(DBMatch.id)
+            .where(DBMatch.session_id == scrim_id, DBMatch.match_index == match_index, DBMatch.deleted_at.is_(None))
+        )).first()
+    if _exists is None:
+        raise HTTPException(status_code=404, detail="Match not found")
 
     content = await file.read()
     log_text, enc_fallback = _decode_log_bytes(content)
@@ -794,15 +809,13 @@ async def rebuild_database():
             with open(meta_path, "r", encoding="utf-8") as f:
                 scrim_obj = json.load(f)
             scrim_id = scrim_obj["id"]
-            log_files = glob.glob(f"{ROW_DATA_DIR}/{scrim_id}_*.txt")
+            if not is_valid_session_id(scrim_id):
+                raise ValueError("invalid session id")  # 아래 except → parse_errors, 이 세션은 건너뜀
+            # '{id}_{n}.txt' 정확 일치만 — 접두 glob 은 형제 '{id}_1_2.txt' 를 int('1_2')=12 로 붙였다
+            log_files = list_log_files(ROW_DATA_DIR, scrim_id)
             if not log_files:
                 print(f"[REBUILD] 경고: {scrim_id} 로그 없음 (메타만 등록)")
-            for log_path in sorted(log_files):
-                base_name = os.path.basename(log_path)
-                try:
-                    match_index = int(base_name.replace(f"{scrim_id}_", "").replace(".txt", ""))
-                except:
-                    continue
+            for match_index, log_path in log_files:
                 with open(log_path, "r", encoding="utf-8") as lf:
                     log_text = lf.read()
                 target_match = next((m for m in scrim_obj.get("matches", []) if m.get("match_index") == match_index), None)
@@ -1408,32 +1421,40 @@ async def complete_session(session_id: str):
 # ── 세션 단건 삭제 ─────────────────────────────────────────────
 @router.delete("/api/sessions/{scrim_id}")
 async def delete_session(scrim_id: str):
-    # 1. DB soft delete
-    if _DB_AVAILABLE:
-        try:
-            from sqlalchemy.orm import selectinload as _sil
-            async with AsyncSessionLocal() as db:
-                result = await db.execute(
-                    select(DBSession)
-                    .where(DBSession.id == scrim_id, DBSession.deleted_at.is_(None))
-                    .options(_sil(DBSession.matches))
-                )
-                sess = result.scalars().first()
-                if not sess:
-                    raise HTTPException(status_code=404, detail=f"Session {scrim_id} not found")
-                if sess:
-                    now = datetime.utcnow()
-                    sess.deleted_at = now
-                    for m in (sess.matches or []):
-                        if m.deleted_at is None:
-                            m.deleted_at = now
-                    await db.commit()
-                    print(f"[DB] soft-delete session: {scrim_id}")
-                    await forget_match_abilities([m.id for m in (sess.matches or [])])
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[DB] delete_session failed: {e}")
+    require_session_id(scrim_id)
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
+    # 1. DB soft delete — 실패하면 파일은 건드리지 않고 오류로 끝낸다
+    _forget: list[str] = []
+    try:
+        from sqlalchemy.orm import selectinload as _sil
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(DBSession)
+                .where(DBSession.id == scrim_id, DBSession.deleted_at.is_(None))
+                .options(_sil(DBSession.matches))
+            )
+            sess = result.scalars().first()
+            if not sess:
+                raise HTTPException(status_code=404, detail=f"Session {scrim_id} not found")
+            now = datetime.utcnow()
+            sess.deleted_at = now
+            for m in (sess.matches or []):
+                if m.deleted_at is None:
+                    m.deleted_at = now
+            await db.commit()
+            print(f"[DB] soft-delete session: {scrim_id}")
+            _forget = [m.id for m in (sess.matches or [])]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DB] delete_session failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error: session not deleted")
+    # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 삭제는 확정이므로 파일 삭제까지 진행
+    try:
+        await forget_match_abilities(_forget)
+    except Exception as e:
+        print(f"[DB] delete_session forget_match_abilities failed: {e}")
 
     print(f"[DELETE] 세션 삭제: {scrim_id}  ({datetime.now().isoformat()})")
     warnings = _delete_scrim_files(scrim_id)
@@ -1446,43 +1467,46 @@ async def delete_session(scrim_id: str):
 async def delete_sessions_batch(req: BatchDeleteRequest):
     if not req.ids:
         raise HTTPException(status_code=400, detail="ids 배열이 비어 있습니다")
+    for sid in req.ids:  # 하나라도 형식 밖이면 전체 거부(부분 삭제 없음)
+        require_session_id(sid)
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
 
     deleted_ids: list[str] = []
     failed_ids: list[str] = []
     _ability_forget: list[str] = []   # 스킬 저장소에서 정리할 매치 id
 
-    # 1. DB soft delete
-    if _DB_AVAILABLE:
-        try:
-            from sqlalchemy.orm import selectinload as _sil
-            async with AsyncSessionLocal() as db:
-                now = datetime.utcnow()
-                for sid in req.ids:
-                    result = await db.execute(
-                        select(DBSession)
-                        .where(DBSession.id == sid, DBSession.deleted_at.is_(None))
-                        .options(_sil(DBSession.matches))
-                    )
-                    sess = result.scalars().first()
-                    if sess:
-                        sess.deleted_at = now
-                        for m in (sess.matches or []):
-                            if m.deleted_at is None:
-                                m.deleted_at = now
-                        deleted_ids.append(sid)
-                        _ability_forget.extend(m.id for m in (sess.matches or []))
-                    else:
-                        failed_ids.append(sid)
-                await db.commit()
-            print(f"[DB] soft-delete sessions batch: {deleted_ids}")
-            await forget_match_abilities(_ability_forget)
-        except Exception as e:
-            print(f"[DB] delete_sessions_batch failed: {e}")
-            # Fallback: treat all as to-delete via JSON only
-            deleted_ids = list(req.ids)
-            failed_ids = []
-    else:
-        deleted_ids = list(req.ids)
+    # 1. DB soft delete — 실패하면 파일 삭제 없이 오류(요청 ID 목록으로 대체하지 않는다)
+    try:
+        from sqlalchemy.orm import selectinload as _sil
+        async with AsyncSessionLocal() as db:
+            now = datetime.utcnow()
+            for sid in req.ids:
+                result = await db.execute(
+                    select(DBSession)
+                    .where(DBSession.id == sid, DBSession.deleted_at.is_(None))
+                    .options(_sil(DBSession.matches))
+                )
+                sess = result.scalars().first()
+                if sess:
+                    sess.deleted_at = now
+                    for m in (sess.matches or []):
+                        if m.deleted_at is None:
+                            m.deleted_at = now
+                    deleted_ids.append(sid)
+                    _ability_forget.extend(m.id for m in (sess.matches or []))
+                else:
+                    failed_ids.append(sid)
+            await db.commit()
+        print(f"[DB] soft-delete sessions batch: {deleted_ids}")
+    except Exception as e:
+        print(f"[DB] delete_sessions_batch failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error: sessions not deleted")
+    # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 에서 지운 세션의 파일 삭제는 진행
+    try:
+        await forget_match_abilities(_ability_forget)
+    except Exception as e:
+        print(f"[DB] delete_sessions_batch forget_match_abilities failed: {e}")
 
     print(f"[DELETE] 세션 배치 삭제: {deleted_ids}  ({datetime.now().isoformat()})")
     warnings: list[str] = []
@@ -1562,8 +1586,7 @@ async def delete_matches_batch(req: BatchDeleteRequest):
             await forget_match_abilities([x[2] for x in db_deleted])
         except Exception as e:
             print(f"[DB] delete_matches_batch failed: {e}")
-            db_deleted = [(None, None, mid) for mid in req.ids]
-            failed_ids = []
+            raise HTTPException(status_code=500, detail="DB error: matches not deleted")
 
     warnings: list[str] = []
     print(f"[DELETE] 매치 배치 삭제: {[x[2] for x in db_deleted]}  ({datetime.now().isoformat()})")
