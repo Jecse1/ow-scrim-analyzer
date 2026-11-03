@@ -53,10 +53,12 @@ app = FastAPI(lifespan=lifespan)
 # compresslevel=6: 기본값 9는 압축률 이득이 거의 없이 CPU만 수 배 소모 (저사양 서버 고려)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
+# 프론트는 같은 출처 요청만 쓰고 쿠키·Authorization 을 보내지 않는다 — credentials 허용 불필요.
+# allow_origins=["*"] + credentials=True 조합은 Starlette 가 요청 Origin 을 그대로 반사해 사실상 모든 출처에 허용.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
