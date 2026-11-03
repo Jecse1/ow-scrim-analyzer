@@ -204,3 +204,27 @@ def test_db_error_on_delete_keeps_files(client, monkeypatch):
         assert sid in {s["id"] for s in c.get("/api/scrims").json()}
     finally:
         _cleanup(c, sid)
+
+
+def test_forget_failure_on_match_batch_delete_still_deletes(client, monkeypatch):
+    # 스킬 저장소 정리(forget_match_abilities) 실패는 로그만 — 응답·파일 삭제는 DB 결과 기준
+    import routers.scrims as scrims
+
+    async def _boom(ids):
+        raise RuntimeError("injected forget failure")
+
+    c = client
+    sid = None
+    try:
+        sid, mids = _register(c, "forget-fail", 2)
+        assert _upload(c, sid, 1).status_code == 200
+        with monkeypatch.context() as mp:
+            mp.setattr(scrims, "forget_match_abilities", _boom)
+            r = c.post("/api/matches/delete-batch", json={"ids": [mids[1]]})
+        assert r.status_code == 200, r.text
+        assert r.json()["success"] is True and r.json()["deleted_count"] == 1
+        left = {m["match_index"] for m in c.get(f"/api/scrims/{sid}").json()["matches"]}
+        assert left == {2}
+        assert not os.path.exists(f"{ROW_DATA_DIR}/{sid}_1.txt")
+    finally:
+        _cleanup(c, sid)

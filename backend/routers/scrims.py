@@ -1583,10 +1583,14 @@ async def delete_matches_batch(req: BatchDeleteRequest):
                         failed_ids.append(mid)
                 await db.commit()
             print(f"[DB] soft-delete matches batch: {[x[2] for x in db_deleted]}")
-            await forget_match_abilities([x[2] for x in db_deleted])
         except Exception as e:
             print(f"[DB] delete_matches_batch failed: {e}")
             raise HTTPException(status_code=500, detail="DB error: matches not deleted")
+        # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 에서 지운 매치의 파일 삭제·응답은 DB 결과 기준
+        try:
+            await forget_match_abilities([x[2] for x in db_deleted])
+        except Exception as e:
+            print(f"[DB] delete_matches_batch forget_match_abilities failed: {e}")
 
     warnings: list[str] = []
     print(f"[DELETE] 매치 배치 삭제: {[x[2] for x in db_deleted]}  ({datetime.now().isoformat()})")
