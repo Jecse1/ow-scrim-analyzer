@@ -116,7 +116,7 @@ export default {
   sdDiffAdopt: "[OK] = adopt parsed values · [Cancel] = keep manual values (winner moves to override)",
   sdManualBadge: "Manual", sdEditFail: "Edit failed: ", sdUploadDone: "Log applied.",
   pcWarnPrefix: "Log format warnings", pcWarnUnit: "",
-  pcIncomplete: "Incomplete log — the last round has no round_end or match_end (log cut off, e.g. game crash). Check the result.",
+  pcIncomplete: "Incomplete log — the last round has no round_end (log cut off, e.g. game crash). Check the result.",
   wsOverride: "Override", wsProgress: "Progress", wsDraw: "Draw", wsTitle: "Winner source",
   wsUndetermined: "Undetermined",
   pcUdPrefix: "Winner undetermined (set it via override)", pcUdPush: "Push map — the log has no push distance",

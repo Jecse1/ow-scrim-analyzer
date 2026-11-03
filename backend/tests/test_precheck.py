@@ -62,7 +62,8 @@ def test_encoding_flag_and_cap():
     assert r["warnings"][0]["code"] == "encoding_fallback"
 
 
-# 쟁탈·플래시포인트: 마지막 라운드 round_end 또는 match_end 가 없으면(크래시로 로그 끊김) 미완 로그 경고
+# 쟁탈·플래시포인트: 마지막 라운드 round_end 가 없으면(크래시로 로그 끊김) 미완 로그 경고.
+# 라운드는 끝났고 match_end 만 없으면 기존 no_match_end 경고만(미완 로그 아님).
 R1 = ["[00:00:01] ,round_start,0,1,0,0,0,0", "[00:05:00] ,round_end,300,1,0,1,0,0,0,0,0"]
 R2_START = "[00:05:20] ,round_start,300,2,0,0,0,0"
 R2_END = "[00:11:40] ,round_end,700,2,0,2,0,0,0,0,0"
@@ -81,10 +82,14 @@ def test_incomplete_log_last_round_end_missing():
     assert "2라운드" in w["message"]
 
 
-def test_incomplete_log_match_end_missing_only():
+def test_match_end_missing_only_is_not_incomplete():
     r = precheck_log_text("\n".join([START.format(map="리장 타워", mode="쟁탈")] + R1 + [R2_START, R2_END]))
-    assert _codes(r) == {"no_match_end": 1, "incomplete_log": 1}
-    assert _incomplete(r)[0]["event"] == "match_end"
+    assert _codes(r) == {"no_match_end": 1}
+
+
+def test_flashpoint_match_end_missing_only_is_not_incomplete():
+    r = precheck_log_text("\n".join([START.format(map="뉴 정크 시티", mode="플래시포인트")] + R1 + [R2_START, R2_END]))
+    assert "incomplete_log" not in _codes(r) and _codes(r)["no_match_end"] == 1
 
 
 def test_incomplete_log_flashpoint():
@@ -113,7 +118,9 @@ def test_incomplete_log_survives_warning_cap():
 def test_incomplete_log_parser_result_unchanged(fixture_text):
     # 경고만 추가 — 같은 텍스트의 파싱 결과(승패 판정 포함)는 precheck 와 무관
     from parsers.log_parser import parse_overwatch_log
-    text = "\n".join(l for l in fixture_text("control_simple.txt").splitlines() if ",match_end," not in l)
+    lines = fixture_text("control_simple.txt").splitlines()
+    last_end = max(i for i, l in enumerate(lines) if ",round_end," in l)
+    text = "\n".join(lines[:last_end])   # 마지막 round_end 부터 잘라 크래시처럼 끊긴 로그
     before = parse_overwatch_log(text)
     assert _codes(precheck_log_text(text)).get("incomplete_log") == 1
     assert parse_overwatch_log(text) == before
