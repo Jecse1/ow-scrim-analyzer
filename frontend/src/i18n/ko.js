@@ -116,6 +116,7 @@ export default {
   sdDiffAdopt: "[확인] = 파싱 결과 채택 · [취소] = 수기값 유지(승자는 승패 보정으로 이동)",
   sdManualBadge: "수기", sdEditFail: "수정 실패: ", sdUploadDone: "로그가 반영되었습니다.",
   pcWarnPrefix: "로그 형식 경고", pcWarnUnit: "건",
+  pcIncomplete: "미완 로그 — 마지막 라운드의 round_end 또는 match_end가 없습니다(게임 크래시 등으로 로그가 끊김). 결과를 확인하세요.",
   wsOverride: "보정", wsProgress: "진행도", wsDraw: "무승부", wsTitle: "승자 출처",
   wsUndetermined: "미확정",
   pcUdPrefix: "승자 미확정(승패 보정 필요)", pcUdPush: "밀기 맵 — 로그에 전진 거리 기록 없음",

@@ -63,6 +63,8 @@ INTENTIONALLY_IGNORED = frozenset({
 })
 
 CONTROL_MODES = ("쟁탈", "Control")
+# 미완 로그(incomplete_log) 검사 대상 — 라운드 단위로 끝나는 모드
+ROUND_MODES = CONTROL_MODES + ("플래시포인트", "Flashpoint")
 
 # 경고 코드 → 기본 메시지
 CODES = {
@@ -74,6 +76,7 @@ CODES = {
     "no_match_start": "match_start 없음 — 맵·모드·팀명이 기본값(Unknown/1팀/2팀)",
     "no_match_end": "match_end 없음 — 최종 스코어 이벤트 부재",
     "zero_team_noncontrol": "쟁탈이 아닌 맵에서 공격팀/라운드 승자가 '0' — 팀명 기반 집계가 어긋남",
+    "incomplete_log": "미완 로그 — 마지막 라운드 round_end 또는 match_end 누락(크래시 등으로 로그가 끊김)",
     "encoding_fallback": "UTF-8 디코드 실패 — cp949(errors=ignore)로 대체, 깨진 바이트 삭제됨",
 }
 
@@ -126,6 +129,9 @@ def precheck_log_text(text: str, *, encoding_fallback: bool = False) -> dict:
     unknown: dict = {}          # 이벤트명 → [건수, 첫 줄 번호]
     has_start = has_end = False
     is_control = None           # match_start 를 본 뒤 결정
+    is_round_mode = False       # 쟁탈·플래시포인트(match_start 를 본 뒤 결정)
+    last_round = None           # 마지막 round_start 의 라운드 번호
+    last_round_open = False     # 마지막 round_start 뒤에 round_end 가 아직 없음
     zero_lines: list = []       # (줄 번호, 이벤트) — match_start 이전에 나온 경우를 위해 지연 판정
     end_winner_unmatched = 0
     n_lines = 0
@@ -172,8 +178,9 @@ def precheck_log_text(text: str, *, encoding_fallback: bool = False) -> dict:
         if ev == "match_start":
             if not has_start:
                 mode = parts[base + 3]
-                is_control = (mode in CONTROL_MODES
-                              or resolve_map_type(parts[base + 2]) == "쟁탈")
+                map_type = resolve_map_type(parts[base + 2])
+                is_control = (mode in CONTROL_MODES or map_type == "쟁탈")
+                is_round_mode = (mode in ROUND_MODES or map_type in ROUND_MODES)
             has_start = True
         elif ev == "match_end":
             has_end = True
@@ -181,10 +188,14 @@ def precheck_log_text(text: str, *, encoding_fallback: bool = False) -> dict:
             # 파서의 match_end_winner 는 항상 None 이고 승패 판정에도 쓰이지 않는다. 경고 아닌 info.
             if all(_is_number(x) for x in parts[base + 1:] if x):
                 end_winner_unmatched += 1
-        elif ev == "round_start" and parts[base + 3] == "0":
-            zero_lines.append((i, ev))
-        elif ev == "round_end" and parts[base + 3] == "0":
-            zero_lines.append((i, ev))
+        elif ev == "round_start":
+            last_round, last_round_open = parts[base + 2], True
+            if parts[base + 3] == "0":
+                zero_lines.append((i, ev))
+        elif ev == "round_end":
+            last_round_open = False
+            if parts[base + 3] == "0":
+                zero_lines.append((i, ev))
 
     if not has_start:
         warn("no_match_start", None, "match_start")
@@ -196,6 +207,15 @@ def precheck_log_text(text: str, *, encoding_fallback: bool = False) -> dict:
             warn("zero_team_noncontrol", i, ev)
     for ev, (cnt, first) in sorted(unknown.items()):
         warn("unknown_event", first, ev, f"'{ev}' {cnt}건")
+    # 미완 로그: 파일 끝에서야 판정되지만 상한(MAX_WARNINGS)에 밀리지 않게 맨 앞에 둔다
+    if is_round_mode and last_round is not None and (last_round_open or not has_end):
+        missing = "round_end" if last_round_open else "match_end"
+        by_code["incomplete_log"] = by_code.get("incomplete_log", 0) + 1
+        warnings.insert(0, {"code": "incomplete_log", "line": None, "event": missing,
+                            "message": f"{CODES['incomplete_log']} ({last_round}라운드 {missing} 없음)"})
+        if len(warnings) > MAX_WARNINGS:
+            warnings.pop()
+            overflow += 1
 
     return {
         "warnings": warnings,

@@ -116,6 +116,7 @@ export default {
   sdDiffAdopt: "[确定] = 采用解析结果 · [取消] = 保留手动值（胜者移入胜负修正）",
   sdManualBadge: "手动", sdEditFail: "编辑失败：", sdUploadDone: "日志已应用。",
   pcWarnPrefix: "日志格式警告", pcWarnUnit: "条",
+  pcIncomplete: "日志不完整 — 最后一回合缺少 round_end 或 match_end（游戏崩溃等导致日志中断）。请核对结果。",
   wsOverride: "修正", wsProgress: "进度", wsDraw: "平局", wsTitle: "胜者来源",
   wsUndetermined: "未确定",
   pcUdPrefix: "胜者未确定（需胜负修正）", pcUdPush: "推进图 — 日志中没有推进距离",

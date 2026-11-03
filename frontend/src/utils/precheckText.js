@@ -18,6 +18,8 @@ export function precheckLine(data, t) {
     for (const w of data?.warnings || []) byCode[w.code] = (byCode[w.code] || 0) + 1;
     const codes = Object.entries(byCode).map(([c, k]) => `${c}×${k}`).join(", ");
     line += `\n${t.pcWarnPrefix} ${n}${t.pcWarnUnit}${codes ? `: ${codes}` : ""}`;
+    // 미완 로그는 코드만으로는 뜻이 안 보여 문구를 한 줄 더 (서버가 경고 목록 맨 앞에 둠 — 상한에 안 밀림)
+    if (byCode.incomplete_log) line += `\n${t.pcIncomplete}`;
   }
   const ud = data?.undetermined_reason;
   if (ud) line += `\n${t.pcUdPrefix}: ${t[UD_REASON_KEYS[ud]] || t.pcUdOther}`;
