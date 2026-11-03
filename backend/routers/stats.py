@@ -70,7 +70,8 @@ async def get_scrim_list(request: Request):
     try:
         return await cached_json_response(request, "scrims", _compute_scrims)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_scrim_list failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 def _db_match_to_dict_events_only(m: "DBMatch") -> dict:
@@ -138,7 +139,8 @@ async def get_scrims_full_events(request: Request):
     try:
         return await cached_json_response(request, "full-events", _compute_full_events)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_scrims_full_events failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 def _first_fight_from_events(events: list, t1: str, t2: str):
@@ -255,7 +257,8 @@ async def get_first_fights():
                                 items.append(_first_fight_item(m, s, map_type, r.round_number, fight, rs, fd))
             return items
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_first_fights failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 async def _compute_fight_records(base_team: str) -> bytes:
@@ -278,7 +281,8 @@ async def get_fight_records(request: Request, base_team: str = BASE_TEAM):
         return await cached_json_response(
             request, f"fight-records:{base_team}", partial(_compute_fight_records, base_team))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_fight_records failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 async def _compute_player_fight_stats(base_team: str) -> bytes:
@@ -324,7 +328,8 @@ async def get_player_fight_stats(request: Request, base_team: str = BASE_TEAM):
         return await cached_json_response(
             request, f"player-fight-stats:{base_team}", partial(_compute_player_fight_stats, base_team))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_player_fight_stats failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 # 선채우기 대상·순서(cache.py): 목록 → 전체 이벤트 → 한타 기록(기준 팀) → 선수 한타 통계(기준 팀).

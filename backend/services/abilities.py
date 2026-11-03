@@ -162,8 +162,8 @@ async def _run_backfill(force: bool) -> None:
         raise
     except Exception as e:
         st["state"] = "error"
-        st["error"] = f"{type(e).__name__}: {e}"
-        print(f"[ABILITY] backfill error: {st['error']}", flush=True)
+        st["error"] = "backfill failed"  # 상태 API 로 나간다 — 상세는 로그만
+        print(f"[ABILITY] backfill error: {type(e).__name__}: {e}", flush=True)
     finally:
         st["elapsed_sec"] = round(time.perf_counter() - t0, 2)
         if tx_samples:

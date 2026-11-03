@@ -14,6 +14,7 @@ import threading
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 from fastapi.concurrency import run_in_threadpool
+from pydantic import ValidationError
 
 _DB_IMPORT_ERROR = None
 try:
@@ -85,7 +86,8 @@ def _delete_scrim_files(scrim_id: str) -> list[str]:
                 os.remove(path)
                 print(f"[DELETE] 파일 삭제: {path}")
             except Exception as e:
-                warnings.append(f"파일 삭제 실패 ({path}): {e}")
+                print(f"[DELETE] 파일 삭제 실패: {path}: {e}")
+                warnings.append(f"파일 삭제 실패 ({os.path.basename(path)})")
     return warnings
 
 
@@ -98,7 +100,8 @@ def _delete_match_file(scrim_id: str, match_index: int) -> list[str]:
             os.remove(path)
             print(f"[DELETE] 파일 삭제: {path}")
         except Exception as e:
-            warnings.append(f"파일 삭제 실패 ({path}): {e}")
+            print(f"[DELETE] 파일 삭제 실패: {path}: {e}")
+            warnings.append(f"파일 삭제 실패 ({os.path.basename(path)})")
     return warnings
 
 
@@ -295,7 +298,10 @@ async def register_scrim_manual(request: Request):
         data = ScrimManualInput(**raw_body)
     except Exception as e:
         print(f"❌ [DEBUG] Validation Error: {e}")
-        raise HTTPException(status_code=422, detail=f"Validation Error: {str(e)}")
+        if isinstance(e, ValidationError):
+            fields = sorted({".".join(str(x) for x in err.get("loc", ())) for err in e.errors()})
+            raise HTTPException(status_code=422, detail=f"Validation Error: {', '.join(fields)}")
+        raise HTTPException(status_code=422, detail="Validation Error: invalid request body")
     # 시각은 세션 ID(=파일명)에 그대로 들어간다 — 두 자리 00~23 만
     if not (is_valid_hour(data.start_time) and is_valid_hour(data.end_time)):
         raise HTTPException(status_code=422, detail="startHour/endHour must be 00-23")
@@ -454,7 +460,8 @@ async def register_scrim_manual(request: Request):
             await db.commit()
             print(f"[DB] register OK: {new_scrim_id}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB write failed: {e}")
+        print(f"[DB] register_scrim_manual failed: {e}")
+        raise HTTPException(status_code=500, detail="DB write failed")
 
     _invalidate_response_cache()
     return {"status": "success", "scrim_id": new_scrim_id}
@@ -642,7 +649,8 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] upload_match_log failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 def _parse_upload_log(log_text: str, enc_fallback: bool, c_t1: str, c_t2: str,
@@ -757,7 +765,8 @@ def _extract_roster_from_bytes(content: bytes) -> dict:
 @router.get("/api/admin/db-status")
 async def db_status():
     if not _DB_AVAILABLE:
-        return {"db_available": False, "error": _DB_IMPORT_ERROR or "DB modules not installed"}
+        print(f"[DB] db_status: import failed: {_DB_IMPORT_ERROR}")
+        return {"db_available": False, "error": "DB modules not available"}
     try:
         from sqlalchemy import func as sa_func
         async with AsyncSessionLocal() as db:
@@ -780,7 +789,8 @@ async def db_status():
             "legacy_json_backup_exists": os.path.exists("scrim_data.json.phase5_backup"),
         }
     except Exception as e:
-        return {"db_available": True, "error": str(e)}
+        print(f"[DB] db_status failed: {e}")
+        return {"db_available": True, "error": "DB query failed"}
 
 
 @router.post("/api/admin/rebuild-db")
@@ -797,7 +807,8 @@ async def rebuild_database():
         _shutil.copy(db_path, backup_path)
         print(f"[REBUILD] DB backup: {backup_path}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Backup failed: {e}")
+        print(f"[REBUILD] DB backup failed: {e}")
+        raise HTTPException(status_code=500, detail="Backup failed")
 
     print("[REBUILD] raw 파일 파싱 시작...")
     meta_files = sorted(glob.glob(f"{ROW_DATA_DIR}/*_meta.json"), reverse=True)
@@ -805,17 +816,21 @@ async def rebuild_database():
     parse_errors: list[str] = []
 
     for meta_path in meta_files:
+        cur_file = meta_path  # parse_errors 에 남길 '어느 파일'
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 scrim_obj = json.load(f)
             scrim_id = scrim_obj["id"]
             if not is_valid_session_id(scrim_id):
-                raise ValueError("invalid session id")  # 아래 except → parse_errors, 이 세션은 건너뜀
+                parse_errors.append(f"{os.path.basename(meta_path)}: invalid session id")
+                print(f"[REBUILD] 건너뜀(형식 밖 세션 ID): {meta_path}")
+                continue
             # '{id}_{n}.txt' 정확 일치만 — 접두 glob 은 형제 '{id}_1_2.txt' 를 int('1_2')=12 로 붙였다
             log_files = list_log_files(ROW_DATA_DIR, scrim_id)
             if not log_files:
                 print(f"[REBUILD] 경고: {scrim_id} 로그 없음 (메타만 등록)")
             for match_index, log_path in log_files:
+                cur_file = log_path
                 with open(log_path, "r", encoding="utf-8") as lf:
                     log_text = lf.read()
                 target_match = next((m for m in scrim_obj.get("matches", []) if m.get("match_index") == match_index), None)
@@ -845,7 +860,10 @@ async def rebuild_database():
                             _rnd["video_delta_sec"] = _rd[_rnd.get("round_number")]
             new_scrims.append(scrim_obj)
         except Exception as e:
-            parse_errors.append(f"{os.path.basename(meta_path)}: {e}")
+            where = os.path.basename(cur_file)
+            if isinstance(e, json.JSONDecodeError):
+                where += f" line {e.lineno}"
+            parse_errors.append(f"{where}: {type(e).__name__}")
             print(f"[REBUILD] 파싱 실패: {meta_path}: {e}")
 
     print(f"[REBUILD] 파싱 완료: {len(new_scrims)} scrims. DB 재구축 시작...")
@@ -988,7 +1006,8 @@ async def rebuild_database():
             print(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
             start_backfill(force=True)  # 스킬 저장소도 재파싱한 매치 단위로 교체(백그라운드, 응답을 기다리게 하지 않음)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB rebuild failed: {e}")
+        print(f"[REBUILD] rebuild_database failed: {e}")
+        raise HTTPException(status_code=500, detail="DB rebuild failed")
 
     _invalidate_response_cache()
     return {
@@ -1022,7 +1041,8 @@ async def get_scrim_detail(scrim_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_scrim_detail failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 # DEPRECATED (Phase 5): No longer used. Kept for manual recovery only.
@@ -1065,7 +1085,8 @@ async def get_match_detail(match_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_match_detail failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 # ── 사후 승패 보정(winner_override) ─────────────────────────────
@@ -1102,7 +1123,8 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] update_match_winner_override failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
     _update_match_wo_in_meta(scrim_id, match_id, wo, ws)
@@ -1160,7 +1182,8 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] patch_session failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
 
@@ -1347,7 +1370,8 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] patch_match failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
     if meta_fields:
@@ -1405,7 +1429,8 @@ async def complete_session(session_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] complete_session failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
     session = summarize_session(scrim, BASE_TEAM)
     session.pop("skipped_matches_without_base_team", None)

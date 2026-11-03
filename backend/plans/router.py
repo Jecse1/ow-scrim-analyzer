@@ -69,7 +69,8 @@ async def get_boards():
             data = await service.list_boards(db)
         return plans_cache_store(_BOARDS_CACHE_KEY, data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_boards failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.post("/api/plans/boards")
@@ -83,7 +84,8 @@ async def post_board(body: BoardCreate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] post_board failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.patch("/api/plans/boards/{board_id}")
@@ -97,7 +99,8 @@ async def patch_board(board_id: str, body: BoardUpdate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] patch_board failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.delete("/api/plans/boards/{board_id}")
@@ -111,7 +114,8 @@ async def delete_board(board_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] delete_board failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 # ── 맵 카드 ───────────────────────────────────────────────────────────────────
@@ -126,7 +130,8 @@ async def post_map(body: MapCreate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] post_map failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.patch("/api/plans/maps/{map_id}")
@@ -140,7 +145,8 @@ async def patch_map(map_id: str, body: MapUpdate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] patch_map failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.delete("/api/plans/maps/{map_id}")
@@ -154,7 +160,8 @@ async def delete_map(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] delete_map failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.post("/api/plans/maps/{map_id}/duplicate")
@@ -168,7 +175,8 @@ async def duplicate_map(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] duplicate_map failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 # ── 캔버스(전체 치환) ─────────────────────────────────────────────────────────
@@ -181,7 +189,8 @@ async def get_canvas(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] get_canvas failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.put("/api/plans/maps/{map_id}/canvas")
@@ -201,4 +210,5 @@ async def put_canvas(map_id: str, request: Request):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] put_canvas failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")

@@ -116,7 +116,8 @@ async def _load(base_team: str) -> tuple[dict, list]:
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB error: {e}")
+        print(f"[DB] _load failed: {e}")
+        raise HTTPException(status_code=500, detail="DB error")
 
 
 @router.get("/api/summary/maps", response_model=MapSummaryResponse)
