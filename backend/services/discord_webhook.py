@@ -19,6 +19,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 WEBHOOK_TIMEOUT_SEC = 5
+# 본문에 사용자 입력(세션명·팀명·맵명)이 들어간다 — 어떤 멘션(@everyone·@here·역할·사용자)도 알림을 보내지 않게.
+ALLOWED_MENTIONS = {"parse": []}
 
 # 실행 중 작업의 강한 참조(이벤트 루프는 task 를 약하게 참조 — 완료 전 GC 방지). 완료 시 제거.
 _PENDING: set = set()
@@ -28,7 +30,7 @@ async def _post_webhook(url: str, build_content: Callable[[], str]) -> None:
     try:
         content = build_content()
         async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SEC) as client:
-            r = await client.post(url, json={"content": content})
+            r = await client.post(url, json={"content": content, "allowed_mentions": ALLOWED_MENTIONS})
         if r.status_code >= 300:
             logger.warning("[WEBHOOK] discord webhook failed: HTTP %s", r.status_code)
     except Exception as e:  # 본문 생성·네트워크·타임아웃·URL 형식 등 전부 — 응답 경로로 전파하지 않는다

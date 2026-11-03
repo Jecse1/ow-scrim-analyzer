@@ -301,26 +301,43 @@ def summarize_period(scrims, frm=None, to=None, base_team: str = "") -> dict:
 
 
 DISCORD_CONTENT_LIMIT = 2000
+_ZWSP = "\u200b"  # 폭 없는 공백(U+200B)
+
+
+def _discord_escape(value) -> str:
+    """코드 블록 안에 넣을 사용자 입력: 백틱·@ 뒤에 폭 없는 공백을 끼운다.
+    백틱이 이어지지 않으니 ``` 로 블록을 닫을 수 없고, @everyone·<@id> 도 멘션 문법이 깨진다.
+    백틱·@ 가 없는 입력은 그대로(바이트 동일)."""
+    return str(value).replace("`", "`" + _ZWSP).replace("@", "@" + _ZWSP)
 
 
 def format_session_message(scrim, base_team: str, limit: int = DISCORD_CONTENT_LIMIT) -> str:
     """세션 등록 완료 알림 본문 — 고정폭 코드 블록 1개(폭 보정 없음).
     1줄: 날짜 · vs 상대 · (세션명) · [id:세션ID](반복 호출 시 채널에서 중복 식별용) / 매치마다 '맵 / 승·패·무·미정 / 우리:상대 점수' / 끝줄: 합계 승-패-무(미정 수).
-    limit 초과 시 뒤쪽 매치 줄부터 잘라내고 '…외 N매치' 줄을 붙인다."""
+    순서: 사용자 입력(날짜·상대 팀명·세션명·ID·맵명) 이스케이프 → limit 초과 시 뒤쪽 매치 줄부터 잘라내고
+    '…외 N매치' 줄 → 그래도 넘치면(긴 세션명·팀명) 머리줄을 잘라 닫는 ``` 를 항상 남긴다."""
     rows, _ = _session_match_rows(scrim, base_team)
     sm = summarize_session(scrim, base_team)
-    head = f"{sm['date']} vs {', '.join(sm['opponents']) or '-'} ({sm['scrim_name']}) [id:{sm['id']}]"
+    esc = _discord_escape
+    opponents = ", ".join(esc(o) for o in sm["opponents"]) or "-"
+    head = f"{esc(sm['date'])} vs {opponents} ({esc(sm['scrim_name'])}) [id:{esc(sm['id'])}]"
     total = f"합계 {sm['wins']}-{sm['losses']}-{sm['draws']}" + (f" (미정 {sm['no_result']})" if sm["no_result"] else "")
-    lines = [f"{r['map']} / {_RESULT_KO[r['result']]} / {r['our_score']}:{r['enemy_score']}" for r in rows]
+    lines = [f"{esc(r['map'])} / {_RESULT_KO[r['result']]} / {r['our_score']}:{r['enemy_score']}" for r in rows]
 
-    def _build(body):
+    def _build(head, body):
         return "```\n" + "\n".join([head, *body, total]) + "\n```"
 
-    msg = _build(lines)
+    body = lines
+    msg = _build(head, body)
     keep = len(lines)
     while len(msg) > limit and keep > 0:
         keep -= 1
-        msg = _build(lines[:keep] + [f"…외 {len(lines) - keep}매치"])
+        body = lines[:keep] + [f"…외 {len(lines) - keep}매치"]
+        msg = _build(head, body)
+    if len(msg) > limit:
+        # 매치 줄을 다 빼도 넘침 = 머리줄이 긺. 머리줄만 줄인다(이스케이프 뒤라 잘라도 백틱이 이어지지 않는다).
+        room = max(limit - (len(msg) - len(head)) - 1, 0)
+        msg = _build(head[:room] + "…", body)
     return msg[:limit]
 
 
