@@ -128,7 +128,7 @@ def test_summary_endpoints_validate_models(seeded):
         r = c.get(f"/api/summary/{name}", params=ALL)
         assert r.status_code == 200, (name, r.text)
         body = model.model_validate(r.json())
-        assert body.meta.definitions_version == "1"
+        assert body.meta.definitions_version == "2"
         assert body.meta.population == population
         assert (body.meta.from_, body.meta.to, body.meta.base_team) == ("2000-01-01", "2099-12-31", BASE)
 

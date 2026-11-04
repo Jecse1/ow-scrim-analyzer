@@ -57,6 +57,9 @@ def _build_fight_records_payload(sessions, base_team: str) -> dict:
                 "match_result": ("win" if eff_winner == base_team
                                   else ("draw" if (not eff_winner or eff_winner == "Draw") else "loss")),
                 "source": (getattr(m, 'source', None) or 'log'),
+                # 승자 출처(override/manual/draw/undetermined/score/progress) — 요약 API 가 미확정을 승률 분모에서
+                # 빼는 데 쓴다(추가 필드만, 기존 필드·match_result 판정 무변경).
+                "winner_source": getattr(m, 'winner_source', None),
             })
             if (getattr(m, 'source', None) or 'log') != 'log':
                 continue  # 수기 매치 — 한타 레코드 없음

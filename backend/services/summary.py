@@ -38,7 +38,7 @@ from zoneinfo import ZoneInfo
 from game_data import canonical_map_name
 from parsers.log_parser import is_match_level_map
 
-DEFINITIONS_VERSION = "1"
+DEFINITIONS_VERSION = "2"   # 2: 미확정(undetermined)을 무승부·승률 분모에서 분리
 
 POPULATION_FIGHT_MATCHES_PLUS_MANUAL = "fight_matches_plus_manual"
 POPULATION_ALL_MATCHES = "all_matches"
@@ -75,11 +75,14 @@ def _known(r) -> bool:
 
 
 def _wl(results) -> dict:
-    """결과 문자열 목록('win'/'loss'/'draw') → 승·패·무와 맵 승률(분모 = 세 값의 합)."""
+    """결과 문자열 목록('win'/'loss'/'draw'/'undetermined') → 승·패·무와 맵 승률(분모 = 승+패+무).
+    미확정(로그로 승자를 못 가린 매치, winner_source=undetermined)은 분모·무승부에서 빼고 건수만 센다."""
     w = sum(1 for x in results if x == "win")
     l = sum(1 for x in results if x == "loss")
     d = sum(1 for x in results if x == "draw")
-    return {"matches": w + l + d, "wins": w, "losses": l, "draws": d, "map_winrate": _rate(w, w + l + d)}
+    u = sum(1 for x in results if x == "undetermined")
+    return {"matches": w + l + d, "wins": w, "losses": l, "draws": d, "undetermined": u,
+            "map_winrate": _rate(w, w + l + d)}
 
 
 def _match_winners(scrims) -> dict:
@@ -153,6 +156,8 @@ def _scoped_matches(records, match_summaries, frm, to, opponent, scrims):
             if result is None:
                 excluded["null_result_matches"] += 1   # D7
                 continue
+        if result == "draw" and ms.get("winner_source") == "undetermined":
+            result = "undetermined"   # 로그로 승자를 못 가린 Draw — 승률 분모에서 제외(건수만)
         rows.append({
             "match_id": mid, "session_id": ms.get("session_id"),
             "map": canonical_map_name(ms.get("map_name")), "map_type": ms.get("map_type"),
@@ -220,13 +225,14 @@ def summarize_opponents(records, match_summaries, frm=None, to=None, scrims=None
 
 
 # ── 3. 기간(세션별) ───────────────────────────────────────────────────────────
-_RESULT_KO = {"win": "승", "loss": "패", "draw": "무", None: "미정"}
+_RESULT_KO = {"win": "승", "loss": "패", "draw": "무", "undetermined": "미확정", None: "미정"}
 
 
 def _session_match_rows(scrim, base_team: str) -> tuple[list, int]:
     """세션 dict(/api/scrims 형식) → base_team 참가 매치 행 [{map, opponent, result, our_score, enemy_score}]과
     base_team 미참가로 건너뛴 매치 수. result = D1(유효 승자 winner = winner_override or winner) 기준
-    'win'/'loss'/'draw', 승자 빈값은 None(D7). 매치 순서는 입력 그대로(match_index 순)."""
+    'win'/'loss'/'draw', 로그로 승자를 못 가린 매치(winner_source=undetermined)는 'undetermined',
+    승자 빈값은 None(D7). 매치 순서는 입력 그대로(match_index 순)."""
     rows, skipped = [], 0
     for m in scrim.get("matches") or []:
         t1, t2 = m.get("team1_name"), m.get("team2_name")
@@ -238,11 +244,15 @@ def _session_match_rows(scrim, base_team: str) -> tuple[list, int]:
             skipped += 1
             continue
         w = (m.get("winner") or "").strip()  # 유효 승자(winner_override or winner)
+        if not w:
+            result = None
+        elif m.get("winner_source") == "undetermined":
+            result = "undetermined"
+        else:
+            result = "draw" if w == "Draw" else ("win" if w == base_team else "loss")
         rows.append({
-            "map": canonical_map_name(m.get("map_name")), "opponent": opp,
-            "result": None if not w else ("draw" if w == "Draw" else ("win" if w == base_team else "loss")),
+            "map": canonical_map_name(m.get("map_name")), "opponent": opp, "result": result,
             "our_score": ours or 0, "enemy_score": theirs or 0,
-            "undetermined": m.get("winner_source") == "undetermined",
         })
     return rows, skipped
 
@@ -261,8 +271,8 @@ def summarize_session(scrim, base_team: str) -> dict:
         "opponents": opponents, "matches": len(rows),
         "wins": wl["wins"], "losses": wl["losses"], "draws": wl["draws"],
         "no_result": sum(1 for r in rows if r["result"] is None),
-        # 무승부(draws) 중 로그로 못 가린 매치 수 — 승률·분모 정의는 그대로(04 미결: 분모 제외 여부)
-        "undetermined": sum(1 for r in rows if r["undetermined"]),
+        # 로그로 승자를 못 가린 매치 수 — draws 와 별개, 승률 분모에서 제외(definitions_version 2)
+        "undetermined": wl["undetermined"],
         "maps": [r["map"] for r in rows],
         "skipped_matches_without_base_team": skipped,
     }
@@ -273,7 +283,8 @@ def summarize_period(scrims, frm=None, to=None, base_team: str = "") -> dict:
     no_result, maps[]} + total + excluded. 세션 순서는 입력(/api/scrims: date DESC, id DESC) 그대로.
     base_team 이 참가하지 않은 매치는 건너뛰고 total.skipped_matches_without_base_team 로 센다(fight-records 와 동일).
     base_team 참가 매치가 0인 세션은 행에서 빼고 excluded.sessions_without_base_team 로 센다.
-    matches = base_team 참가 매치 수(결과 없음 포함), wins+losses+draws = 결과 있는 매치(D7)."""
+    matches = base_team 참가 매치 수(결과 없음·미확정 포함) = W + L + D + undetermined + no_result,
+    승률 분모 decided_matches = W + L + D(미확정·결과 없음 제외)."""
     sessions = []
     skipped = 0
     no_base_sessions = 0
@@ -321,7 +332,10 @@ def format_session_message(scrim, base_team: str, limit: int = DISCORD_CONTENT_L
     esc = _discord_escape
     opponents = ", ".join(esc(o) for o in sm["opponents"]) or "-"
     head = f"{esc(sm['date'])} vs {opponents} ({esc(sm['scrim_name'])}) [id:{esc(sm['id'])}]"
-    total = f"합계 {sm['wins']}-{sm['losses']}-{sm['draws']}" + (f" (미정 {sm['no_result']})" if sm["no_result"] else "")
+    # 괄호는 값이 있는 항목만: 미확정(로그로 승자 못 가림) · 미정(승자 빈값). 무(D)는 실제 무승부만.
+    extra = ([f"미확정 {sm['undetermined']}"] if sm["undetermined"] else []) + \
+            ([f"미정 {sm['no_result']}"] if sm["no_result"] else [])
+    total = f"합계 {sm['wins']}-{sm['losses']}-{sm['draws']}" + (f" ({', '.join(extra)})" if extra else "")
     lines = [f"{esc(r['map'])} / {_RESULT_KO[r['result']]} / {r['our_score']}:{r['enemy_score']}" for r in rows]
 
     def _build(head, body):

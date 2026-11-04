@@ -31,10 +31,11 @@ class SummaryExcluded(BaseModel):
 class MapSummaryRow(BaseModel):
     map: str = Field(description="정본 ko 맵명. 합계 행은 '__total__'")
     map_type: Optional[str] = None
-    matches: int = Field(description="맵 승률 분모 = wins + losses + draws")
+    matches: int = Field(description="맵 승률 분모 = wins + losses + draws(미확정 제외)")
     wins: int
     losses: int
-    draws: int
+    draws: int = Field(description="실제 무승부만(미확정 제외)")
+    undetermined: int = Field(0, description="로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 분모에서 제외, 건수만")
     map_winrate: Optional[float] = None
     first_fights: int = Field(description="첫 한타 승률 분모(us/them 판정 가능)")
     first_fight_wins: int
@@ -54,10 +55,11 @@ class MapSummaryResponse(BaseModel):
 class OpponentSummaryRow(BaseModel):
     opponent: str = Field(description="상대 팀명. 합계 행은 '__total__'")
     sessions: int
-    matches: int
+    matches: int = Field(description="맵 승률 분모 = wins + losses + draws(미확정 제외)")
     wins: int
     losses: int
-    draws: int
+    draws: int = Field(description="실제 무승부만(미확정 제외)")
+    undetermined: int = Field(0, description="로그로 승자를 못 가린 매치 — 승률 분모에서 제외, 건수만")
     map_winrate: Optional[float] = None
     first_fights: int
     first_fight_wins: int
@@ -78,12 +80,12 @@ class SessionSummaryRow(BaseModel):
     date: str
     scrim_name: str
     opponents: List[str]
-    matches: int = Field(description="base_team 참가 매치 수(결과 없음 포함)")
+    matches: int = Field(description="base_team 참가 매치 수(결과 없음·미확정 포함)")
     wins: int
     losses: int
     draws: int
     no_result: int
-    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
+    undetermined: int = Field(0, description="로그로 승자를 못 가린 매치(winner_source=undetermined) — draws 와 별개, 승률 분모에서 제외")
     maps: List[str]
 
 
@@ -94,9 +96,9 @@ class PeriodTotal(BaseModel):
     losses: int
     draws: int
     no_result: int
-    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
+    undetermined: int = Field(0, description="로그로 승자를 못 가린 매치(winner_source=undetermined) — draws 와 별개, 승률 분모에서 제외")
     map_winrate: Optional[float] = None
-    decided_matches: int = Field(description="map_winrate 분모 = wins + losses + draws")
+    decided_matches: int = Field(description="map_winrate 분모 = wins + losses + draws(미확정·결과 없음 제외)")
     skipped_matches_without_base_team: int
 
 
@@ -117,12 +119,12 @@ class CompletedSession(BaseModel):
     date: str
     scrim_name: str
     opponents: List[str]
-    matches: int = Field(description="BASE_TEAM 참가 매치 수(결과 없음 포함)")
+    matches: int = Field(description="BASE_TEAM 참가 매치 수(결과 없음·미확정 포함)")
     wins: int
     losses: int
     draws: int
     no_result: int
-    undetermined: int = Field(0, description="draws 중 로그로 승자를 못 가린 매치(winner_source=undetermined) — 승률 정의는 무변경")
+    undetermined: int = Field(0, description="로그로 승자를 못 가린 매치(winner_source=undetermined) — draws 와 별개, 승률 분모에서 제외")
     maps: List[str]
 
 

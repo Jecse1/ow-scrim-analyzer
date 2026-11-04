@@ -2,7 +2,7 @@
  "complete": {
   "session": {
    "date": "2026-10-08",
-   "draws": 2,
+   "draws": 1,
    "id": "2610082022",
    "losses": 1,
    "maps": [
@@ -45,6 +45,7 @@
     "map_type": "쟁탈",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 0
    },
    {
@@ -59,6 +60,7 @@
     "map_type": "쟁탈",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    },
    {
@@ -73,6 +75,7 @@
     "map_type": "혼합",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    },
    {
@@ -87,21 +90,8 @@
     "map_type": "밀기",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
-   },
-   {
-    "draws": 1,
-    "fights": 3,
-    "first_fight_winrate": 0.5,
-    "first_fight_wins": 1,
-    "first_fights": 2,
-    "first_fights_unknown": 0,
-    "losses": 0,
-    "map": "도라도",
-    "map_type": "화물",
-    "map_winrate": 0.0,
-    "matches": 1,
-    "wins": 0
    },
    {
     "draws": 0,
@@ -115,6 +105,7 @@
     "map_type": "쟁탈",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    },
    {
@@ -129,6 +120,7 @@
     "map_type": "혼합",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 0
    },
    {
@@ -143,18 +135,34 @@
     "map_type": "쟁탈",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "도라도",
+    "map_type": "화물",
+    "map_winrate": null,
+    "matches": 0,
+    "undetermined": 1,
     "wins": 0
    }
   ],
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "fight_matches_plus_manual",
    "to": "2099-12-31"
   },
   "total": {
-   "draws": 2,
+   "draws": 1,
    "fights": 33,
    "first_fight_winrate": 0.5,
    "first_fight_wins": 6,
@@ -163,8 +171,9 @@
    "losses": 2,
    "map": "__total__",
    "map_type": null,
-   "map_winrate": 0.5,
-   "matches": 8,
+   "map_winrate": 0.5714285714285714,
+   "matches": 7,
+   "undetermined": 1,
    "wins": 4
   }
  },
@@ -187,6 +196,7 @@
     "map_type": "쟁탈",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 0
    },
    {
@@ -201,6 +211,7 @@
     "map_type": "쟁탈",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    },
    {
@@ -215,12 +226,13 @@
     "map_type": "밀기",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    }
   ],
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2026-10-01",
    "population": "fight_matches_plus_manual",
    "to": "2026-10-01"
@@ -237,6 +249,7 @@
    "map_type": null,
    "map_winrate": 0.6666666666666666,
    "matches": 3,
+   "undetermined": 0,
    "wins": 2
   }
  },
@@ -259,21 +272,8 @@
     "map_type": "혼합",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
-   },
-   {
-    "draws": 1,
-    "fights": 3,
-    "first_fight_winrate": 0.5,
-    "first_fight_wins": 1,
-    "first_fights": 2,
-    "first_fights_unknown": 0,
-    "losses": 0,
-    "map": "도라도",
-    "map_type": "화물",
-    "map_winrate": 0.0,
-    "matches": 1,
-    "wins": 0
    },
    {
     "draws": 0,
@@ -287,6 +287,7 @@
     "map_type": "쟁탈",
     "map_winrate": 1.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 1
    },
    {
@@ -301,6 +302,7 @@
     "map_type": "혼합",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
     "wins": 0
    },
    {
@@ -315,18 +317,34 @@
     "map_type": "쟁탈",
     "map_winrate": 0.0,
     "matches": 1,
+    "undetermined": 0,
+    "wins": 0
+   },
+   {
+    "draws": 0,
+    "fights": 3,
+    "first_fight_winrate": 0.5,
+    "first_fight_wins": 1,
+    "first_fights": 2,
+    "first_fights_unknown": 0,
+    "losses": 0,
+    "map": "도라도",
+    "map_type": "화물",
+    "map_winrate": null,
+    "matches": 0,
+    "undetermined": 1,
     "wins": 0
    }
   ],
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "fight_matches_plus_manual",
    "to": "2099-12-31"
   },
   "total": {
-   "draws": 2,
+   "draws": 1,
    "fights": 12,
    "first_fight_winrate": 0.5,
    "first_fight_wins": 4,
@@ -335,8 +353,9 @@
    "losses": 1,
    "map": "__total__",
    "map_type": null,
-   "map_winrate": 0.4,
-   "matches": 5,
+   "map_winrate": 0.5,
+   "matches": 4,
+   "undetermined": 1,
    "wins": 2
   }
  },
@@ -348,23 +367,24 @@
   },
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "fight_matches_plus_manual",
    "to": "2099-12-31"
   },
   "opponents": [
    {
-    "draws": 2,
+    "draws": 1,
     "first_fight_winrate": 0.5,
     "first_fight_wins": 4,
     "first_fights": 8,
     "first_fights_unknown": 0,
     "losses": 1,
-    "map_winrate": 0.4,
-    "matches": 5,
+    "map_winrate": 0.5,
+    "matches": 4,
     "opponent": "팀C",
     "sessions": 1,
+    "undetermined": 1,
     "wins": 2
    },
    {
@@ -378,20 +398,22 @@
     "matches": 3,
     "opponent": "Team B",
     "sessions": 1,
+    "undetermined": 0,
     "wins": 2
    }
   ],
   "total": {
-   "draws": 2,
+   "draws": 1,
    "first_fight_winrate": 0.5,
    "first_fight_wins": 6,
    "first_fights": 12,
    "first_fights_unknown": 0,
    "losses": 2,
-   "map_winrate": 0.5,
-   "matches": 8,
+   "map_winrate": 0.5714285714285714,
+   "matches": 7,
    "opponent": "__total__",
    "sessions": 2,
+   "undetermined": 1,
    "wins": 4
   }
  },
@@ -401,7 +423,7 @@
   },
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "all_matches",
    "to": "2099-12-31"
@@ -409,7 +431,7 @@
   "sessions": [
    {
     "date": "2026-10-08",
-    "draws": 2,
+    "draws": 1,
     "losses": 1,
     "maps": [
      "리장 타워",
@@ -451,10 +473,10 @@
    }
   ],
   "total": {
-   "decided_matches": 8,
-   "draws": 2,
+   "decided_matches": 7,
+   "draws": 1,
    "losses": 2,
-   "map_winrate": 0.5,
+   "map_winrate": 0.5714285714285714,
    "matches": 10,
    "no_result": 2,
    "sessions": 2,
@@ -469,7 +491,7 @@
   },
   "meta": {
    "base_team": "Team B",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "all_matches",
    "to": "2099-12-31"
@@ -535,7 +557,7 @@
   },
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "log_fights",
    "to": "2099-12-31"
@@ -658,7 +680,7 @@
   },
   "meta": {
    "base_team": "Team A",
-   "definitions_version": "1",
+   "definitions_version": "2",
    "from": "2000-01-01",
    "population": "log_fights",
    "to": "2099-12-31"
@@ -670,6 +692,6 @@
   }
  },
  "webhook_content": [
-  "```\n2026-10-08 vs 팀C (261008-팀C) [id:2610082022]\n리장 타워 / 승 / 2:0\n도라도 / 무 / 0:0\n눔바니 / 승 / 1:1\n왕의 길 / 패 / 1:2\n부산 / 미정 / 0:0\n일리오스 / 무 / 1:1\n하나오카 / 미정 / 0:0\n합계 2-1-2 (미정 2)\n```"
+  "```\n2026-10-08 vs 팀C (261008-팀C) [id:2610082022]\n리장 타워 / 승 / 2:0\n도라도 / 미확정 / 0:0\n눔바니 / 승 / 1:1\n왕의 길 / 패 / 1:2\n부산 / 미정 / 0:0\n일리오스 / 무 / 1:1\n하나오카 / 미정 / 0:0\n합계 2-1-1 (미확정 1, 미정 2)\n```"
  ]
 }

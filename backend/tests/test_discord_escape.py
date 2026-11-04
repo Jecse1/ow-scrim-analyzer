@@ -86,3 +86,22 @@ def test_webhook_payload_disables_mentions(monkeypatch):
     content = format_session_message(_scrim(name="```@everyone"), BASE)
     asyncio.run(discord_webhook._post_webhook("http://127.0.0.1:9/hook", lambda: content))
     assert sent["json"] == {"content": content, "allowed_mentions": {"parse": []}}
+
+
+def _m(winner, source=None, t2="팀C"):
+    return {"map_name": "리장 타워", "team1_name": BASE, "team2_name": t2, "winner": winner,
+            "winner_source": source, "score_t1": 0, "score_t2": 0}
+
+
+def test_total_line_lists_only_present_extras():
+    # definitions_version 2: 무(D)는 실제 무승부만, 괄호는 값이 있는 항목만(미확정 → 미정 순)
+    def total(matches):
+        return format_session_message({"id": "2611040305", "date": "2026-11-04", "scrim_name": "s",
+                                       "matches": matches}, BASE).split("\n")[-2]
+    assert total([_m(BASE), _m("Draw", "draw")]) == "합계 1-0-1"
+    assert total([_m(BASE), _m("Draw", "undetermined")]) == "합계 1-0-0 (미확정 1)"
+    assert total([_m(BASE), _m("")]) == "합계 1-0-0 (미정 1)"
+    assert total([_m("팀C"), _m("Draw", "undetermined"), _m("Draw", "draw"), _m("")]) == "합계 0-1-1 (미확정 1, 미정 1)"
+    lines = format_session_message({"id": "x", "date": "d", "scrim_name": "s",
+                                    "matches": [_m("Draw", "undetermined")]}, BASE).split("\n")
+    assert lines[2] == "리장 타워 / 미확정 / 0:0"

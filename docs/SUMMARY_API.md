@@ -1,4 +1,4 @@
-# 집계 API · 세션 완료 알림 계약 (definitions_version 1)
+# 집계 API · 세션 완료 알림 계약 (definitions_version 2)
 
 디스코드 봇 등 외부 조회자가 쓰는 서버 집계 API의 계약 문서다. 봇은 이 응답을 표로 바꾸기만 하고
 수치를 다시 계산하지 않는다. 집계 정의의 정본은 `backend/services/summary.py`(D1~D8),
@@ -46,7 +46,7 @@
 ## 정의 (D1~D8)
 | 정의 | 내용 |
 |---|---|
-| D1 매치 결과 | 유효 승자 = `winner_override`(수기 보정) 우선, 없으면 원본 `winner`. 기준 팀이면 win, `"Draw"`면 draw, 다른 팀명이면 loss. 맵 승률 = wins / (wins + losses + draws). 무승부는 분모에 포함한다. |
+| D1 매치 결과 | 유효 승자 = `winner_override`(수기 보정) 우선, 없으면 원본 `winner`. 기준 팀이면 win, `"Draw"`면 draw, 다른 팀명이면 loss. 맵 승률 = wins / (wins + losses + draws). 실제 무승부는 분모에 포함한다. 단 **로그로 승자를 못 가린 매치(`winner_source=undetermined`)는 무승부가 아니라 `undetermined`로 따로 세고 승률 분모에서 뺀다**(definitions_version 2, 2026-11). |
 | D2 첫 한타 | 밀기·플래시포인트는 매치당 1개, 그 외(쟁탈·화물·혼합·격돌·Unknown)는 라운드마다 1개. (매치, 라운드)별로 가장 먼저 시작한 한타. 첫 한타 승률 분모는 승자 판정 가능(us/them)한 것만이다. |
 | D3 상대 | 매치의 두 팀명 중 base_team이 아닌 쪽. 세션명은 파싱하지 않는다. |
 | D4 기간 | 위 "기간" 참조 |
@@ -77,8 +77,9 @@
 | 필드 (maps[] · total) | 구분 | 설명 |
 |---|---|---|
 | `map` | 핵심 | 정본 한글 맵명(D8) |
-| `matches` | 핵심 | 맵 승률 분모 = wins + losses + draws |
-| `wins`, `losses`, `draws` | 핵심 | D1 |
+| `matches` | 핵심 | 맵 승률 분모 = wins + losses + draws(미확정 제외) |
+| `wins`, `losses`, `draws` | 핵심 | D1(`draws` = 실제 무승부만) |
+| `undetermined` | 참고 | 로그로 승자를 못 가린 매치 수 — 분모에서 제외, 건수만 |
 | `map_winrate` | 핵심 | wins / matches |
 | `first_fights` | 핵심 | 첫 한타 승률 분모(판정 가능) |
 | `first_fight_wins` | 핵심 | |
@@ -97,7 +98,7 @@
 | 필드 | 구분 | 설명 |
 |---|---|---|
 | `opponent` | 핵심 | D3 |
-| `matches`, `wins`, `losses`, `draws`, `map_winrate` | 핵심 | maps와 같은 정의 |
+| `matches`, `wins`, `losses`, `draws`, `undetermined`, `map_winrate` | 핵심 | maps와 같은 정의 |
 | `first_fights`, `first_fight_wins`, `first_fight_winrate` | 핵심 | |
 | `sessions` | 참고 | 승패 집계 대상 매치가 속한 세션 수 |
 | `first_fights_unknown` | 참고 | |
@@ -114,14 +115,15 @@
 | `matches` | 핵심 | base_team 참가 매치 수(결과 없음 포함) |
 | `wins`, `losses`, `draws` | 핵심 | D1 |
 | `maps` | 핵심 | 정본 맵명 목록(매치 순서) |
-| `no_result` | 참고 | 승자 빈 매치 수(D7) — matches = W + L + D + no_result |
+| `no_result` | 참고 | 승자 빈 매치 수(D7) — matches = W + L + D + undetermined + no_result |
+| `undetermined` | 참고 | 로그로 승자를 못 가린 매치 수(무승부와 별개) |
 
 | 필드 (total) | 구분 | 설명 |
 |---|---|---|
 | `sessions`, `matches`, `wins`, `losses`, `draws` | 핵심 | |
 | `map_winrate` | 핵심 | wins / decided_matches |
-| `decided_matches` | 핵심 | 승률 분모 = W + L + D |
-| `no_result` | 참고 | |
+| `decided_matches` | 핵심 | 승률 분모 = W + L + D(미확정·결과 없음 제외) |
+| `no_result`, `undetermined` | 참고 | |
 | `skipped_matches_without_base_team` | 참고 | base_team이 참가하지 않아 건너뛴 매치 수 |
 
 `excluded.sessions_without_base_team`(참고): 기간 안에 있지만 base_team 참가 매치가 0인 세션 수(행에서 제외).
@@ -178,7 +180,7 @@
 | `session.opponents` | 핵심 | |
 | `session.matches`, `.wins`, `.losses`, `.draws` | 핵심 | period의 세션 행과 같은 계산 |
 | `session.maps` | 핵심 | 정본 맵명(매치 순서) |
-| `session.no_result` | 참고 | |
+| `session.no_result`, `.undetermined` | 참고 | |
 | `webhook` | 핵심 | `"queued"`(발송 작업 분리됨 — 성공 보장 아님) / `"disabled"`(`DISCORD_WEBHOOK_URL` 미설정, no-op) |
 
 ### 웹후크 (백엔드 env `DISCORD_WEBHOOK_URL`, 선택)
@@ -188,12 +190,13 @@
   ```
   2026-10-08 vs 팀C (261008-팀C) [id:2610082022]
   리장 타워 / 승 / 2:0
+  도라도 / 미확정 / 0:0
   부산 / 미정 / 0:0
-  합계 2-1-2 (미정 2)
+  합계 2-1-1 (미확정 1, 미정 2)
   ```
   - 1줄: 날짜 · 상대 · (세션명) · `[id:세션ID]`(반복 호출로 같은 세션 알림이 중복될 때 채널에서 식별용)
-  - 매치마다 `맵 / 승·패·무·미정 / 우리:상대 점수`
-  - 끝줄: `합계 승-패-무` (미정이 있으면 괄호로 덧붙임)
+  - 매치마다 `맵 / 승·패·무·미확정·미정 / 우리:상대 점수`
+  - 끝줄: `합계 승-패-무`(무 = 실제 무승부만). 미확정·미정이 있으면 값이 있는 것만 괄호로 덧붙인다(`(미확정 1, 미정 2)`, `(미정 2)`)
   - 2,000자를 넘으면 뒤쪽 매치 줄부터 잘라내고 `…외 N매치`를 붙인다.
 - 반복 호출하면 매번 다시 발송한다(무상태 — 중복 억제 없음).
 - 실패(연결·타임아웃·4xx·5xx·본문 생성 오류)는 발송 작업 안에서 전부 잡는다. `/complete` 응답에는 영향이 없다.
