@@ -51,6 +51,7 @@ def iso():
     mp.setattr(scrims, "ROW_DATA_DIR", rows)
     mp.setattr(database, "_DB_PATH", db_path)            # rebuild 백업 원본
     mp.setattr(scrims, "start_backfill", lambda force=False: None)   # 스킬 백필은 공유 DB 를 읽으므로 끈다
+    mp.setattr(scrims, "BASE_TEAM", BASE)   # 기준 팀은 배포마다 다르다(config) — test_summary 와 같은 관례
     with TestClient(main.app) as c:
         yield c, rows, scrims
         c.portal.call(engine.dispose)
