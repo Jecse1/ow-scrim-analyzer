@@ -402,8 +402,8 @@ class _SlowClose:
         return _Ctx()
 
 
-@pytest.mark.xfail(strict=True, reason="D2·D3: 같은 ID 동시 등록 — PK 충돌 500·meta 덮어쓰기 / 삭제 ID 재사용 시 매치 병합")
 def test_d3_concurrent_register_gets_distinct_ids(iso, monkeypatch):
+    # D3: 등록은 프로세스 내 잠금으로 직렬화 — 동시 등록도 서로 다른 ID(두 번째는 _1), 세션마다 meta = DB
     c, rows, scrims = iso
     monkeypatch.setattr(scrims, "AsyncSessionLocal", _SlowClose(scrims.AsyncSessionLocal))
     body = lambda n, d: {"scrimName": n, "date": d, "startHour": "03", "endHour": "04", "matches": [_seg()]}

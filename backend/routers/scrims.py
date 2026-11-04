@@ -9,6 +9,8 @@ import os
 import json
 import glob
 import uuid
+import asyncio
+import weakref
 import tempfile
 import threading
 from datetime import datetime
@@ -303,8 +305,27 @@ def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
     return _update_meta_json(scrim_id, mutate)
 
 
+# 등록 직렬화: "ID 고르기 → DB 커밋 → meta 확정" 사이에 다른 등록이 끼면 같은 ID 를 골라 PK 충돌(500)이나
+# 삭제 ID 재사용 시 두 세션의 매치가 한 ID 에 섞였다. 프로세스(=이벤트 루프)당 잠금 1개 — 운영은 uvicorn 단일 워커.
+# 루프별로 따로 두는 것은 테스트에서 TestClient 마다 루프가 달라서다(asyncio.Lock 은 처음 기다린 루프에 묶인다).
+_REGISTER_LOCKS: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _register_lock() -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    lock = _REGISTER_LOCKS.get(loop)
+    if lock is None:
+        lock = _REGISTER_LOCKS[loop] = asyncio.Lock()
+    return lock
+
+
 @router.post("/api/scrim/manual-register")
 async def register_scrim_manual(request: Request):
+    async with _register_lock():
+        return await _register_scrim_manual_locked(request)
+
+
+async def _register_scrim_manual_locked(request: Request):
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
