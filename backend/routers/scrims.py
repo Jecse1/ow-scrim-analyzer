@@ -554,8 +554,13 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     log_text, enc_fallback = _decode_log_bytes(content)
 
     is_dry = (dry_run or "").strip() in ("1", "true", "yes")
+    # 원문 로그는 DB 커밋이 성공한 뒤에만 교체한다 — 먼저 같은 폴더 임시 파일에 쓰고 커밋 후 os.replace.
+    # (예전: 파싱·DB 전에 덮어써 실패 시 디스크는 새 로그·DB 는 옛 결과 → 다음 rebuild 가 새 로그를 재파싱)
+    log_path = f"{ROW_DATA_DIR}/{scrim_id}_{match_index}.txt"
+    log_tmp = None
     if not is_dry:
-        with open(f"{ROW_DATA_DIR}/{scrim_id}_{match_index}.txt", "w", encoding="utf-8") as f:
+        fd, log_tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(log_path)), suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(log_text)
 
     try:
@@ -680,6 +685,8 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     ))
             await db.commit()
             tprint(f"[DB] upload OK: match={match_id_val}")
+            os.replace(log_tmp, log_path)
+            log_tmp = None
             await store_match_abilities(match_id_val, ability)  # 로그 교체면 그 매치 스킬 행을 통째로 바꾼다
             _invalidate_response_cache()  # 커밋 직후(아래 meta 쓰기가 실패해도 캐시가 DB 보다 낡지 않게)
             # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
@@ -698,6 +705,10 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     except Exception as e:
         tprint(f"[DB] upload_match_log failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
+    finally:
+        if log_tmp:   # 커밋 전에 끝남(404·파싱·DB 오류·dry_run 아님) — 기존 원문 로그는 그대로
+            try: os.unlink(log_tmp)
+            except OSError: pass
 
 
 def _parse_upload_log(log_text: str, enc_fallback: bool, c_t1: str, c_t2: str,

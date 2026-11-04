@@ -427,8 +427,8 @@ def test_d3_concurrent_register_gets_distinct_ids(iso, monkeypatch):
 
 
 # ── 업로드 실패 ─────────────────────────────────────────────────────────────
-@pytest.mark.xfail(strict=True, reason="D4: 업로드가 원문 로그를 파싱·커밋 전에 덮어써 실패 시 디스크≠DB")
 def test_d4_upload_failure_keeps_previous_log(iso, monkeypatch):
+    # D4: 원문 로그는 DB 커밋 뒤에만 교체(임시 파일 → os.replace). 실패하면 기존 로그 그대로, 임시 파일 없음.
     c, rows, scrims = iso
     sid, mids = _register(c, "d4", [_seg()], date="2026-11-09", hours=("05", "06"))
     assert _upload(c, sid, 1).status_code == 200
@@ -439,6 +439,7 @@ def test_d4_upload_failure_keeps_previous_log(iso, monkeypatch):
     monkeypatch.setattr(scrims, "_parse_upload_log", boom)
     assert _upload(c, sid, 1, body=b"[00:00:00] ,garbage\n").status_code == 500
     assert _read(f"{rows}/{sid}_1.txt") == original
+    assert not [f for f in os.listdir(rows) if f.endswith(".tmp")]
 
 
 # ── rebuild 중 쓰기 ─────────────────────────────────────────────────────────
