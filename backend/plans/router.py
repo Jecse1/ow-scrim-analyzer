@@ -21,6 +21,7 @@ except Exception as _e:
 
 from plans import service
 from plans.cache import plans_cache_get, plans_cache_store, plans_cache_invalidate
+from services.rebuild_job import raise_if_rebuilding
 from log_time import tprint
 
 router = APIRouter()
@@ -31,6 +32,12 @@ _BOARDS_CACHE_KEY = "plans:boards"
 def _require_db():
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
+
+
+def _require_writable():
+    """쓰기 API 가드 — DB 가용 + rebuild 진행 중 아님(재구축은 사본 위에서 돌아 그사이 저장은 교체 때 사라진다 → 409)."""
+    _require_db()
+    raise_if_rebuilding()
 
 
 def _map_error(e: "service.PlanError") -> HTTPException:
@@ -76,7 +83,7 @@ async def get_boards():
 
 @router.post("/api/plans/boards")
 async def post_board(body: BoardCreate):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             out = await service.create_board(db, body.name)
@@ -91,7 +98,7 @@ async def post_board(body: BoardCreate):
 
 @router.patch("/api/plans/boards/{board_id}")
 async def patch_board(board_id: str, body: BoardUpdate):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             out = await service.update_board(db, board_id, name=body.name, sort_order=body.sort_order)
@@ -106,7 +113,7 @@ async def patch_board(board_id: str, body: BoardUpdate):
 
 @router.delete("/api/plans/boards/{board_id}")
 async def delete_board(board_id: str):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             await service.delete_board(db, board_id)
@@ -122,7 +129,7 @@ async def delete_board(board_id: str):
 # ── 맵 카드 ───────────────────────────────────────────────────────────────────
 @router.post("/api/plans/maps")
 async def post_map(body: MapCreate):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             out = await service.create_map(db, body.board_id, body.map_id)
@@ -137,7 +144,7 @@ async def post_map(body: MapCreate):
 
 @router.patch("/api/plans/maps/{map_id}")
 async def patch_map(map_id: str, body: MapUpdate):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             out = await service.update_map(db, map_id, board_id=body.board_id, sort_order=body.sort_order)
@@ -152,7 +159,7 @@ async def patch_map(map_id: str, body: MapUpdate):
 
 @router.delete("/api/plans/maps/{map_id}")
 async def delete_map(map_id: str):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             await service.delete_map(db, map_id)
@@ -167,7 +174,7 @@ async def delete_map(map_id: str):
 
 @router.post("/api/plans/maps/{map_id}/duplicate")
 async def duplicate_map(map_id: str):
-    _require_db()
+    _require_writable()
     try:
         async with AsyncSessionLocal() as db:
             out = await service.duplicate_map(db, map_id)
@@ -196,7 +203,7 @@ async def get_canvas(map_id: str):
 
 @router.put("/api/plans/maps/{map_id}/canvas")
 async def put_canvas(map_id: str, request: Request):
-    _require_db()
+    _require_writable()
     try:
         body = await request.json()
     except Exception:

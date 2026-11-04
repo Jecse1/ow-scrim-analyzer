@@ -167,7 +167,8 @@ def api():
         with open(golden_util.SAMPLE_LOG, "rb") as f:
             c.post("/api/matches/upload", data={"scrim_id": sid, "match_index": "1"},
                    files={"file": ("log.txt", f.read(), "text/plain")}).raise_for_status()
-        assert c.post("/api/admin/rebuild-db").status_code == 200   # 기준 상태 = rebuild 결과
+        assert c.post("/api/admin/rebuild-db").status_code == 202   # 기준 상태 = rebuild 결과
+        assert _wait(c)["state"] == "done"
         yield c, scrims, db_path, rows, sid
         c.portal.call(engine.dispose)
     mp.undo()
@@ -196,18 +197,19 @@ def _backups(db_path):
     return set(glob.glob(glob.escape(db_path) + ".before_rebuild_*"))
 
 
-def _post_rebuild_in_thread(c):
-    out = {}
-    t = threading.Thread(target=lambda: out.setdefault("r", c.post("/api/admin/rebuild-db")))
-    t.start()
-    return t, out
+def _wait(c, timeout=30):
+    import time
+    end = time.monotonic() + timeout
+    while True:
+        st = c.get("/api/admin/rebuild-db/status").json()
+        if st["state"] != "running":
+            return st
+        assert time.monotonic() < end, st
+        time.sleep(0.05)
 
 
-def test_reads_served_from_live_db_while_rebuilding(api, monkeypatch):
-    # 재구축(임시 사본에 커밋까지 끝난 뒤 교체 직전)에서 멈춘 동안: 조회 200·옛 데이터, 운영 DB 에 잠금 없음.
-    # 교체 직후 첫 조회 = 새 데이터.
-    c, scrims, db_path, rows, sid = api
-    _set_meta_name(rows, sid, "rebuilt-name")
+def _pause_after_build(monkeypatch, scrims):
+    """임시 사본 커밋 뒤·교체 직전에서 작업을 멈춘다 → (started, release)."""
     started, release = threading.Event(), threading.Event()
     real_into = scrims._rebuild_into
 
@@ -218,9 +220,21 @@ def test_reads_served_from_live_db_while_rebuilding(api, monkeypatch):
             await asyncio.sleep(0.01)
         return res
     monkeypatch.setattr(scrims, "_rebuild_into", paused_into)
-    t, out = _post_rebuild_in_thread(c)
+    return started, release
+
+
+def test_reads_served_from_live_db_while_rebuilding(api, monkeypatch):
+    # 재구축(임시 사본에 커밋까지 끝난 뒤 교체 직전)에서 멈춘 동안: 조회 200·옛 데이터, 운영 DB 에 잠금 없음.
+    # 교체 직후 첫 조회 = 새 데이터.
+    c, scrims, db_path, rows, sid = api
+    _set_meta_name(rows, sid, "rebuilt-name")
+    started, release = _pause_after_build(monkeypatch, scrims)
+    r = c.post("/api/admin/rebuild-db")
+    assert r.status_code == 202 and r.json()["state"] == "running"
     try:
         assert started.wait(10)
+        st = c.get("/api/admin/rebuild-db/status").json()
+        assert st["state"] == "running" and st["job_id"] == r.json()["job_id"] and st["phase"] == "build"
         r = c.get(f"/api/scrims/{sid}")
         assert r.status_code == 200 and r.json()["scrim_name"] == "swap-src"
         assert c.get("/api/scrims").status_code == 200
@@ -232,8 +246,9 @@ def test_reads_served_from_live_db_while_rebuilding(api, monkeypatch):
             con.close()
     finally:
         release.set()
-        t.join(20)
-    assert out["r"].status_code == 200, out["r"].text
+    st = _wait(c)
+    assert st["state"] == "done" and st["sessions"] == 1 and st["matches"] == 1 and st["parse_errors"] == []
+    assert st["backup_created"].startswith("scrim.db.before_rebuild_") and st["finished_at"]
     assert c.get(f"/api/scrims/{sid}").json()["scrim_name"] == "rebuilt-name"
     assert not _leftovers(db_path)
     _set_meta_name(rows, sid, "swap-src")
@@ -258,8 +273,9 @@ def test_failure_leaves_live_db_unchanged(api, monkeypatch, where):
         monkeypatch.setattr(scrims, "_rebuild_into", into_then_boom)
     else:
         monkeypatch.setattr(database, "swap_db_file", boom)
-    r = c.post("/api/admin/rebuild-db")
-    assert r.status_code == 500 and r.json() == {"detail": "DB rebuild failed"}
+    assert c.post("/api/admin/rebuild-db").status_code == 202
+    st = _wait(c)
+    assert st["state"] == "failed" and st["error"] == "DB rebuild failed" and st["phase"] == where
     assert _sha(db_path) == before
     assert _backups(db_path) == backups
     assert not _leftovers(db_path)
@@ -274,4 +290,36 @@ def test_disk_shortfall_returns_507(api, monkeypatch, capsys):
     r = c.post("/api/admin/rebuild-db")
     assert r.status_code == 507 and r.json() == {"detail": "Insufficient disk space"}
     assert "디스크 여유 부족 — 시작 안 함: free 0MB < need 64MB" in capsys.readouterr().out
+    st = c.get("/api/admin/rebuild-db/status").json()
+    assert st["state"] == "failed" and st["error"] == "Insufficient disk space"
+    assert st["reason"].startswith("free 0MB < need 64MB") and st["job_id"] is None
     assert not _leftovers(db_path)
+
+
+def test_duplicate_post_and_plans_writes_409_while_running(api, monkeypatch):
+    c, scrims, db_path, *_ = api
+    board = c.post("/api/plans/boards", json={"name": "b"}).json()
+    bid = board.get("id") or board.get("board_id")
+    started, release = _pause_after_build(monkeypatch, scrims)
+    assert c.post("/api/admin/rebuild-db").status_code == 202
+    try:
+        assert started.wait(10)
+        codes = [
+            c.post("/api/admin/rebuild-db").status_code,
+            c.post("/api/plans/boards", json={"name": "x"}).status_code,
+            c.patch(f"/api/plans/boards/{bid}", json={"name": "y"}).status_code,
+            c.delete(f"/api/plans/boards/{bid}").status_code,
+            c.post("/api/plans/maps", json={"board_id": bid, "map_id": "x"}).status_code,
+            c.patch("/api/plans/maps/m1", json={"sort_order": 1}).status_code,
+            c.delete("/api/plans/maps/m1").status_code,
+            c.post("/api/plans/maps/m1/duplicate").status_code,
+            c.put("/api/plans/maps/m1/canvas", json={}).status_code,
+        ]
+        reads = [c.get("/api/plans/boards").status_code, c.get("/api/scrims").status_code]
+    finally:
+        release.set()
+    assert codes == [409] * 9
+    assert reads == [200, 200]
+    assert _wait(c)["state"] == "done"
+    assert c.patch(f"/api/plans/boards/{bid}", json={"name": "after"}).status_code == 200
+    assert c.delete(f"/api/plans/boards/{bid}").status_code in (200, 204)

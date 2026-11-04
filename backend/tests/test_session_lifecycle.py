@@ -111,11 +111,25 @@ def _snap(c, mid):
     }
 
 
+def _wait_rebuild(c, timeout=30):
+    """202 뒤 status 폴링 — running 이 끝난 status 를 돌려준다."""
+    import time
+    end = time.monotonic() + timeout
+    while True:
+        st = c.get("/api/admin/rebuild-db/status").json()
+        if st["state"] != "running":
+            return st
+        assert time.monotonic() < end, st
+        time.sleep(0.05)
+
+
 def _rebuild(c):
     r = c.post("/api/admin/rebuild-db")
-    assert r.status_code == 200, r.text
-    assert r.json()["parse_errors"] == []
-    return r.json()
+    assert r.status_code == 202, r.text
+    st = _wait_rebuild(c)
+    assert st["state"] == "done" and st["job_id"] == r.json()["job_id"], st
+    assert st["parse_errors"] == []
+    return st
 
 
 # ── 등록 ────────────────────────────────────────────────────────────────────
@@ -458,9 +472,7 @@ def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
         release.wait(3)
         return real_snapshot(src, dst)
     monkeypatch.setattr(scrims, "_snapshot_db", slow_snapshot)
-    out = {}
-    t = threading.Thread(target=lambda: out.setdefault("rebuild", c.post("/api/admin/rebuild-db")))
-    t.start()
+    out = {"rebuild": c.post("/api/admin/rebuild-db")}   # 202 즉시 — 작업은 사본 단계에서 멈춰 있다
     try:
         assert started.wait(3)
         codes = [
@@ -478,10 +490,11 @@ def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
         ]
     finally:
         release.set()
-        t.join(10)
     assert codes == [409] * 10
-    assert out["rebuild"].status_code == 200
-    assert scrims._REBUILD_JOB is None                                          # 끝나면 상태 해제
+    assert out["rebuild"].status_code == 202
+    assert _wait_rebuild(c)["state"] == "done"
+    from services import rebuild_job
+    assert not rebuild_job.is_running()                                         # 끝나면 상태 해제
     assert c.patch(f"/api/sessions/{sid}", json={"scrimName": "d6-after"}).status_code == 200
     assert c.post(f"/api/sessions/{sid}/complete").status_code == 200     # complete 는 대상 아님
 

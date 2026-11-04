@@ -44,6 +44,8 @@ from services.stats import calculate_pure_stats
 from services.fight_analysis import compute_fights
 from services.summary import summarize_session, format_session_message
 from services.discord_webhook import schedule_webhook
+from services import rebuild_job
+from services.rebuild_job import raise_if_rebuilding as _raise_if_rebuilding
 from schemas_summary import SessionCompleteResponse
 from schemas_roster import RosterResponse
 from log_time import tprint
@@ -335,15 +337,8 @@ def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
     return _update_meta_json(scrim_id, mutate)
 
 
-# rebuild 진행 상태(프로세스 내). rebuild 는 DB 를 통째로 지우고 meta·원문 로그로 다시 만드는 긴 트랜잭션이라,
-# 그동안 들어온 쓰기는 SQLite 잠금 대기 끝에 "locked" 500 이 나거나, 이미 읽어 둔 meta 기준 재구축에 덮여 DB 에서
-# 사라졌다. 진행 중이면 쓰기 API·중복 rebuild 는 409. 구조는 {job_id, started_at} — 묶음 3(작업 ID) 과 호환.
-_REBUILD_JOB: "dict | None" = None
-
-
-def _raise_if_rebuilding():
-    if _REBUILD_JOB is not None:
-        raise HTTPException(status_code=409, detail="DB rebuild in progress")
+# rebuild 진행 상태는 services/rebuild_job(plans 쓰기와 공용). 재구축은 운영 DB 사본 위에서 돌아 그동안 운영 DB 에
+# 쓴 것은 교체 때 사라지므로, 진행 중이면 쓰기 API·중복 rebuild 는 409.
 
 
 # 등록 직렬화: "ID 고르기 → DB 커밋 → meta 확정" 사이에 다른 등록이 끼면 같은 ID 를 골라 PK 충돌(500)이나
@@ -919,18 +914,25 @@ async def db_status():
 
 
 # 가정: meta.json + 원문 로그가 정본(삭제 매치는 meta 에 없음). 진행 중 쓰기는 409, winner_override 는 DB 스냅샷 우선.
-@router.post("/api/admin/rebuild-db")
+# 202 즉시 응답 + 백그라운드 작업 — 결과는 GET /api/admin/rebuild-db/status (예전: 끝까지 붙잡아 nginx 60초 504).
+@router.post("/api/admin/rebuild-db", status_code=202)
 async def rebuild_database():
-    global _REBUILD_JOB
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
-    _raise_if_rebuilding()   # 중복 실행 409. 검사와 설정 사이에 await 가 없어 단일 이벤트 루프에서 원자적
-    _REBUILD_JOB = {"job_id": uuid.uuid4().hex, "started_at": datetime.utcnow().isoformat(timespec="seconds") + "Z"}
-    tprint(f"[REBUILD] 시작 job={_REBUILD_JOB['job_id']}")
-    try:
-        return await _rebuild_database_locked(_REBUILD_JOB["job_id"])
-    finally:
-        _REBUILD_JOB = None
+    _raise_if_rebuilding()   # 중복 실행 409
+    shortfall = _rebuild_disk_shortfall(_database._DB_PATH)
+    if shortfall:
+        tprint(f"[REBUILD] 디스크 여유 부족 — 시작 안 함: {shortfall}")
+        rebuild_job.record_rejected("Insufficient disk space", shortfall)
+        raise HTTPException(status_code=507, detail="Insufficient disk space")
+    return rebuild_job.start(_rebuild_database_locked)
+
+
+@router.get("/api/admin/rebuild-db/status")
+async def rebuild_database_status():
+    """{state: idle|running|done|failed, job_id, started_at, finished_at, phase, sessions, matches, rounds, events,
+    parse_errors, backup_created(파일명), error(고정 문구), reason(디스크 부족 사유)}. 마지막 결과는 다음 실행까지 유지."""
+    return rebuild_job.status()
 
 
 _REBUILD_DISK_MARGIN = 64 * 1024 * 1024   # 임시 파일(DB 1개분) + 여유. 기준 = DB 크기×2 + 64MB
@@ -967,7 +969,7 @@ def _remove_rebuild_tmp(tmp_path: str) -> None:
             tprint(f"[REBUILD] tmp remove failed: {os.path.basename(p)}: {type(e).__name__}")
 
 
-async def _rebuild_database_locked(job_id: "str | None" = None):
+async def _rebuild_database_locked(job_id: "str | None" = None, set_phase=lambda phase: None):
     """운영 DB 사본(임시 파일) 위에서 재구축한 뒤 원자 교체한다. 그동안 운영 DB 는 읽기 그대로 서비스되고
     (쓰기는 rebuild 상태로 409), 실패하면 임시 파일만 지운다 — 운영 DB·엔진 무변경."""
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -979,12 +981,9 @@ async def _rebuild_database_locked(job_id: "str | None" = None):
 
     # 엔진이 쓰는 DB 파일 그대로(SCRIM_DB_PATH 반영). 예전 "data/scrim.db" 는 작업 폴더 기준이라 경로 재지정을 무시했다.
     db_path = _database._DB_PATH
-    shortfall = _rebuild_disk_shortfall(db_path)
-    if shortfall:
-        tprint(f"[REBUILD] 디스크 여유 부족 — 시작 안 함: {shortfall}")
-        raise HTTPException(status_code=507, detail="Insufficient disk space")
     backup_path = f"{db_path}.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     tmp_path = _database.rebuild_tmp_path(db_path, job_id or uuid.uuid4().hex)
+    set_phase("copy")
     try:
         # 스레드풀 — 큰 DB 복사가 이벤트 루프를 막지 않게(그동안 들어온 쓰기는 rebuild 상태로 409)
         await run_in_threadpool(_snapshot_db, db_path, tmp_path)
@@ -998,9 +997,12 @@ async def _rebuild_database_locked(job_id: "str | None" = None):
                                      connect_args={"check_same_thread": False})
     try:
         # 파싱은 스레드풀(순수 계산) — 예전엔 이벤트 루프에서 돌아 그동안 모든 요청이 멈췄다
+        set_phase("parse")
         new_scrims, parse_errors = await run_in_threadpool(_parse_rebuild_sources)
+        set_phase("build")
         totals = await _rebuild_into(sessionmaker(tmp_engine, class_=AsyncSession, expire_on_commit=False), new_scrims)
         await tmp_engine.dispose()
+        set_phase("swap")
         backup_method = await _database.swap_db_file(AsyncSessionLocal, db_path, tmp_path, backup_path)
         tprint(f"[REBUILD] 교체 완료(백업 {backup_method}): {os.path.basename(backup_path)}")
     except Exception as e:

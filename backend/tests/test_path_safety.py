@@ -267,8 +267,15 @@ def test_rebuild_backup_follows_db_path(client, monkeypatch):
         raise OSError("stop before rebuild")
 
     monkeypatch.setattr(scrims, "_snapshot_db", _fake_snapshot)
+    import time
     r = client.post("/api/admin/rebuild-db")
-    assert r.status_code == 500 and r.json() == {"detail": "Backup failed"}
+    assert r.status_code == 202
+    for _ in range(200):
+        st = client.get("/api/admin/rebuild-db/status").json()
+        if st["state"] != "running":
+            break
+        time.sleep(0.05)
+    assert st["state"] == "failed" and st["error"] == "Backup failed" and st["phase"] == "copy"
     assert seen["src"] == database._DB_PATH == os.path.abspath(os.environ["SCRIM_DB_PATH"])
     assert seen["dst"].startswith(database._DB_PATH + ".rebuild-") and seen["dst"].endswith(".tmp")
     assert not glob.glob(glob.escape(database._DB_PATH) + ".rebuild-*")
