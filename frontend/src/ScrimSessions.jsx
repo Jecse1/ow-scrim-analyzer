@@ -101,7 +101,8 @@ const ScrimSessions = ({ onSelectScrim }) => {
     try {
       const res = await axios.post('/api/admin/rebuild-db');
       invalidateApiCache(); // DB 재구축 성공 → 공유 캐시 무효화 후 재조회
-      alert(`Done! ${res.data.count} scrims restored.`);
+      // 응답 키는 sessions·matches(count 키 없음 — 예전엔 항상 "undefined" 표시)
+      alert(`Done! ${res.data.sessions} sessions, ${res.data.matches} matches restored.`);
       fetchScrims();
     } catch (err) {
       console.error(err);
