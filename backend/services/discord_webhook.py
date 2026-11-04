@@ -26,19 +26,28 @@ ALLOWED_MENTIONS = {"parse": []}
 _PENDING: set = set()
 
 
-async def _post_webhook(url: str, build_content: Callable[[], str]) -> None:
+async def _post_webhook(url: str, build_content: Callable[[], str], on_result=None) -> None:
+    ok = False
     try:
         content = build_content()
         async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SEC) as client:
             r = await client.post(url, json={"content": content, "allowed_mentions": ALLOWED_MENTIONS})
         if r.status_code >= 300:
             logger.warning("[WEBHOOK] discord webhook failed: HTTP %s", r.status_code)
+        else:
+            ok = True
     except Exception as e:  # 본문 생성·네트워크·타임아웃·URL 형식 등 전부 — 응답 경로로 전파하지 않는다
         logger.warning("[WEBHOOK] discord webhook failed: %s", type(e).__name__)
+    if on_result is not None:
+        try:
+            on_result(ok)
+        except Exception:
+            pass
 
 
-def schedule_webhook(url: str, build_content: Callable[[], str]) -> None:
-    """발송 작업을 현재 이벤트 루프에 분리 등록(fire-and-forget). build_content: 본문 문자열을 돌려주는 함수."""
-    task = asyncio.create_task(_post_webhook(url, build_content))
+def schedule_webhook(url: str, build_content: Callable[[], str], on_result=None) -> None:
+    """발송 작업을 현재 이벤트 루프에 분리 등록(fire-and-forget). build_content: 본문 문자열을 돌려주는 함수.
+    on_result(ok: bool): 발송이 끝나면 성공 여부로 한 번 불린다(선택)."""
+    task = asyncio.create_task(_post_webhook(url, build_content, on_result))
     _PENDING.add(task)
     task.add_done_callback(_PENDING.discard)

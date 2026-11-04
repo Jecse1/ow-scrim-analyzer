@@ -9,6 +9,7 @@ import os
 import json
 import glob
 import uuid
+import hashlib
 import asyncio
 import weakref
 import tempfile
@@ -1541,13 +1542,19 @@ async def patch_match(match_id: str, body: MatchPatchInput):
 
 
 # ── 세션 등록 완료 알림 ─────────────────────────────────────────
+# complete 웹훅 중복 억제: 세션별로 마지막에 보낸(보내는 중) 본문 sha256. 같은 본문이면 다시 보내지 않고,
+# 편집으로 본문이 바뀌면 다시 보낸다. 발송이 실패하면 지워서 다음 호출이 다시 보낸다. 프로세스 메모리(재시작 시 초기화).
+_WEBHOOK_SENT: dict = {}
+
+
 @router.post("/api/sessions/{session_id}/complete", response_model=SessionCompleteResponse)
 async def complete_session(session_id: str):
-    """세션 등록 완료 신호. 읽기 전용(DB·meta.json 무변경)·멱등 — 같은 세션이면 같은 응답.
+    """세션 등록 완료 신호. 읽기 전용(DB·meta.json 무변경) — 같은 세션이면 같은 응답(webhook 값 제외).
     서버에는 "등록 완료" 시점이 없으므로(manual-register 1회 + upload N회를 브라우저가 순차 호출)
     호출자가 마지막 업로드 뒤에 부른다. 승패 = D1(유효 승자), 상대 = D3(BASE_TEAM 이 아닌 팀명).
     DISCORD_WEBHOOK_URL 이 비어 있으면 발송 없이 webhook:"disabled". 설정돼 있으면 발송을
-    asyncio.create_task 로 분리하고(본문 생성 포함) 기다리지 않는다 → webhook:"queued".
+    asyncio.create_task 로 분리하고 기다리지 않는다 → webhook:"queued". 같은 본문을 이미 보냈으면(프로세스 메모리,
+    재시작 시 초기화) 다시 보내지 않는다 → webhook:"duplicate". 발송이 실패하면 기억을 지워 다음 호출이 다시 보낸다.
     발송 실패는 services/discord_webhook 안에서 전부 잡혀 이 응답에 영향을 주지 않는다."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -1577,11 +1584,21 @@ async def complete_session(session_id: str):
     session = summarize_session(scrim, BASE_TEAM)
     session.pop("skipped_matches_without_base_team", None)
     url = _config.DISCORD_WEBHOOK_URL
-    if url:
-        schedule_webhook(url, lambda: format_session_message(scrim, BASE_TEAM))
-        webhook = "queued"
-    else:
+    if not url:
         webhook = "disabled"
+    else:
+        content = format_session_message(scrim, BASE_TEAM)
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        if _WEBHOOK_SENT.get(session_id) == digest:
+            webhook = "duplicate"
+        else:
+            _WEBHOOK_SENT[session_id] = digest
+
+            def _on_result(ok, sid=session_id, d=digest):
+                if not ok and _WEBHOOK_SENT.get(sid) == d:
+                    _WEBHOOK_SENT.pop(sid, None)
+            schedule_webhook(url, lambda: content, on_result=_on_result)
+            webhook = "queued"
     return {"status": "ok", "session": session, "webhook": webhook}
 
 

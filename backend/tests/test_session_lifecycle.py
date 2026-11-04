@@ -528,17 +528,24 @@ def test_d8_upload_log_replace_failure_is_warning(iso, monkeypatch, capsys):
 
 
 # ── complete ────────────────────────────────────────────────────────────────
-@pytest.mark.xfail(strict=True, reason="D7: complete 를 같은 본문으로 다시 부르면 웹훅을 또 보낸다")
 def test_d7_complete_same_content_sends_webhook_once(iso, monkeypatch):
+    # D7: 같은 본문은 1회(webhook:"duplicate"), 본문이 바뀌면 다시, 발송 실패면 다음 호출이 다시 보낸다
     import config as _config
     c, rows, scrims = iso
     sent = []
     monkeypatch.setattr(_config, "DISCORD_WEBHOOK_URL", "http://127.0.0.1:9/hook")
-    monkeypatch.setattr(scrims, "schedule_webhook", lambda url, build: sent.append(build()))
+    results = []
+
+    def fake_schedule(url, build, on_result=None):
+        sent.append(build())
+        results.append(on_result)
+    monkeypatch.setattr(scrims, "schedule_webhook", fake_schedule)
     sid, mids = _register(c, "d7", [_seg()], date="2026-11-09", hours=("13", "14"))
-    for _ in range(3):
-        assert c.post(f"/api/sessions/{sid}/complete").status_code == 200
-    assert len(sent) == 1
+    hooks = [c.post(f"/api/sessions/{sid}/complete").json()["webhook"] for _ in range(3)]
+    assert hooks == ["queued", "duplicate", "duplicate"] and len(sent) == 1
     assert c.patch(f"/api/sessions/{sid}", json={"scrimName": "d7-renamed"}).status_code == 200
-    assert c.post(f"/api/sessions/{sid}/complete").status_code == 200     # 본문이 바뀌면 다시 보냄
+    assert c.post(f"/api/sessions/{sid}/complete").json()["webhook"] == "queued"   # 본문이 바뀌면 다시 보냄
     assert len(sent) == 2
+    results[-1](False)                                                           # 그 발송이 실패하면
+    assert c.post(f"/api/sessions/{sid}/complete").json()["webhook"] == "queued"   # 같은 본문도 다시 보냄
+    assert len(sent) == 3 and sent[-1] == sent[-2]

@@ -181,7 +181,7 @@
 | `session.matches`, `.wins`, `.losses`, `.draws` | 핵심 | period의 세션 행과 같은 계산 |
 | `session.maps` | 핵심 | 정본 맵명(매치 순서) |
 | `session.no_result`, `.undetermined` | 참고 | |
-| `webhook` | 핵심 | `"queued"`(발송 작업 분리됨 — 성공 보장 아님) / `"disabled"`(`DISCORD_WEBHOOK_URL` 미설정, no-op) |
+| `webhook` | 핵심 | `"queued"`(발송 작업 분리됨 — 성공 보장 아님) / `"disabled"`(`DISCORD_WEBHOOK_URL` 미설정, no-op) / `"duplicate"`(같은 본문을 이미 보냄 — 재발송 안 함) |
 
 ### 웹후크 (백엔드 env `DISCORD_WEBHOOK_URL`, 선택)
 - 설정돼 있으면 `asyncio.create_task`로 발송을 분리하고 응답은 기다리지 않는다. 디스코드 웹후크에
@@ -198,7 +198,9 @@
   - 매치마다 `맵 / 승·패·무·미확정·미정 / 우리:상대 점수`
   - 끝줄: `합계 승-패-무`(무 = 실제 무승부만). 미확정·미정이 있으면 값이 있는 것만 괄호로 덧붙인다(`(미확정 1, 미정 2)`, `(미정 2)`)
   - 2,000자를 넘으면 뒤쪽 매치 줄부터 잘라내고 `…외 N매치`를 붙인다.
-- 반복 호출하면 매번 다시 발송한다(무상태 — 중복 억제 없음).
+- 같은 본문은 재발송하지 않음(재시작 시 초기화). 세션별로 마지막에 보낸 본문의 해시를 서버 프로세스 메모리에
+  기억하고, 같으면 `webhook: "duplicate"`로 응답만 한다. 편집으로 본문이 바뀌면 다시 보낸다. 발송이 실패하면
+  기억을 지워 다음 호출이 다시 보낸다.
 - 실패(연결·타임아웃·4xx·5xx·본문 생성 오류)는 발송 작업 안에서 전부 잡는다. `/complete` 응답에는 영향이 없다.
   로그에는 `[WEBHOOK] discord webhook failed: HTTP <코드>` 또는 `…: <예외 클래스명>` 한 줄만 남는다.
   **URL·요청 본문·응답 본문은 기록하지 않는다.** 기동 로그에는 `[WEBHOOK] DISCORD_WEBHOOK_URL: 설정됨/미설정`만 남는다.

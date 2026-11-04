@@ -66,6 +66,15 @@ def _seed(c):
     return s1, s2
 
 
+@pytest.fixture(autouse=True)
+def _fresh_webhook_dedupe():
+    # complete 웹훅 중복 억제(같은 본문 1회, 프로세스 메모리)는 테스트마다 비운다 — 같은 세션을 여러 테스트가 complete 한다
+    import routers.scrims as rs
+    rs._WEBHOOK_SENT.clear()
+    yield
+    rs._WEBHOOK_SENT.clear()
+
+
 @pytest.fixture(scope="module")
 def seeded():
     import main
@@ -86,7 +95,7 @@ def _build_golden(c, s2, monkeypatch) -> bytes:
     captured = []
     monkeypatch.setattr(rs, "BASE_TEAM", BASE)
     monkeypatch.setattr(rs._config, "DISCORD_WEBHOOK_URL", "http://example.invalid/hook")
-    monkeypatch.setattr(rs, "schedule_webhook", lambda url, build: captured.append(build()))
+    monkeypatch.setattr(rs, "schedule_webhook", lambda url, build, **kw: captured.append(build()))
     out = {
         "maps": _no_meta_time(c.get("/api/summary/maps", params=ALL).json()),
         "maps_opponent_팀C": _no_meta_time(c.get("/api/summary/maps", params={**ALL, "opponent": "팀C"}).json()),
@@ -161,7 +170,7 @@ def test_complete_disabled_is_noop_and_idempotent(seeded, monkeypatch):
     monkeypatch.setattr(rs, "BASE_TEAM", BASE)
     monkeypatch.setattr(rs._config, "DISCORD_WEBHOOK_URL", "")
     called = []
-    monkeypatch.setattr(rs, "schedule_webhook", lambda *a: called.append(a))
+    monkeypatch.setattr(rs, "schedule_webhook", lambda *a, **kw: called.append(a))
     before = c.get("/api/scrims").json()
     r1, r2 = c.post(f"/api/sessions/{s2}/complete"), c.post(f"/api/sessions/{s2}/complete")
     assert r1.status_code == r2.status_code == 200

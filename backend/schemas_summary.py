@@ -131,7 +131,8 @@ class CompletedSession(BaseModel):
 class SessionCompleteResponse(BaseModel):
     status: str = Field(description="항상 'ok'")
     session: CompletedSession
-    webhook: str = Field(description="'queued'(발송 작업 분리됨) | 'disabled'(DISCORD_WEBHOOK_URL 미설정)")
+    webhook: str = Field(description="'queued'(발송 작업 분리됨) | 'disabled'(DISCORD_WEBHOOK_URL 미설정) | "
+                               "'duplicate'(같은 본문을 이미 보냄 — 재발송 안 함, 재시작 시 초기화)")
 
 
 # ── ults ─────────────────────────────────────────────────────────────────────
