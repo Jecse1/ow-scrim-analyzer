@@ -129,6 +129,13 @@ export default {
   sdPartialFail: "部分删除失败：", sdDeleteFail: "删除失败：", sdDeleteMatchPost: " 场对局吗？",
   ssDeleteSessionMid: " 个场次吗？\n该场次包含的共 ", ssDeleteSessionPost: " 场对局也将一并删除。",
   ssRebuildConfirm: "确定重建数据库吗？(Rebuild DB?)",
+  ssRebuildDone: "数据库重建完成：{sessions} 个会话，{matches} 场比赛",
+  ssRebuildParseErrors: "（解析错误 {n} 个 — 请查看后端日志）",
+  ssRebuildFailed: "数据库重建失败 — 现有数据库未改变。请查看后端日志。",
+  ssRebuildNoDisk: "磁盘剩余空间不足，未开始重建数据库。",
+  ssRebuildInterrupted: "数据库重建已中断（服务器重启）。现有数据库未改变。",
+  ssRebuildUnreachable: "服务器无响应，无法确认重建结果。请稍后刷新。",
+  ssRebuildAlreadyRunning: "数据库重建已在进行中。完成后会通知您。",
   // ScrimModal
   smCloseConfirm: "正在输入的内容将丢失。确定关闭吗？", smEnterName: "请输入训练赛名称。", smMinOneMatch: "请至少录入1场对局。",
   smMatchPre: "第 ", smMatchPost: " 场对局：", smPauseSelectedWarn: "已选择“有暂停”。请添加暂停区间或选择“否”。",

@@ -129,6 +129,13 @@ export default {
   sdPartialFail: "일부 삭제 실패: ", sdDeleteFail: "삭제 실패: ", sdDeleteMatchPost: "개 매치를 삭제하시겠습니까?",
   ssDeleteSessionMid: "개 세션을 삭제하시겠습니까?\n이 세션에 포함된 총 ", ssDeleteSessionPost: "개의 매치도 함께 삭제됩니다.",
   ssRebuildConfirm: "DB를 복구하시겠습니까? (Rebuild DB?)",
+  ssRebuildDone: "DB 복구 완료: 세션 {sessions}개, 매치 {matches}개",
+  ssRebuildParseErrors: " (파싱 오류 {n}건 — 백엔드 로그 확인)",
+  ssRebuildFailed: "DB 복구 실패 — 기존 DB 는 그대로입니다. 백엔드 로그를 확인하세요.",
+  ssRebuildNoDisk: "디스크 여유 공간이 부족해 DB 복구를 시작하지 않았습니다.",
+  ssRebuildInterrupted: "DB 복구가 중단되었습니다(서버 재시작). 기존 DB 는 그대로입니다.",
+  ssRebuildUnreachable: "서버 응답이 없어 DB 복구 결과를 확인하지 못했습니다. 잠시 후 새로고침하세요.",
+  ssRebuildAlreadyRunning: "DB 복구가 이미 진행 중입니다. 끝나면 알려 드립니다.",
   // ScrimModal
   smCloseConfirm: "입력 중인 내용이 사라집니다. 정말 닫으시겠습니까?", smEnterName: "스크림 이름을 입력해주세요.", smMinOneMatch: "최소 1개의 경기를 기록해주세요.",
   smMatchPre: "", smMatchPost: "번 경기: ", smPauseSelectedWarn: "'퍼즈 있음'을 선택하셨습니다. 퍼즈 구간을 추가하거나 '아니오'를 선택해주세요.",

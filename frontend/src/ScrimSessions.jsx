@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { fetchCached, invalidateApiCache } from './utils/apiCache';
 import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, RefreshCw, Filter, Trash2, AlertCircle } from 'lucide-react';
@@ -6,6 +6,7 @@ import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { BASE_TEAM } from "./config";
 import { sessionRecord as computeSessionRecord } from "./utils/sessionRecord";
+import { REBUILD_URL, REBUILD_STATUS_URL, pollRebuildJob, rebuildMessage, failMessage } from "./utils/rebuildJob";
 
 // 세션명(YYMMDD-TEAM)에서 상대팀 추출 — 첫 하이픈 뒤 전체.
 // (실데이터 전수 확인: 전 세션이 하이픈 정확히 1개. 예외 없음.)
@@ -79,22 +80,65 @@ const ScrimSessions = ({ onSelectScrim }) => {
 
   useEffect(() => { fetchScrims(); }, []);
 
+  // rebuild-db 는 202 {job_id} 즉시 응답 + 백그라운드 작업 → status 폴링(utils/rebuildJob). 화면을 떠나면 폴링 중단.
+  const unmountedRef = useRef(false);
+  useEffect(() => {   // StrictMode(dev)는 mount→cleanup→mount 를 하므로 mount 때 되돌린다
+    unmountedRef.current = false;
+    return () => { unmountedRef.current = true; };
+  }, []);
+  const tRef = useRef(t);
+  tRef.current = t;   // 폴링 도중 언어를 바꿔도 끝난 시점의 언어로 알린다
+
+  const followingRef = useRef(null);   // 따라가는 job_id — 같은 작업을 두 번 폴링하지 않게(StrictMode 이중 effect 등)
+  const followRebuild = async (jobId) => {
+    if (followingRef.current === jobId) return;
+    followingRef.current = jobId;
+    setRebuilding(true);
+    const result = await pollRebuildJob({
+      jobId,
+      getStatus: () => axios.get(REBUILD_STATUS_URL).then((r) => r.data),
+      isCancelled: () => unmountedRef.current,
+    });
+    followingRef.current = null;
+    if (result.outcome === 'cancelled') return;
+    setRebuilding(false);
+    if (result.outcome === 'done') {
+      invalidateApiCache(); // DB 교체 완료 → 공유 캐시 무효화 후 재조회
+      fetchScrims();
+    }
+    alert(rebuildMessage(tRef.current, result));
+  };
+
+  // 진입 시 이미 진행 중이면(새로고침·다른 탭에서 시작) 버튼을 잠그고 폴링을 이어 받는다
+  useEffect(() => {
+    axios.get(REBUILD_STATUS_URL)
+      .then((r) => { if (!unmountedRef.current && r.data?.state === 'running') followRebuild(r.data.job_id); })
+      .catch(() => {});
+  }, []);
+
   const handleRebuildDB = async (e) => {
     e.stopPropagation();
     if (!window.confirm(t.ssRebuildConfirm)) return;
     setRebuilding(true);
+    let jobId;
     try {
-      const res = await axios.post('/api/admin/rebuild-db');
-      invalidateApiCache(); // DB 재구축 성공 → 공유 캐시 무효화 후 재조회
-      // 응답 키는 sessions·matches(count 키 없음 — 예전엔 항상 "undefined" 표시)
-      alert(`Done! ${res.data.sessions} sessions, ${res.data.matches} matches restored.`);
-      fetchScrims();
+      jobId = (await axios.post(REBUILD_URL)).data.job_id;
     } catch (err) {
       console.error(err);
-      alert("Error: Check backend logs.");
-    } finally {
+      const code = err?.response?.status;
+      if (code === 409) {   // 이미 진행 중(다른 탭·다른 사람) → 알리고 그 작업을 따라간다
+        alert(t.ssRebuildAlreadyRunning);
+        try {
+          const st = (await axios.get(REBUILD_STATUS_URL)).data;
+          if (st?.state === 'running') { followRebuild(st.job_id); return; }
+        } catch { /* 아래에서 버튼만 풀린다 */ }
+      } else {
+        alert(failMessage(t, code === 507 ? 'Insufficient disk space' : err?.response?.data?.detail));
+      }
       setRebuilding(false);
+      return;
     }
+    followRebuild(jobId);
   };
 
   const filteredScrims = useMemo(() => {

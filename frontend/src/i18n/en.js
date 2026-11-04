@@ -129,6 +129,13 @@ export default {
   sdPartialFail: "Partial delete failure: ", sdDeleteFail: "Delete failed: ", sdDeleteMatchPost: " selected matches?",
   ssDeleteSessionMid: " selected sessions?\nThis will also delete a total of ", ssDeleteSessionPost: " included matches.",
   ssRebuildConfirm: "Rebuild DB?",
+  ssRebuildDone: "DB rebuild done: {sessions} sessions, {matches} matches restored.",
+  ssRebuildParseErrors: " ({n} parse errors — check backend logs)",
+  ssRebuildFailed: "DB rebuild failed — the existing DB is unchanged. Check backend logs.",
+  ssRebuildNoDisk: "Not enough free disk space — DB rebuild was not started.",
+  ssRebuildInterrupted: "DB rebuild was interrupted (server restarted). The existing DB is unchanged.",
+  ssRebuildUnreachable: "No response from the server — could not confirm the rebuild result. Refresh in a moment.",
+  ssRebuildAlreadyRunning: "A DB rebuild is already running. You will be notified when it finishes.",
   // ScrimModal
   smCloseConfirm: "Your input will be lost. Close anyway?", smEnterName: "Please enter a scrim name.", smMinOneMatch: "Please record at least one match.",
   smMatchPre: "Match ", smMatchPost: ": ", smPauseSelectedWarn: "You selected 'Has Pause'. Add a pause range or select 'No'.",
