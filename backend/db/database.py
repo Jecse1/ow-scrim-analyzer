@@ -105,8 +105,78 @@ def _backfill_draw_detail(sync_conn):
     tprint(f"[DB] draw reclassify: {len(rows)} draws, detail filled {n_detail}, winner_source changed {n_ws}")
 
 
+def rebuild_tmp_path(db_path: str, job_id: str) -> str:
+    """rebuild-db 임시 파일 경로(같은 폴더 — os.replace 가 원자이려면 같은 파일시스템이어야 한다)."""
+    return f"{db_path}.rebuild-{job_id}.tmp"
+
+
+def cleanup_stale_rebuild_files(db_path: str) -> list:
+    """재시작 등으로 끝나지 못한 rebuild 임시 파일(+ -journal)을 지운다. 운영 DB·백업은 건드리지 않는다."""
+    import glob
+    removed = []
+    for p in glob.glob(glob.escape(db_path) + ".rebuild-*.tmp*"):
+        try:
+            os.remove(p)
+            removed.append(os.path.basename(p))
+        except OSError as e:
+            tprint(f"[DB] stale rebuild file remove failed: {os.path.basename(p)}: {type(e).__name__}")
+    if removed:
+        tprint(f"[DB] stale rebuild files removed: {removed}")
+    return removed
+
+
+async def swap_db_file(session_factory, db_path: str, tmp_path: str, backup_path: str,
+                       timeout: float = 10.0) -> str:
+    """재구축이 끝난 tmp_path 로 db_path 를 원자 교체한다. 반환: 백업 방식 "link" | "copy".
+
+    1) 백업 = 옛 파일의 하드링크(복사 없음). 링크를 못 만드는 파일시스템이면 복사로 폴백.
+    2) { 엔진 dispose → os.replace } 를 성공할 때까지 반복 — Windows 는 열린 핸들이 있으면 replace 가
+       PermissionError 라 유휴 연결을 닫고 진행 중 요청이 끝나기를 기다린다. Linux 는 첫 시도에 교체되고
+       진행 중 요청은 옛 inode 를 끝까지 읽는다. 본 경로가 비는 순간은 없다(rename 두 번 방식과의 차이).
+    3) dispose 한 번 더 — 옛 파일을 잡은 유휴 연결을 버린다. 엔진 객체는 그대로(dispose 는 풀만 새로 만든다)라
+       `from db.database import AsyncSessionLocal` 로 가져간 모듈들이 손대지 않아도 새 파일을 본다.
+    timeout 안에 교체하지 못하면 백업을 지우고 예외 — 운영 DB 는 옛 것 그대로, tmp_path 정리는 호출자 몫."""
+    import asyncio
+    import shutil
+    import time
+    engine = session_factory.kw["bind"]
+    try:
+        os.link(db_path, backup_path)
+        method = "link"
+    except OSError as e:
+        tprint(f"[DB] backup hardlink unavailable ({type(e).__name__}) — copying instead")
+        await asyncio.to_thread(shutil.copy2, db_path, backup_path)
+        method = "copy"
+    from sqlalchemy.util import greenlet_spawn
+    deadline = time.monotonic() + timeout
+    # dispose 뒤에 반납되는 연결(진행 중이던 요청)은 새 풀이 아니라 옛 풀로 돌아가 열린 채 남는다 —
+    # Windows 에선 그 핸들이 replace 를 막으므로 재시도마다 옛 풀들도 다시 비운다.
+    old_pools = []
+    while True:
+        old_pools.append(engine.sync_engine.pool)
+        await engine.dispose()
+        for p in old_pools:
+            await greenlet_spawn(p.dispose)
+        try:
+            os.replace(tmp_path, db_path)
+            break
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                try:
+                    os.remove(backup_path)
+                except OSError:
+                    pass
+                raise
+            await asyncio.sleep(0.05)
+    await engine.dispose()
+    for p in old_pools:   # Linux: 교체 중 반납된 옛 inode 연결도 닫는다
+        await greenlet_spawn(p.dispose)
+    return method
+
+
 async def init_db():
     os.makedirs(_DB_DIR, exist_ok=True)
+    cleanup_stale_rebuild_files(_DB_PATH)
     async with engine.begin() as conn:
         from db import models  # noqa: F401 — ensure models are imported before create_all
         await conn.run_sync(Base.metadata.create_all)
