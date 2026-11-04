@@ -928,29 +928,99 @@ async def rebuild_database():
     _REBUILD_JOB = {"job_id": uuid.uuid4().hex, "started_at": datetime.utcnow().isoformat(timespec="seconds") + "Z"}
     tprint(f"[REBUILD] 시작 job={_REBUILD_JOB['job_id']}")
     try:
-        return await _rebuild_database_locked()
+        return await _rebuild_database_locked(_REBUILD_JOB["job_id"])
     finally:
         _REBUILD_JOB = None
 
 
-async def _rebuild_database_locked():
+_REBUILD_DISK_MARGIN = 64 * 1024 * 1024   # 임시 파일(DB 1개분) + 여유. 기준 = DB 크기×2 + 64MB
+
+
+def _rebuild_disk_shortfall(db_path: str) -> "str | None":
+    """디스크 여유가 DB×2+64MB 미만이면 사유 문자열, 충분하면 None."""
     import shutil as _shutil
-    from sqlalchemy import delete as sa_delete
+    size = os.path.getsize(db_path) if os.path.exists(db_path) else 0
+    need = size * 2 + _REBUILD_DISK_MARGIN
+    free = _shutil.disk_usage(os.path.dirname(db_path) or ".").free
+    if free < need:
+        return f"free {free // (1024 * 1024)}MB < need {need // (1024 * 1024)}MB (db {size // (1024 * 1024)}MB x2 + 64MB)"
+    return None
+
+
+def _snapshot_db(src: str, dst: str) -> None:
+    """운영 DB 의 일관된 사본(sqlite backup API — 페이지 단위라 스키마·rebuild 대상 밖 테이블까지 그대로)."""
+    import sqlite3
+    s, d = sqlite3.connect(src), sqlite3.connect(dst)
+    try:
+        s.backup(d)
+    finally:
+        d.close()
+        s.close()
+
+
+def _remove_rebuild_tmp(tmp_path: str) -> None:
+    for p in (tmp_path, tmp_path + "-journal"):
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except OSError as e:
+            tprint(f"[REBUILD] tmp remove failed: {os.path.basename(p)}: {type(e).__name__}")
+
+
+async def _rebuild_database_locked(job_id: "str | None" = None):
+    """운영 DB 사본(임시 파일) 위에서 재구축한 뒤 원자 교체한다. 그동안 운영 DB 는 읽기 그대로 서비스되고
+    (쓰기는 rebuild 상태로 409), 실패하면 임시 파일만 지운다 — 운영 DB·엔진 무변경."""
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import NullPool
 
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
     # 엔진이 쓰는 DB 파일 그대로(SCRIM_DB_PATH 반영). 예전 "data/scrim.db" 는 작업 폴더 기준이라 경로 재지정을 무시했다.
     db_path = _database._DB_PATH
+    shortfall = _rebuild_disk_shortfall(db_path)
+    if shortfall:
+        tprint(f"[REBUILD] 디스크 여유 부족 — 시작 안 함: {shortfall}")
+        raise HTTPException(status_code=507, detail="Insufficient disk space")
     backup_path = f"{db_path}.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    tmp_path = _database.rebuild_tmp_path(db_path, job_id or uuid.uuid4().hex)
     try:
-        # 스레드풀 — 큰 DB 복사가 이벤트 루프를 막지 않게(그동안 들어온 쓰기는 위 상태로 409)
-        await run_in_threadpool(_shutil.copy, db_path, backup_path)
-        tprint(f"[REBUILD] DB backup: {backup_path}")
+        # 스레드풀 — 큰 DB 복사가 이벤트 루프를 막지 않게(그동안 들어온 쓰기는 rebuild 상태로 409)
+        await run_in_threadpool(_snapshot_db, db_path, tmp_path)
+        tprint(f"[REBUILD] 임시 사본: {os.path.basename(tmp_path)}")
     except Exception as e:
-        tprint(f"[REBUILD] DB backup failed: {e}")
+        tprint(f"[REBUILD] DB snapshot failed: {type(e).__name__}: {e}")
+        _remove_rebuild_tmp(tmp_path)
         raise HTTPException(status_code=500, detail="Backup failed")
 
+    tmp_engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path}", poolclass=NullPool,
+                                     connect_args={"check_same_thread": False})
+    try:
+        # 파싱은 스레드풀(순수 계산) — 예전엔 이벤트 루프에서 돌아 그동안 모든 요청이 멈췄다
+        new_scrims, parse_errors = await run_in_threadpool(_parse_rebuild_sources)
+        totals = await _rebuild_into(sessionmaker(tmp_engine, class_=AsyncSession, expire_on_commit=False), new_scrims)
+        await tmp_engine.dispose()
+        backup_method = await _database.swap_db_file(AsyncSessionLocal, db_path, tmp_path, backup_path)
+        tprint(f"[REBUILD] 교체 완료(백업 {backup_method}): {os.path.basename(backup_path)}")
+    except Exception as e:
+        tprint(f"[REBUILD] rebuild_database failed: {type(e).__name__}: {e}")
+        await tmp_engine.dispose()
+        _remove_rebuild_tmp(tmp_path)
+        raise HTTPException(status_code=500, detail="DB rebuild failed")
+
+    start_backfill(force=True)  # 스킬 저장소도 재파싱한 매치 단위로 교체(백그라운드, 응답을 기다리게 하지 않음)
+    _invalidate_response_cache()
+    return {
+        "success": True,
+        "backup_created": backup_path,
+        **totals,
+        "parse_errors": parse_errors,
+    }
+
+
+def _parse_rebuild_sources():
+    """meta.json·원문 로그 → (new_scrims, parse_errors). 순수 계산이라 스레드풀에서 돈다(내용은 예전 rebuild 본문 그대로)."""
     tprint("[REBUILD] raw 파일 파싱 시작...")
     meta_files = sorted(glob.glob(f"{ROW_DATA_DIR}/*_meta.json"), reverse=True)
     new_scrims: list = []
@@ -1008,158 +1078,150 @@ async def _rebuild_database_locked():
             tprint(f"[REBUILD] 파싱 실패: {meta_path}: {e}")
 
     tprint(f"[REBUILD] 파싱 완료: {len(new_scrims)} scrims. DB 재구축 시작...")
+    return new_scrims, parse_errors
+
+
+async def _rebuild_into(session_factory, new_scrims: list) -> dict:
+    """session_factory 의 DB(임시 사본)를 new_scrims 로 다시 채운다 — 삭제·삽입·자리 바꾸기 재적용은 예전 본문 그대로."""
+    from sqlalchemy import delete as sa_delete
 
     total_sessions = total_matches = total_rounds = total_events = 0
-    try:
-        async with AsyncSessionLocal() as db:
-            # 수기 승패 보정(winner_override)은 DB에만 있으므로 재구축 전 스냅샷 → 재구축 후 복원
-            # (video_offset/pauses가 meta.json에서 보존되는 것과 같은 원칙)
-            _wo_rows = await db.execute(select(DBMatch.id, DBMatch.winner_override)
-                                        .where(DBMatch.winner_override.isnot(None)))
-            _wo_snapshot = {row[0]: row[1] for row in _wo_rows}
-            await db.execute(sa_delete(DBEvent))
-            await db.execute(sa_delete(DBPlayerStat))
-            await db.execute(sa_delete(DBRound))
-            await db.execute(sa_delete(DBPause))
-            await db.execute(sa_delete(DBMatch))
-            await db.execute(sa_delete(DBSession))
-            await db.flush()
+    # 예외는 호출자(_rebuild_database_locked)가 받아 임시 파일을 지운다
+    async with session_factory() as db:
+        # 수기 승패 보정(winner_override)은 DB에만 있으므로 재구축 전 스냅샷 → 재구축 후 복원
+        # (video_offset/pauses가 meta.json에서 보존되는 것과 같은 원칙)
+        _wo_rows = await db.execute(select(DBMatch.id, DBMatch.winner_override)
+                                    .where(DBMatch.winner_override.isnot(None)))
+        _wo_snapshot = {row[0]: row[1] for row in _wo_rows}
+        await db.execute(sa_delete(DBEvent))
+        await db.execute(sa_delete(DBPlayerStat))
+        await db.execute(sa_delete(DBRound))
+        await db.execute(sa_delete(DBPause))
+        await db.execute(sa_delete(DBMatch))
+        await db.execute(sa_delete(DBSession))
+        await db.flush()
 
-            swapped_matches = []   # teams_swapped=true 매치 — 삽입·flush 후 일괄 슬롯 교환
-            for scrim_obj in new_scrims:
-                scrim_id = scrim_obj["id"]
-                db.add(DBSession(
-                    id=scrim_id,
-                    scrim_name=scrim_obj.get("scrim_name", ""),
-                    date=scrim_obj.get("date", ""),
-                    start_time=scrim_obj.get("start_time", ""),
-                    end_time=scrim_obj.get("end_time", ""),
-                ))
-                total_sessions += 1
+        swapped_matches = []   # teams_swapped=true 매치 — 삽입·flush 후 일괄 슬롯 교환
+        for scrim_obj in new_scrims:
+            scrim_id = scrim_obj["id"]
+            db.add(DBSession(
+                id=scrim_id,
+                scrim_name=scrim_obj.get("scrim_name", ""),
+                date=scrim_obj.get("date", ""),
+                start_time=scrim_obj.get("start_time", ""),
+                end_time=scrim_obj.get("end_time", ""),
+            ))
+            total_sessions += 1
 
-                for m in scrim_obj.get("matches", []):
-                    match_id_val = m.get("id") or str(uuid.uuid4())
-                    dbm = DBMatch(
-                        id=match_id_val,
-                        session_id=scrim_id,
-                        match_index=m.get("match_index", 0),
-                        map_name=m.get("map_name", ""),
-                        team1_name=m.get("team1_name") or m.get("team_1_name", ""),
-                        team2_name=m.get("team2_name") or m.get("team_2_name", ""),
-                        winner=m.get("winner", ""),
-                        winner_override=_wo_snapshot.get(match_id_val) or m.get("winner_override") or None,
-                        score_t1=m.get("score_t1", 0),
-                        score_t2=m.get("score_t2", 0),
-                        result=m.get("result", ""),
-                        source=m.get("source") or "log",
-                        video_url=m.get("video_url", ""),
-                        video_offset=m.get("video_offset", 0),
-                        video_start_sec=m.get("video_start_sec"),
-                        video_end_sec=m.get("video_end_sec"),
-                        game_setup_sec=m.get("game_setup_sec"),
-                        duration_sec=m.get("timeline", {}).get("duration_sec", 0),
-                        total_final_blows_t1=m.get("total_final_blows_t1", 0),
-                        total_final_blows_t2=m.get("total_final_blows_t2", 0),
-                    )
-                    # 승자 출처: 재파싱 결과(winner_detail)와 복원된 override 로 다시 파생(meta 의 옛 값은 쓰지 않음 —
-                    # 분류 규칙이 바뀌면 meta 값이 낡을 수 있다). 수기 매치는 winner_detail 없이 같은 규칙.
-                    _wd = m.get("winner_detail")
-                    dbm.winner_detail = json.dumps(_wd, ensure_ascii=False) if _wd else None
-                    dbm.winner_source = derive_winner_source(dbm)
-                    db.add(dbm)
-                    # 자리 바꾸기 복원: meta는 로그 원본 순서 → 재파싱으로 선수 소속이 정확히 복원된 뒤
-                    # 이 매치만 라이브와 동일한 _swap_team_slots_db 를 재적용(이름+슬롯 숫자쌍 교환).
-                    if m.get("teams_swapped"):
-                        swapped_matches.append(dbm)
-                    for p in m.get("pauses", []):
-                        db.add(DBPause(
-                            match_id=match_id_val,
-                            start_sec=p.get("start_sec", 0),
-                            end_sec=p.get("end_sec", 0),
-                            duration=p.get("duration", 0),
-                        ))
-                    total_matches += 1
-                    await db.flush()
-
-                    for rnd in m.get("rounds", []):
-                        db_round = DBRound(
-                            match_id=match_id_val,
-                            round_number=rnd.get("round_number", 0),
-                            winner=rnd.get("winner", ""),
-                            duration_sec=rnd.get("duration_sec", 0),
-                            final_blows_t1=rnd.get("final_blows_t1", 0),
-                            final_blows_t2=rnd.get("final_blows_t2", 0),
-                            video_delta_sec=rnd.get("video_delta_sec"),
-                        )
-                        db.add(db_round)
-                        await db.flush()
-                        total_rounds += 1
-
-                        for stat in rnd.get("stats", []):
-                            db.add(DBPlayerStat(
-                                round_id=db_round.id,
-                                match_id=match_id_val,
-                                team_name=stat.get("team_name", ""),
-                                player_name=stat.get("player_name", ""),
-                                hero_name=stat.get("hero_name", ""),
-                                hero_image=stat.get("hero_image", ""),
-                                slot_index=stat.get("slot_index", -1),
-                                **{f: stat.get(f, 0) for f in NUMERIC_FIELDS},
-                            ))
-                        for ev in rnd.get("events", []):
-                            et = ev.get("event_type", "")
-                            db.add(DBEvent(
-                                round_id=db_round.id,
-                                match_id=match_id_val,
-                                event_type=et,
-                                timestamp=float(ev.get("timestamp", 0)),
-                                game_timestamp=float(ev.get("game_timestamp", 0)) if ev.get("game_timestamp") is not None else None,
-                                player_name=ev.get("player_name"),
-                                player_team=ev.get("player_team"),
-                                player_hero=ev.get("player_hero"),
-                                player_hero_img=ev.get("player_hero_img"),
-                                ability=ev.get("ability"),
-                                target_name=ev.get("target_name"),
-                                target_team=ev.get("target_team"),
-                                target_hero=ev.get("target_hero"),
-                                target_hero_img=ev.get("target_hero_img"),
-                                round_number=int(ev["round_number"]) if ev.get("round_number") is not None else None,
-                                winner=ev.get("winner"),
-                                attacker=ev.get("attacker"),
-                                description=ev.get("desc"),
-                                score_t1=int(ev["score_t1"]) if ev.get("score_t1") is not None else None,
-                                score_t2=int(ev["score_t2"]) if ev.get("score_t2") is not None else None,
-                                capturing_team=ev.get("capturing_team"),
-                                new_index=int(ev["new_index"]) if ev.get("new_index") is not None else None,
-                                old_index=int(ev["old_index"]) if ev.get("old_index") is not None else None,
-                                team=ev.get("team"),
-                            ))
-                            total_events += 1
-
-            # 모든 삽입(이름·winner_override 복원 포함) 후 자리 바꾸기 매치만 슬롯 교환 재적용.
-            # rounds/events UPDATE 가 방금 삽입분을 대상으로 동작하도록 먼저 flush.
-            if swapped_matches:
+            for m in scrim_obj.get("matches", []):
+                match_id_val = m.get("id") or str(uuid.uuid4())
+                dbm = DBMatch(
+                    id=match_id_val,
+                    session_id=scrim_id,
+                    match_index=m.get("match_index", 0),
+                    map_name=m.get("map_name", ""),
+                    team1_name=m.get("team1_name") or m.get("team_1_name", ""),
+                    team2_name=m.get("team2_name") or m.get("team_2_name", ""),
+                    winner=m.get("winner", ""),
+                    winner_override=_wo_snapshot.get(match_id_val) or m.get("winner_override") or None,
+                    score_t1=m.get("score_t1", 0),
+                    score_t2=m.get("score_t2", 0),
+                    result=m.get("result", ""),
+                    source=m.get("source") or "log",
+                    video_url=m.get("video_url", ""),
+                    video_offset=m.get("video_offset", 0),
+                    video_start_sec=m.get("video_start_sec"),
+                    video_end_sec=m.get("video_end_sec"),
+                    game_setup_sec=m.get("game_setup_sec"),
+                    duration_sec=m.get("timeline", {}).get("duration_sec", 0),
+                    total_final_blows_t1=m.get("total_final_blows_t1", 0),
+                    total_final_blows_t2=m.get("total_final_blows_t2", 0),
+                )
+                # 승자 출처: 재파싱 결과(winner_detail)와 복원된 override 로 다시 파생(meta 의 옛 값은 쓰지 않음 —
+                # 분류 규칙이 바뀌면 meta 값이 낡을 수 있다). 수기 매치는 winner_detail 없이 같은 규칙.
+                _wd = m.get("winner_detail")
+                dbm.winner_detail = json.dumps(_wd, ensure_ascii=False) if _wd else None
+                dbm.winner_source = derive_winner_source(dbm)
+                db.add(dbm)
+                # 자리 바꾸기 복원: meta는 로그 원본 순서 → 재파싱으로 선수 소속이 정확히 복원된 뒤
+                # 이 매치만 라이브와 동일한 _swap_team_slots_db 를 재적용(이름+슬롯 숫자쌍 교환).
+                if m.get("teams_swapped"):
+                    swapped_matches.append(dbm)
+                for p in m.get("pauses", []):
+                    db.add(DBPause(
+                        match_id=match_id_val,
+                        start_sec=p.get("start_sec", 0),
+                        end_sec=p.get("end_sec", 0),
+                        duration=p.get("duration", 0),
+                    ))
+                total_matches += 1
                 await db.flush()
-                for dbm in swapped_matches:
-                    await _swap_team_slots_db(db, dbm)
 
-            await db.commit()
-            tprint(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
-            start_backfill(force=True)  # 스킬 저장소도 재파싱한 매치 단위로 교체(백그라운드, 응답을 기다리게 하지 않음)
-    except Exception as e:
-        tprint(f"[REBUILD] rebuild_database failed: {e}")
-        raise HTTPException(status_code=500, detail="DB rebuild failed")
+                for rnd in m.get("rounds", []):
+                    db_round = DBRound(
+                        match_id=match_id_val,
+                        round_number=rnd.get("round_number", 0),
+                        winner=rnd.get("winner", ""),
+                        duration_sec=rnd.get("duration_sec", 0),
+                        final_blows_t1=rnd.get("final_blows_t1", 0),
+                        final_blows_t2=rnd.get("final_blows_t2", 0),
+                        video_delta_sec=rnd.get("video_delta_sec"),
+                    )
+                    db.add(db_round)
+                    await db.flush()
+                    total_rounds += 1
 
-    _invalidate_response_cache()
-    return {
-        "success": True,
-        "backup_created": backup_path,
-        "sessions": total_sessions,
-        "matches": total_matches,
-        "rounds": total_rounds,
-        "events": total_events,
-        "parse_errors": parse_errors,
-    }
+                    for stat in rnd.get("stats", []):
+                        db.add(DBPlayerStat(
+                            round_id=db_round.id,
+                            match_id=match_id_val,
+                            team_name=stat.get("team_name", ""),
+                            player_name=stat.get("player_name", ""),
+                            hero_name=stat.get("hero_name", ""),
+                            hero_image=stat.get("hero_image", ""),
+                            slot_index=stat.get("slot_index", -1),
+                            **{f: stat.get(f, 0) for f in NUMERIC_FIELDS},
+                        ))
+                    for ev in rnd.get("events", []):
+                        et = ev.get("event_type", "")
+                        db.add(DBEvent(
+                            round_id=db_round.id,
+                            match_id=match_id_val,
+                            event_type=et,
+                            timestamp=float(ev.get("timestamp", 0)),
+                            game_timestamp=float(ev.get("game_timestamp", 0)) if ev.get("game_timestamp") is not None else None,
+                            player_name=ev.get("player_name"),
+                            player_team=ev.get("player_team"),
+                            player_hero=ev.get("player_hero"),
+                            player_hero_img=ev.get("player_hero_img"),
+                            ability=ev.get("ability"),
+                            target_name=ev.get("target_name"),
+                            target_team=ev.get("target_team"),
+                            target_hero=ev.get("target_hero"),
+                            target_hero_img=ev.get("target_hero_img"),
+                            round_number=int(ev["round_number"]) if ev.get("round_number") is not None else None,
+                            winner=ev.get("winner"),
+                            attacker=ev.get("attacker"),
+                            description=ev.get("desc"),
+                            score_t1=int(ev["score_t1"]) if ev.get("score_t1") is not None else None,
+                            score_t2=int(ev["score_t2"]) if ev.get("score_t2") is not None else None,
+                            capturing_team=ev.get("capturing_team"),
+                            new_index=int(ev["new_index"]) if ev.get("new_index") is not None else None,
+                            old_index=int(ev["old_index"]) if ev.get("old_index") is not None else None,
+                            team=ev.get("team"),
+                        ))
+                        total_events += 1
+
+        # 모든 삽입(이름·winner_override 복원 포함) 후 자리 바꾸기 매치만 슬롯 교환 재적용.
+        # rounds/events UPDATE 가 방금 삽입분을 대상으로 동작하도록 먼저 flush.
+        if swapped_matches:
+            await db.flush()
+            for dbm in swapped_matches:
+                await _swap_team_slots_db(db, dbm)
+
+        await db.commit()
+        tprint(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
+    return {"sessions": total_sessions, "matches": total_matches, "rounds": total_rounds, "events": total_events}
 
 
 @router.get("/api/scrims/{scrim_id}")

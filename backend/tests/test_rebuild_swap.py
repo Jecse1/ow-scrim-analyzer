@@ -114,3 +114,164 @@ def test_cleanup_stale_rebuild_files(tmp_path):
         open(p, "w").close()
     assert sorted(database.cleanup_stale_rebuild_files(db_path)) == sorted(os.path.basename(p) for p in stale)
     assert all(os.path.exists(p) for p in keep) and not any(os.path.exists(p) for p in stale)
+
+
+# ── rebuild-db 엔드포인트: 사본 위 재구축 → 교체 ────────────────────────────
+import glob
+import hashlib
+import json
+import shutil
+import tempfile
+import threading
+
+from fastapi.testclient import TestClient
+
+import golden_util
+
+BASE, OPP = "Team A", "Team Z"
+
+
+@pytest.fixture(scope="module")
+def api():
+    """전용 임시 DB·rowdata 로 routers.scrims 를 돌린다(test_session_lifecycle.iso 와 같은 방식)."""
+    import main
+    import routers.scrims as scrims
+    from db import models  # noqa: F401
+
+    tmp = tempfile.mkdtemp(prefix="scrim_rebuild_swap_")
+    db_path = os.path.join(tmp, "scrim.db")
+    rows = os.path.join(tmp, "rows")
+    os.makedirs(rows)
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", connect_args={"check_same_thread": False})
+
+    async def _init():
+        async with engine.begin() as conn:
+            await conn.run_sync(database.Base.metadata.create_all)
+            await conn.run_sync(database._apply_column_patches)
+        await engine.dispose()
+    asyncio.run(_init())
+
+    mp = pytest.MonkeyPatch()
+    mp.setattr(scrims, "AsyncSessionLocal", sessionmaker(engine, class_=AsyncSession, expire_on_commit=False))
+    mp.setattr(scrims, "ROW_DATA_DIR", rows)
+    mp.setattr(database, "_DB_PATH", db_path)
+    mp.setattr(scrims, "start_backfill", lambda force=False: None)
+    mp.setattr(scrims, "BASE_TEAM", BASE)
+    with TestClient(main.app) as c:
+        reg = c.post("/api/scrim/manual-register", json={
+            "scrimName": "swap-src", "date": "2026-11-05", "startHour": "10", "endHour": "12",
+            "matches": [{"map_name": "리장 타워", "team1Name": OPP, "team2Name": BASE, "start_time": "00:00",
+                         "end_time": "00:00", "result": "Unknown"}]})
+        assert reg.status_code == 200, reg.text
+        sid = reg.json()["scrim_id"]
+        with open(golden_util.SAMPLE_LOG, "rb") as f:
+            c.post("/api/matches/upload", data={"scrim_id": sid, "match_index": "1"},
+                   files={"file": ("log.txt", f.read(), "text/plain")}).raise_for_status()
+        assert c.post("/api/admin/rebuild-db").status_code == 200   # 기준 상태 = rebuild 결과
+        yield c, scrims, db_path, rows, sid
+        c.portal.call(engine.dispose)
+    mp.undo()
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _sha(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _set_meta_name(rows, sid, name):
+    p = f"{rows}/{sid}_meta.json"
+    with open(p, encoding="utf-8") as f:
+        meta = json.load(f)
+    meta["scrim_name"] = name
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False)
+
+
+def _leftovers(db_path):
+    return glob.glob(glob.escape(db_path) + ".rebuild-*")
+
+
+def _backups(db_path):
+    return set(glob.glob(glob.escape(db_path) + ".before_rebuild_*"))
+
+
+def _post_rebuild_in_thread(c):
+    out = {}
+    t = threading.Thread(target=lambda: out.setdefault("r", c.post("/api/admin/rebuild-db")))
+    t.start()
+    return t, out
+
+
+def test_reads_served_from_live_db_while_rebuilding(api, monkeypatch):
+    # 재구축(임시 사본에 커밋까지 끝난 뒤 교체 직전)에서 멈춘 동안: 조회 200·옛 데이터, 운영 DB 에 잠금 없음.
+    # 교체 직후 첫 조회 = 새 데이터.
+    c, scrims, db_path, rows, sid = api
+    _set_meta_name(rows, sid, "rebuilt-name")
+    started, release = threading.Event(), threading.Event()
+    real_into = scrims._rebuild_into
+
+    async def paused_into(factory, new_scrims):
+        res = await real_into(factory, new_scrims)
+        started.set()
+        while not release.is_set():
+            await asyncio.sleep(0.01)
+        return res
+    monkeypatch.setattr(scrims, "_rebuild_into", paused_into)
+    t, out = _post_rebuild_in_thread(c)
+    try:
+        assert started.wait(10)
+        r = c.get(f"/api/scrims/{sid}")
+        assert r.status_code == 200 and r.json()["scrim_name"] == "swap-src"
+        assert c.get("/api/scrims").status_code == 200
+        con = sqlite3.connect(db_path, timeout=0)       # 예전 구현은 이 시점에 쓰기 트랜잭션이 운영 DB 를 쥐고 있었다
+        try:
+            con.execute("BEGIN IMMEDIATE")
+            con.rollback()
+        finally:
+            con.close()
+    finally:
+        release.set()
+        t.join(20)
+    assert out["r"].status_code == 200, out["r"].text
+    assert c.get(f"/api/scrims/{sid}").json()["scrim_name"] == "rebuilt-name"
+    assert not _leftovers(db_path)
+    _set_meta_name(rows, sid, "swap-src")
+
+
+@pytest.mark.parametrize("where", ["build", "swap"])
+def test_failure_leaves_live_db_unchanged(api, monkeypatch, where):
+    c, scrims, db_path, rows, sid = api
+    name_before = c.get(f"/api/scrims/{sid}").json()["scrim_name"]
+    _set_meta_name(rows, sid, "never-visible")
+    c.portal.call(scrims.AsyncSessionLocal.kw["bind"].dispose)   # 파일 바이트 비교 전에 풀 정리
+    before, backups = _sha(db_path), _backups(db_path)
+
+    async def boom(*a, **k):
+        raise RuntimeError("injected")
+    if where == "build":
+        real_into = scrims._rebuild_into
+
+        async def into_then_boom(factory, new_scrims):
+            await real_into(factory, new_scrims)       # 임시 사본은 새 데이터로 커밋된 뒤 실패
+            raise RuntimeError("injected")
+        monkeypatch.setattr(scrims, "_rebuild_into", into_then_boom)
+    else:
+        monkeypatch.setattr(database, "swap_db_file", boom)
+    r = c.post("/api/admin/rebuild-db")
+    assert r.status_code == 500 and r.json() == {"detail": "DB rebuild failed"}
+    assert _sha(db_path) == before
+    assert _backups(db_path) == backups
+    assert not _leftovers(db_path)
+    assert c.get(f"/api/scrims/{sid}").json()["scrim_name"] == name_before
+    _set_meta_name(rows, sid, "swap-src")
+
+
+def test_disk_shortfall_returns_507(api, monkeypatch, capsys):
+    c, scrims, db_path, *_ = api
+    real = shutil.disk_usage
+    monkeypatch.setattr(shutil, "disk_usage", lambda p: real(p)._replace(free=1024))
+    r = c.post("/api/admin/rebuild-db")
+    assert r.status_code == 507 and r.json() == {"detail": "Insufficient disk space"}
+    assert "디스크 여유 부족 — 시작 안 함: free 0MB < need 64MB" in capsys.readouterr().out
+    assert not _leftovers(db_path)

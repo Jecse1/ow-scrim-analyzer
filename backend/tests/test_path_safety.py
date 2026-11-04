@@ -256,17 +256,19 @@ def test_forget_failure_on_single_match_delete_still_deletes(client, monkeypatch
 
 
 def test_rebuild_backup_follows_db_path(client, monkeypatch):
-    # rebuild 백업 원본·사본 경로 = 엔진 DB 경로(SCRIM_DB_PATH). 복사를 가로채 실패시켜 재구축은 하지 않는다.
-    import shutil
+    # rebuild 사본 원본·임시 파일 경로 = 엔진 DB 경로(SCRIM_DB_PATH). 사본을 가로채 실패시켜 재구축은 하지 않는다.
+    import glob
+    import routers.scrims as scrims
     from db import database
     seen = {}
 
-    def _fake_copy(src, dst):
+    def _fake_snapshot(src, dst):
         seen["src"], seen["dst"] = src, dst
         raise OSError("stop before rebuild")
 
-    monkeypatch.setattr(shutil, "copy", _fake_copy)
+    monkeypatch.setattr(scrims, "_snapshot_db", _fake_snapshot)
     r = client.post("/api/admin/rebuild-db")
     assert r.status_code == 500 and r.json() == {"detail": "Backup failed"}
     assert seen["src"] == database._DB_PATH == os.path.abspath(os.environ["SCRIM_DB_PATH"])
-    assert seen["dst"].startswith(database._DB_PATH + ".before_rebuild_")
+    assert seen["dst"].startswith(database._DB_PATH + ".rebuild-") and seen["dst"].endswith(".tmp")
+    assert not glob.glob(glob.escape(database._DB_PATH) + ".rebuild-*")

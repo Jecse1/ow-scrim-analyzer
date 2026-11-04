@@ -451,13 +451,13 @@ def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
     c, rows, scrims = iso
     sid, mids = _register(c, "d6", [_seg()], date="2026-11-09", hours=("07", "08"))
     started, release = threading.Event(), threading.Event()
-    real_copy = shutil.copy
+    real_snapshot = scrims._snapshot_db
 
-    def slow_copy(src, dst):           # rebuild 백업 단계에서 잠시 멈춘다
+    def slow_snapshot(src, dst):       # rebuild 사본 단계(스레드풀)에서 잠시 멈춘다
         started.set()
         release.wait(3)
-        return real_copy(src, dst)
-    monkeypatch.setattr(shutil, "copy", slow_copy)
+        return real_snapshot(src, dst)
+    monkeypatch.setattr(scrims, "_snapshot_db", slow_snapshot)
     out = {}
     t = threading.Thread(target=lambda: out.setdefault("rebuild", c.post("/api/admin/rebuild-db")))
     t.start()
