@@ -4,8 +4,10 @@
 config.py(ROW_DATA_DIR 생성)·db/database.py(엔진 경로)는 import 시점에 경로를 정하므로,
 여기서 환경변수로 임시 디렉터리를 먼저 지정해 테스트가 운영 DB·원문 로그 경로를 만들거나 건드리지 않게 한다.
 """
+import asyncio
 import os
 import shutil
+import sys
 import tempfile
 
 _TMP = tempfile.mkdtemp(prefix="scrim_pytest_")
@@ -24,4 +26,14 @@ def pytest_addoption(parser):
 
 
 def pytest_unconfigure(config):
+    # 전역 aiosqlite 엔진(db/database.py)이 연결 풀에 scrim.db 핸들을 쥔 채면 Windows 는 파일을 지우지 못해
+    # rmtree(ignore_errors) 가 조용히 실패하고 %TEMP%\scrim_pytest_* 가 쌓인다 → 풀을 먼저 닫는다.
+    db = sys.modules.get("db.database")
+    if db is not None:
+        try:
+            asyncio.run(db.engine.dispose())
+        except Exception as e:  # 정리 실패가 테스트 결과를 바꾸지 않게
+            print(f"[conftest] engine.dispose failed: {type(e).__name__}: {e}")
     shutil.rmtree(_TMP, ignore_errors=True)
+    if os.path.exists(_TMP):
+        print(f"[conftest] 임시 폴더 삭제 실패: {_TMP}")

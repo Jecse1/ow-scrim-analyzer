@@ -228,3 +228,45 @@ def test_forget_failure_on_match_batch_delete_still_deletes(client, monkeypatch)
         assert not os.path.exists(f"{ROW_DATA_DIR}/{sid}_1.txt")
     finally:
         _cleanup(c, sid)
+
+
+def test_forget_failure_on_single_match_delete_still_deletes(client, monkeypatch, capsys):
+    # 매치 단건 삭제도 스킬 저장소 정리 실패는 로그만(일괄 삭제와 같은 구조) — 응답·파일 삭제는 DB 결과 기준
+    import routers.scrims as scrims
+
+    async def _boom(ids):
+        raise RuntimeError("injected forget failure")
+
+    c = client
+    sid = None
+    try:
+        sid, mids = _register(c, "forget-fail-1", 2, hours=("10", "11"))
+        assert _upload(c, sid, 1).status_code == 200
+        with monkeypatch.context() as mp:
+            mp.setattr(scrims, "forget_match_abilities", _boom)
+            r = c.delete(f"/api/matches/{mids[1]}")
+        assert r.status_code == 200, r.text
+        assert {m["match_index"] for m in c.get(f"/api/scrims/{sid}").json()["matches"]} == {2}
+        assert not os.path.exists(f"{ROW_DATA_DIR}/{sid}_1.txt")
+        out = capsys.readouterr().out
+        assert "delete_match forget_match_abilities failed" in out
+        assert "[DB] delete_match failed" not in out          # DB 오류로 잘못 기록하지 않는다
+    finally:
+        _cleanup(c, sid)
+
+
+def test_rebuild_backup_follows_db_path(client, monkeypatch):
+    # rebuild 백업 원본·사본 경로 = 엔진 DB 경로(SCRIM_DB_PATH). 복사를 가로채 실패시켜 재구축은 하지 않는다.
+    import shutil
+    from db import database
+    seen = {}
+
+    def _fake_copy(src, dst):
+        seen["src"], seen["dst"] = src, dst
+        raise OSError("stop before rebuild")
+
+    monkeypatch.setattr(shutil, "copy", _fake_copy)
+    r = client.post("/api/admin/rebuild-db")
+    assert r.status_code == 500 and r.json() == {"detail": "Backup failed"}
+    assert seen["src"] == database._DB_PATH == os.path.abspath(os.environ["SCRIM_DB_PATH"])
+    assert seen["dst"].startswith(database._DB_PATH + ".before_rebuild_")

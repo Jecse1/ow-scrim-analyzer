@@ -20,6 +20,7 @@ _DB_IMPORT_ERROR = None
 try:
     from sqlalchemy import select
     from db.database import AsyncSessionLocal
+    from db import database as _database  # rebuild 백업 경로(_DB_PATH = SCRIM_DB_PATH 반영)
     from db.models import Session as DBSession, Match as DBMatch, Pause as DBPause, Round as DBRound, PlayerStat as DBPlayerStat, Event as DBEvent
     _DB_AVAILABLE = True
 except Exception as _e:
@@ -802,8 +803,9 @@ async def rebuild_database():
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    db_path = "data/scrim.db"
-    backup_path = f"data/scrim.db.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    # 엔진이 쓰는 DB 파일 그대로(SCRIM_DB_PATH 반영). 예전 "data/scrim.db" 는 작업 폴더 기준이라 경로 재지정을 무시했다.
+    db_path = _database._DB_PATH
+    backup_path = f"{db_path}.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     try:
         _shutil.copy(db_path, backup_path)
         tprint(f"[REBUILD] DB backup: {backup_path}")
@@ -1568,9 +1570,14 @@ async def delete_match(match_id: str):
                     m.deleted_at = datetime.utcnow()
                     await db.commit()
                     tprint(f"[DB] soft-delete match: {match_id}")
-                    await forget_match_abilities([match_id])
         except Exception as e:
             tprint(f"[DB] delete_match failed: {e}")
+        # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 삭제는 확정이므로 파일 삭제까지 진행(일괄 삭제와 같은 구조)
+        if found_scrim_id:
+            try:
+                await forget_match_abilities([match_id])
+            except Exception as e:
+                tprint(f"[DB] delete_match forget_match_abilities failed: {e}")
 
     if not found_scrim_id:
         raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
