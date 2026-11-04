@@ -325,13 +325,15 @@ def test_rebuild_reproduces_live_after_edits(iso):
     assert {k: _snap(c, v) for k, v in mids.items()} == live
 
 
-@pytest.mark.xfail(strict=True, reason="D1: 매치 삭제가 meta 의 매치 항목을 남겨 rebuild 가 되살린다")
 def test_d1_deleted_match_stays_deleted_after_rebuild(iso):
+    # D1: 매치 삭제(단건·일괄)는 meta 의 매치 항목도 뺀다 — rebuild 가 삭제 매치를 되살리지 않게
     c, rows, _ = iso
-    sid, mids = _register(c, "d1", [_seg(), _seg()], date="2026-11-08", hours=("13", "15"))
-    for i in (1, 2):
+    sid, mids = _register(c, "d1", [_seg(), _seg(), _seg()], date="2026-11-08", hours=("13", "15"))
+    for i in (1, 2, 3):
         assert _upload(c, sid, i).status_code == 200
     assert c.delete(f"/api/matches/{mids[2]}").status_code == 200
+    assert c.post("/api/matches/delete-batch", json={"ids": [mids[3]]}).status_code == 200
+    assert [m["id"] for m in _meta(rows, sid)["matches"]] == [mids[1]]
     _rebuild(c)
     assert [m["match_index"] for m in c.get(f"/api/scrims/{sid}").json()["matches"]] == [1]
 

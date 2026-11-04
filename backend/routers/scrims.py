@@ -131,6 +131,18 @@ def _update_meta_json(scrim_id: str, mutate) -> bool:
     return True
 
 
+def _remove_matches_from_meta(scrim_id: str, match_ids) -> bool:
+    """meta.json(rebuild 소스)에서 삭제한 매치 항목을 뺀다. rebuild 는 meta 의 매치를 전부 다시 넣고
+    deleted_at 을 복원하지 않으므로, 남겨 두면 삭제한 매치가 되살아난다(가정: 매치 삭제 = DB 소프트 삭제 + meta 제거)."""
+    ids = set(match_ids)
+
+    def mutate(meta):
+        before = len(meta.get("matches", []))
+        meta["matches"] = [m for m in meta.get("matches", []) if m.get("id") not in ids]
+        return len(meta["matches"]) != before
+    return _update_meta_json(scrim_id, mutate)
+
+
 def _update_match_fields_in_meta(scrim_id: str, match_id: str, fields: dict) -> bool:
     """meta.json의 해당 매치에 fields를 병합(rebuild 복원 정합용)."""
     def mutate(meta):
@@ -1586,6 +1598,7 @@ async def delete_match(match_id: str):
     tprint(f"[DELETE] 매치 삭제: {match_id} (scrim={found_scrim_id}, index={found_match_index})  ({datetime.now().isoformat()})")
     warnings.extend(_delete_match_file(found_scrim_id, found_match_index))
     _invalidate_response_cache()
+    _remove_matches_from_meta(found_scrim_id, [match_id])
     return {"success": True, "deleted_count": 1, "warnings": warnings, "failed_ids": []}
 
 
@@ -1632,6 +1645,12 @@ async def delete_matches_batch(req: BatchDeleteRequest):
             warnings.extend(_delete_match_file(scrim_id, match_index))
 
     _invalidate_response_cache()
+    by_session: dict = {}
+    for scrim_id, _idx, mid in db_deleted:
+        if scrim_id:
+            by_session.setdefault(scrim_id, []).append(mid)
+    for scrim_id, mids in by_session.items():
+        _remove_matches_from_meta(scrim_id, mids)
     return {
         "success": len(failed_ids) == 0,
         "deleted_count": len(db_deleted),
