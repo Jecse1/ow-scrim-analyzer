@@ -77,6 +77,7 @@ def save_data(data):
         raise
 
 
+# 가정: 세션 파일 = {id}_meta.json + {id}_{n}.txt(정확 일치) — 형제 세션 {id}_k 의 파일은 건드리지 않는다.
 def _delete_scrim_files(scrim_id: str) -> list[str]:
     """scrim_id 관련 파일 전부 삭제, 실패한 파일 경로 반환"""
     warnings = []
@@ -110,6 +111,7 @@ def _delete_match_file(scrim_id: str, match_index: int) -> list[str]:
     return warnings
 
 
+# 가정: meta.json 쓰기는 _json_lock + 임시 파일 교체로 원자적(단일 프로세스). meta 가 없으면 False.
 def _update_meta_json(scrim_id: str, mutate) -> bool:
     """meta.json(rebuild 소스)을 잠금 하에 읽어 mutate(meta)->bool 적용 후 원자적으로 저장.
     mutate가 False를 반환하면 저장하지 않는다. 파일 없으면 False."""
@@ -205,6 +207,7 @@ def _update_match_wo_in_meta(scrim_id: str, match_id: str, wo_value, winner_sour
 
 
 # ── 팀명 치환·자리 바꾸기 공용 헬퍼(세션 편집·매치 편집·rebuild 공유) ──────────────
+# 가정: 팀명은 값으로만 식별(슬롯 무관) — 한 매치의 두 팀 이름은 서로 다르다.
 async def _rename_team_in_match_db(db, match, old: str, new: str):
     """한 매치 범위에서 '팀명 문자열' 컬럼을 old→new 로 값 치환(DB만, meta는 호출자 담당).
     슬롯 순서와 무관한 값 기반 치환이라 자리 바꾸기 상태에서도 안전하다.
@@ -231,6 +234,7 @@ async def _rename_team_in_match_db(db, match, old: str, new: str):
                          .values(**{col.key: new}))
 
 
+# 가정: DB 는 화면 슬롯 순서, meta 는 로그 원본 순서 + teams_swapped 플래그.
 async def _swap_team_slots_db(db, match):
     """1팀↔2팀 슬롯 교환(DB만). 이름 슬롯·슬롯 숫자쌍만 맞바꾸고 '이름값' 컬럼은 불변.
     교환: matches.team1_name↔team2_name, score_t1↔score_t2, total_final_blows_t1↔t2,
@@ -257,6 +261,7 @@ async def _swap_team_slots_db(db, match):
                      .values(score_t1=DBEvent.score_t2, score_t2=DBEvent.score_t1))
 
 
+# 가정: 임시 토큰(\0swap\0)은 실제 팀명과 충돌하지 않는다.
 async def _exchange_team_names_in_match_db(db, match, a: str, b: str):
     """한 매치에서 팀명 문자열 a↔b 를 '동시에' 맞교환(DB만, meta는 호출자 담당).
     슬롯 순서·슬롯 숫자쌍(score_t1/2 등)은 불변 — 값 기반 치환이므로 자리와 무관.
@@ -355,6 +360,7 @@ def _register_lock() -> asyncio.Lock:
     return lock
 
 
+# 가정: ID = YYMMDD+시작시+종료시(+_n). 등록은 프로세스 내 잠금으로 직렬화, meta 는 DB 커밋 뒤 확정.
 @router.post("/api/scrim/manual-register")
 async def register_scrim_manual(request: Request):
     _raise_if_rebuilding()
@@ -567,6 +573,7 @@ def _decode_log_bytes(content: bytes):
         return content.decode("cp949", errors="ignore"), True
 
 
+# 가정: 매치는 등록으로 이미 존재. 원문 로그·DB 는 커밋 성공 시에만 함께 바뀌고, 교환 매치는 원본 순서로 파싱.
 @router.post("/api/matches/upload")
 async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(...), file: UploadFile = File(...),
                            dry_run: str = Form(None), adopt: str = Form(None)):
@@ -911,6 +918,7 @@ async def db_status():
         return {"db_available": True, "error": "DB query failed"}
 
 
+# 가정: meta.json + 원문 로그가 정본(삭제 매치는 meta 에 없음). 진행 중 쓰기는 409, winner_override 는 DB 스냅샷 우선.
 @router.post("/api/admin/rebuild-db")
 async def rebuild_database():
     global _REBUILD_JOB
@@ -1223,6 +1231,7 @@ async def get_match_detail(match_id: str):
 
 
 # ── 사후 승패 보정(winner_override) ─────────────────────────────
+# 가정: 원본 winner 불변, override 는 1팀명·2팀명·Draw·null 만, meta 동기화(실패는 meta_warning).
 @router.patch("/api/matches/{match_id}/winner-override")
 async def update_match_winner_override(match_id: str, body: WinnerOverrideInput):
     """이미 등록된 매치의 수기 승패 보정을 갱신한다(무승부/미기록 매치 교정용).
@@ -1268,6 +1277,7 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
 
 
 # ── 세션 정보 수정 ─────────────────────────────────────────────
+# 가정: 기준 팀명은 세션 단위로 바꾸지 않는다. 삭제된 매치는 DB 치환 대상이 아니다.
 @router.patch("/api/sessions/{scrim_id}")
 async def patch_session(scrim_id: str, body: SessionPatchInput):
     """세션 이름·날짜·팀명 정정. 팀명은 등록 시 오타 교정 용도 —
@@ -1347,6 +1357,7 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
 
 
 # ── 매치 정보 수정 ─────────────────────────────────────────────
+# 가정: 처리 순서 교환 → 치환, 교차 입력 = 이름 교환. 로그 매치 승패는 winner-override 로만.
 @router.patch("/api/matches/{match_id}")
 async def patch_match(match_id: str, body: MatchPatchInput):
     """매치 정보 수정: 맵·VOD(URL/오프셋/구간)·순서(match_index)·(수기 매치 한정) winner/score.
@@ -1547,6 +1558,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
 _WEBHOOK_SENT: dict = {}
 
 
+# 가정: 읽기 전용. 같은 본문의 웹훅은 프로세스당 1회(발송 실패 시 다시).
 @router.post("/api/sessions/{session_id}/complete", response_model=SessionCompleteResponse)
 async def complete_session(session_id: str):
     """세션 등록 완료 신호. 읽기 전용(DB·meta.json 무변경) — 같은 세션이면 같은 응답(webhook 값 제외).
@@ -1603,6 +1615,7 @@ async def complete_session(session_id: str):
 
 
 # ── 세션 단건 삭제 ─────────────────────────────────────────────
+# 가정: DB 소프트 삭제가 성공해야 파일을 지운다(DB 우선).
 @router.delete("/api/sessions/{scrim_id}")
 async def delete_session(scrim_id: str):
     _raise_if_rebuilding()
@@ -1648,6 +1661,7 @@ async def delete_session(scrim_id: str):
 
 
 # ── 세션 배치 삭제 ─────────────────────────────────────────────
+# 가정: DB 소프트 삭제가 성공해야 파일을 지운다(DB 우선, 요청 ID 대체 없음).
 @router.post("/api/sessions/delete-batch")
 async def delete_sessions_batch(req: BatchDeleteRequest):
     _raise_if_rebuilding()
@@ -1709,6 +1723,7 @@ async def delete_sessions_batch(req: BatchDeleteRequest):
 
 
 # ── 매치 단건 삭제 ─────────────────────────────────────────────
+# 가정: DB 소프트 삭제 + 원문 로그 삭제 + meta 항목 제거(rebuild 부활 방지).
 @router.delete("/api/matches/{match_id}")
 async def delete_match(match_id: str):
     _raise_if_rebuilding()
@@ -1752,6 +1767,7 @@ async def delete_match(match_id: str):
 
 
 # ── 매치 배치 삭제 ─────────────────────────────────────────────
+# 가정: DB 소프트 삭제 + 원문 로그 삭제 + meta 항목 제거(세션별 1회).
 @router.post("/api/matches/delete-batch")
 async def delete_matches_batch(req: BatchDeleteRequest):
     _raise_if_rebuilding()
