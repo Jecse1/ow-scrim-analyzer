@@ -133,6 +133,20 @@ def _update_meta_json(scrim_id: str, mutate) -> bool:
     return True
 
 
+def _meta_sync(scrim_id: str, label: str, fn, *args) -> bool:
+    """DB 커밋 뒤의 meta.json(rebuild 소스) 갱신을 감싼다. meta 가 없거나 쓰기 예외면 로그를 남기고 False —
+    호출자는 응답에 meta_warning 을 붙인다(DB 는 이미 커밋됨). '바꿀 것 없음'(fn 이 False)은 실패가 아니다."""
+    if not os.path.exists(f"{ROW_DATA_DIR}/{scrim_id}_meta.json"):
+        tprint(f"[DB] {label} meta sync failed: {scrim_id}: meta.json 없음")
+        return False
+    try:
+        fn(*args)
+        return True
+    except Exception as e:
+        tprint(f"[DB] {label} meta sync failed: {scrim_id}: {e}")
+        return False
+
+
 def _remove_matches_from_meta(scrim_id: str, match_ids) -> bool:
     """meta.json(rebuild 소스)에서 삭제한 매치 항목을 뺀다. rebuild 는 meta 의 매치를 전부 다시 넣고
     deleted_at 을 복원하지 않으므로, 남겨 두면 삭제한 매치가 되살아난다(가정: 매치 삭제 = DB 소프트 삭제 + meta 제거)."""
@@ -720,12 +734,17 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 await _swap_team_slots_db(db, db_match)
             await db.commit()
             tprint(f"[DB] upload OK: match={match_id_val}")
-            os.replace(log_tmp, log_path)
-            log_tmp = None
+            log_ok = True
+            try:
+                os.replace(log_tmp, log_path)
+                log_tmp = None
+            except OSError as e:   # DB 는 커밋됨 — 원문(rebuild 소스)만 옛 것. 500 대신 경고(임시 파일은 finally 가 지움)
+                tprint(f"[DB] upload log sync failed: {scrim_id} #{match_index}: {e}")
+                log_ok = False
             await store_match_abilities(match_id_val, ability)  # 로그 교체면 그 매치 스킬 행을 통째로 바꾼다
             _invalidate_response_cache()  # 커밋 직후(아래 meta 쓰기가 실패해도 캐시가 DB 보다 낡지 않게)
             # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
-            _update_match_fields_in_meta(scrim_id, match_id_val, {
+            meta_ok = _meta_sync(scrim_id, "upload", _update_match_fields_in_meta, scrim_id, match_id_val, {
                 "source": "log",
                 "map_name": db_match.map_name,
                 "winner_override": db_match.winner_override or "",
@@ -734,7 +753,12 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 "precheck": {"warning_count": pre["warning_count"],
                              "codes": sorted(pre["counts"]["by_code"])},
             })
-            return {"status": "success", "diff": diff, **pre_resp}
+            resp = {"status": "success", "diff": diff, **pre_resp}
+            if not meta_ok:
+                resp["meta_warning"] = "meta_sync_failed"
+            if not log_ok:
+                resp["log_warning"] = "log_sync_failed"
+            return resp
     except HTTPException:
         raise
     except Exception as e:
@@ -1236,8 +1260,10 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
         raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
-    _update_match_wo_in_meta(scrim_id, match_id, wo, ws)
-    return {"success": True, "match_id": match_id, "winner_override": wo or ""}
+    resp = {"success": True, "match_id": match_id, "winner_override": wo or ""}
+    if not _meta_sync(scrim_id, "winner_override", _update_match_wo_in_meta, scrim_id, match_id, wo, ws):
+        resp["meta_warning"] = "meta_sync_failed"
+    return resp
 
 
 # ── 세션 정보 수정 ─────────────────────────────────────────────
@@ -1312,9 +1338,11 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
                 if m.get("result") and rn_from in m["result"]:
                     m["result"] = m["result"].replace(rn_from, rn_to); changed = True
         return changed
-    _update_meta_json(scrim_id, mutate)
-    return {"success": True, "scrim_id": scrim_id,
+    resp = {"success": True, "scrim_id": scrim_id,
             "renamed": {"from": rn_from, "to": rn_to} if rn_from else None}
+    if not _meta_sync(scrim_id, "patch_session", _update_meta_json, scrim_id, mutate):
+        resp["meta_warning"] = "meta_sync_failed"
+    return resp
 
 
 # ── 매치 정보 수정 ─────────────────────────────────────────────
@@ -1485,27 +1513,30 @@ async def patch_match(match_id: str, body: MatchPatchInput):
         raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
+    meta_ok = True
     if meta_fields:
-        _update_match_fields_in_meta(scrim_id, match_id, meta_fields)
+        meta_ok = _meta_sync(scrim_id, "patch_match", _update_match_fields_in_meta, scrim_id, match_id, meta_fields) and meta_ok
     if swapped:
-        _update_match_fields_in_meta(scrim_id, swapped, {"match_index": old_idx})
+        meta_ok = _meta_sync(scrim_id, "patch_match", _update_match_fields_in_meta, scrim_id, swapped, {"match_index": old_idx}) and meta_ok
     # 팀명 변경·자리 바꾸기·이름 교환 meta 동기화(rebuild 소스). meta 팀명은 로그 원본 순서를
     # 유지하고 자리 바꾸기는 teams_swapped 플래그만 토글 — 값 기반 rename/교환은 슬롯 무관하게 적용.
     # 이름 교환은 메타 팀명 값 자체를 A↔B 로 바꾸므로 rebuild 가 플래그 없이 재파싱만으로 복원된다.
     if did_exchange:
-        _exchange_team_names_in_meta_match(scrim_id, match_id, p1, p2)   # p1=c1, p2=c2
+        meta_ok = _meta_sync(scrim_id, "patch_match", _exchange_team_names_in_meta_match, scrim_id, match_id, p1, p2) and meta_ok   # p1=c1, p2=c2
     if did_swap:
-        _toggle_swap_in_meta_match(scrim_id, match_id)
+        meta_ok = _meta_sync(scrim_id, "patch_match", _toggle_swap_in_meta_match, scrim_id, match_id) and meta_ok
     if changed1:
-        _rename_team_in_meta_match(scrim_id, match_id, p1, i1)
+        meta_ok = _meta_sync(scrim_id, "patch_match", _rename_team_in_meta_match, scrim_id, match_id, p1, i1) and meta_ok
     if changed2:
-        _rename_team_in_meta_match(scrim_id, match_id, p2, i2)
+        meta_ok = _meta_sync(scrim_id, "patch_match", _rename_team_in_meta_match, scrim_id, match_id, p2, i2) and meta_ok
     resp = {"success": True, "match_id": match_id, "updated": list(meta_fields.keys()),
             "swapped_with": swapped, "teams_swapped": did_swap,
             "exchanged_teams": did_exchange,
             "renamed_teams": bool(changed1 or changed2)}
     if team_warning:
         resp["warning"] = team_warning
+    if not meta_ok:
+        resp["meta_warning"] = "meta_sync_failed"
     return resp
 
 
@@ -1697,8 +1728,10 @@ async def delete_match(match_id: str):
     tprint(f"[DELETE] 매치 삭제: {match_id} (scrim={found_scrim_id}, index={found_match_index})  ({datetime.now().isoformat()})")
     warnings.extend(_delete_match_file(found_scrim_id, found_match_index))
     _invalidate_response_cache()
-    _remove_matches_from_meta(found_scrim_id, [match_id])
-    return {"success": True, "deleted_count": 1, "warnings": warnings, "failed_ids": []}
+    resp = {"success": True, "deleted_count": 1, "warnings": warnings, "failed_ids": []}
+    if not _meta_sync(found_scrim_id, "delete_match", _remove_matches_from_meta, found_scrim_id, [match_id]):
+        resp["meta_warning"] = "meta_sync_failed"
+    return resp
 
 
 # ── 매치 배치 삭제 ─────────────────────────────────────────────
@@ -1749,11 +1782,15 @@ async def delete_matches_batch(req: BatchDeleteRequest):
     for scrim_id, _idx, mid in db_deleted:
         if scrim_id:
             by_session.setdefault(scrim_id, []).append(mid)
+    meta_ok = True
     for scrim_id, mids in by_session.items():
-        _remove_matches_from_meta(scrim_id, mids)
-    return {
+        meta_ok = _meta_sync(scrim_id, "delete_matches_batch", _remove_matches_from_meta, scrim_id, mids) and meta_ok
+    resp = {
         "success": len(failed_ids) == 0,
         "deleted_count": len(db_deleted),
         "warnings": warnings,
         "failed_ids": failed_ids,
     }
+    if not meta_ok:
+        resp["meta_warning"] = "meta_sync_failed"
+    return resp

@@ -486,15 +486,45 @@ def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
 
 
 # ── 편집 후 meta 갱신 실패 ──────────────────────────────────────────────────
-@pytest.mark.xfail(strict=True, reason="D8: 편집 뒤 meta 갱신 실패가 응답·로그에 드러나지 않는다")
 def test_d8_meta_sync_failure_is_reported(iso, capsys):
+    # D8: DB 커밋 뒤 meta 갱신 실패(meta 없음·쓰기 예외)는 200 + meta_warning + 로그. 정상이면 키 없음.
     c, rows, _ = iso
-    sid, mids = _register(c, "d8", [_seg()], date="2026-11-09", hours=("11", "12"))
+    sid, mids = _register(c, "d8", [_seg(), _seg()], date="2026-11-09", hours=("11", "12"))
+    ok = c.patch(f"/api/matches/{mids[1]}", json={"map_name": "부산"})
+    assert ok.status_code == 200 and "meta_warning" not in ok.json()
     os.remove(f"{rows}/{sid}_meta.json")                 # meta 가 사라진 상태
-    r = c.patch(f"/api/matches/{mids[1]}", json={"map_name": "부산"})
-    assert r.status_code == 200
-    assert r.json().get("meta_warning") == "meta_sync_failed"
+    responses = [
+        c.patch(f"/api/matches/{mids[1]}", json={"map_name": "일리오스"}),
+        c.patch(f"/api/matches/{mids[1]}/winner-override", json={"winner_override": "Draw"}),
+        c.patch(f"/api/sessions/{sid}", json={"scrimName": "d8-2"}),
+        c.delete(f"/api/matches/{mids[2]}"),
+    ]
+    assert [r.status_code for r in responses] == [200] * 4
+    assert [r.json().get("meta_warning") for r in responses] == ["meta_sync_failed"] * 4
+    assert c.get(f"/api/matches/{mids[1]}").json()["map_name"] == "일리오스"   # DB 는 커밋됨
     assert "meta sync failed" in capsys.readouterr().out
+
+
+def test_d8_upload_log_replace_failure_is_warning(iso, monkeypatch, capsys):
+    # D8(D4 후속): 커밋 뒤 원문 로그 교체가 실패해도 500 이 아니라 200 + log_warning + 로그, 기존 원문 그대로
+    c, rows, scrims = iso
+    sid, mids = _register(c, "d8-log", [_seg()], date="2026-11-09", hours=("15", "16"))
+    assert _upload(c, sid, 1).status_code == 200
+    original = _read(f"{rows}/{sid}_1.txt")
+    real_replace = os.replace
+
+    def fail_txt(src, dst):
+        if str(dst).endswith(".txt"):
+            raise OSError("disk full")
+        return real_replace(src, dst)
+    monkeypatch.setattr(scrims.os, "replace", fail_txt)
+    r = _upload(c, sid, 1, body=_sample().replace(b"Player1", b"PlayerX"))
+    monkeypatch.setattr(scrims.os, "replace", real_replace)
+    assert r.status_code == 200 and r.json().get("log_warning") == "log_sync_failed"
+    assert "meta_warning" not in r.json()
+    assert _read(f"{rows}/{sid}_1.txt") == original
+    assert not [f for f in os.listdir(rows) if f.endswith(".tmp")]
+    assert "upload log sync failed" in capsys.readouterr().out
 
 
 # ── complete ────────────────────────────────────────────────────────────────
