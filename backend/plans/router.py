@@ -21,6 +21,7 @@ except Exception as _e:
 
 from plans import service
 from plans.cache import plans_cache_get, plans_cache_store, plans_cache_invalidate
+from log_time import tprint
 
 router = APIRouter()
 
@@ -69,7 +70,7 @@ async def get_boards():
             data = await service.list_boards(db)
         return plans_cache_store(_BOARDS_CACHE_KEY, data)
     except Exception as e:
-        print(f"[DB] get_boards failed: {e}")
+        tprint(f"[DB] get_boards failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -84,7 +85,7 @@ async def post_board(body: BoardCreate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] post_board failed: {e}")
+        tprint(f"[DB] post_board failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -99,7 +100,7 @@ async def patch_board(board_id: str, body: BoardUpdate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] patch_board failed: {e}")
+        tprint(f"[DB] patch_board failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -114,7 +115,7 @@ async def delete_board(board_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] delete_board failed: {e}")
+        tprint(f"[DB] delete_board failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -130,7 +131,7 @@ async def post_map(body: MapCreate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] post_map failed: {e}")
+        tprint(f"[DB] post_map failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -145,7 +146,7 @@ async def patch_map(map_id: str, body: MapUpdate):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] patch_map failed: {e}")
+        tprint(f"[DB] patch_map failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -160,7 +161,7 @@ async def delete_map(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] delete_map failed: {e}")
+        tprint(f"[DB] delete_map failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -175,7 +176,7 @@ async def duplicate_map(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] duplicate_map failed: {e}")
+        tprint(f"[DB] duplicate_map failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -189,7 +190,7 @@ async def get_canvas(map_id: str):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] get_canvas failed: {e}")
+        tprint(f"[DB] get_canvas failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -210,5 +211,5 @@ async def put_canvas(map_id: str, request: Request):
     except service.PlanError as e:
         raise _map_error(e)
     except Exception as e:
-        print(f"[DB] put_canvas failed: {e}")
+        tprint(f"[DB] put_canvas failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")

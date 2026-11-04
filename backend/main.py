@@ -11,6 +11,8 @@ _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
+from log_time import tprint  # noqa: E402 — backend/ 를 sys.path 에 넣은 뒤
+
 _DB_IMPORT_ERROR = None
 try:
     from sqlalchemy import select
@@ -21,7 +23,7 @@ try:
 except Exception as _e:
     _DB_AVAILABLE = False
     _DB_IMPORT_ERROR = f"{type(_e).__name__}: {_e}"
-    print(f"[DB] Import failed: {_DB_IMPORT_ERROR}")
+    tprint(f"[DB] Import failed: {_DB_IMPORT_ERROR}")
 
 
 @asynccontextmanager
@@ -29,13 +31,13 @@ async def lifespan(app: FastAPI):
     if _DB_AVAILABLE:
         try:
             await init_db()
-            print("[DB] Initialized successfully")
+            tprint("[DB] Initialized successfully")
         except Exception as e:
-            print(f"[DB] Init failed: {e}")
+            tprint(f"[DB] Init failed: {e}")
     from services.abilities import init_ability_store
     init_ability_store()  # 스킬 사용 저장소(별도 SQLite 파일) 멱등 생성
     from config import DISCORD_WEBHOOK_URL  # 값은 출력하지 않는다(설정 여부만)
-    print(f"[WEBHOOK] DISCORD_WEBHOOK_URL: {'설정됨' if DISCORD_WEBHOOK_URL else '미설정'}")
+    tprint(f"[WEBHOOK] DISCORD_WEBHOOK_URL: {'설정됨' if DISCORD_WEBHOOK_URL else '미설정'}")
     from cache import schedule_warm, cancel_warm
     if _DB_AVAILABLE:
         schedule_warm(delay=0)  # 기동 직후 응답 캐시 선채우기(cache.py, 백그라운드)

@@ -24,6 +24,7 @@ from config import ROW_DATA_DIR
 from db import ability_store
 from parsers.ability_log import extract_ability_data
 from parsers.log_parser import parse_overwatch_log
+from log_time import tprint
 
 AUTO_BACKFILL = os.getenv("ABILITY_AUTO_BACKFILL", "1") != "0"   # 테스트는 0(backend/conftest.py)
 PROGRESS_EVERY = 25           # 진행 로그 간격(매치 수)
@@ -39,9 +40,9 @@ def init_ability_store() -> None:
     try:
         n = ability_store.init_store()
         _STORE_EMPTY = n == 0
-        print(f"[ABILITY] store ready: {ability_store.DB_PATH} matches={n}")
+        tprint(f"[ABILITY] store ready: {ability_store.DB_PATH} matches={n}")
     except Exception as e:
-        print(f"[ABILITY] store init failed: {type(e).__name__}: {e}")
+        tprint(f"[ABILITY] store init failed: {type(e).__name__}: {e}")
 
 
 async def extract_abilities(log_text: str, parsed: dict) -> "dict | None":
@@ -49,7 +50,7 @@ async def extract_abilities(log_text: str, parsed: dict) -> "dict | None":
     try:
         return await run_in_threadpool(extract_ability_data, log_text, parsed)
     except Exception as e:
-        print(f"[ABILITY] extract failed: {type(e).__name__}: {e}")
+        tprint(f"[ABILITY] extract failed: {type(e).__name__}: {e}")
         return None
 
 
@@ -60,9 +61,9 @@ async def store_match_abilities(match_id: str, data: "dict | None") -> None:
             await run_in_threadpool(ability_store.forget_matches, [match_id])
             return
         n = await run_in_threadpool(ability_store.replace_match, match_id, data)
-        print(f"[ABILITY] stored match={match_id} uses={n}" + ("" if data.get("has_log") else " (no ability log)"))
+        tprint(f"[ABILITY] stored match={match_id} uses={n}" + ("" if data.get("has_log") else " (no ability log)"))
     except Exception as e:
-        print(f"[ABILITY] store failed match={match_id}: {type(e).__name__}: {e}")
+        tprint(f"[ABILITY] store failed match={match_id}: {type(e).__name__}: {e}")
         try:
             await run_in_threadpool(ability_store.forget_matches, [match_id])
         except Exception:
@@ -74,9 +75,9 @@ async def forget_match_abilities(match_ids) -> None:
     try:
         n = await run_in_threadpool(ability_store.forget_matches, list(match_ids or []))
         if n:
-            print(f"[ABILITY] forgot {n} matches")
+            tprint(f"[ABILITY] forgot {n} matches")
     except Exception as e:
-        print(f"[ABILITY] forget failed: {type(e).__name__}: {e}")
+        tprint(f"[ABILITY] forget failed: {type(e).__name__}: {e}")
 
 
 # ── 백필 ─────────────────────────────────────────────────────────────────────
@@ -136,14 +137,14 @@ async def _run_backfill(force: bool) -> None:
             todo = [t for t in targets if t[0] not in done_ids]
             st["skipped"] = len(targets) - len(todo)
         st["total"] = len(todo)
-        print(f"[ABILITY] backfill start: {len(todo)} matches"
+        tprint(f"[ABILITY] backfill start: {len(todo)} matches"
               + (" (force)" if force else f", already done {st['skipped']}"), flush=True)
         for i, (mid, sid, idx, t1, t2) in enumerate(todo, 1):
             path = os.path.join(ROW_DATA_DIR, f"{sid}_{idx}.txt")
             try:
                 res, n, has_log, tx = await run_in_threadpool(_backfill_one, mid, path, t1, t2, force)
             except Exception as e:
-                print(f"[ABILITY] backfill failed match={mid}: {type(e).__name__}: {e}", flush=True)
+                tprint(f"[ABILITY] backfill failed match={mid}: {type(e).__name__}: {e}", flush=True)
                 res, n, has_log, tx = "failed", 0, False, 0.0
             if res == "stored":
                 st["stored_matches"] += 1
@@ -155,7 +156,7 @@ async def _run_backfill(force: bool) -> None:
                 st[{"missing_file": "missing_file", "skipped": "skipped", "failed": "failed"}[res]] += 1
             st["done"] = i
             if i % PROGRESS_EVERY == 0 or i == len(todo):
-                print(f"[ABILITY] backfill {i}/{len(todo)}", flush=True)
+                tprint(f"[ABILITY] backfill {i}/{len(todo)}", flush=True)
         st["state"] = "done"
     except asyncio.CancelledError:
         st["state"] = "cancelled"
@@ -163,14 +164,14 @@ async def _run_backfill(force: bool) -> None:
     except Exception as e:
         st["state"] = "error"
         st["error"] = "backfill failed"  # 상태 API 로 나간다 — 상세는 로그만
-        print(f"[ABILITY] backfill error: {type(e).__name__}: {e}", flush=True)
+        tprint(f"[ABILITY] backfill error: {type(e).__name__}: {e}", flush=True)
     finally:
         st["elapsed_sec"] = round(time.perf_counter() - t0, 2)
         if tx_samples:
             tx_samples.sort()
             st["p50_tx_ms"] = round(tx_samples[len(tx_samples) // 2], 1)
             st["p95_tx_ms"] = round(tx_samples[int(len(tx_samples) * 0.95)], 1)
-    print(f"[ABILITY] backfill done: matches={st['stored_matches']} uses={st['stored_uses']} no_log={st['no_log']} "
+    tprint(f"[ABILITY] backfill done: matches={st['stored_matches']} uses={st['stored_uses']} no_log={st['no_log']} "
           f"missing_file={st['missing_file']} failed={st['failed']} pruned={st['pruned']} "
           f"{st['elapsed_sec']}s tx p50/p95/max={st['p50_tx_ms']}/{st['p95_tx_ms']}/{st['max_tx_ms']}ms", flush=True)
     if _PENDING_FORCE:
@@ -202,7 +203,7 @@ async def _auto_backfill_after_warm() -> None:
         if task is None or task.done():
             break
         await asyncio.wait({task})
-    print("[ABILITY] store empty at boot -> auto backfill", flush=True)
+    tprint("[ABILITY] store empty at boot -> auto backfill", flush=True)
     start_backfill()
 
 

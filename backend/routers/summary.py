@@ -39,6 +39,7 @@ from services.summary import (
 from schemas_summary import (
     MapSummaryResponse, OpponentSummaryResponse, PeriodSummaryResponse, UltSummaryResponse,
 )
+from log_time import tprint
 
 router = APIRouter()
 
@@ -116,7 +117,7 @@ async def _load(base_team: str) -> tuple[dict, list]:
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] _load failed: {e}")
+        tprint(f"[DB] _load failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 

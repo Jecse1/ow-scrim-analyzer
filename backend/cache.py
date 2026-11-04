@@ -11,6 +11,7 @@ import time
 
 from fastapi import Response
 from fastapi.concurrency import run_in_threadpool
+from log_time import tprint
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 응답 레벨 메모리 캐시 — 조회 엔드포인트(scrims / full-events / fight-records / player-fight-stats)의
@@ -117,7 +118,7 @@ async def _compute_and_store(key: str, compute, gen: int) -> tuple:
         if gen == _GEN:
             _RESPONSE_CACHE[key] = gz
         else:
-            print(f"[CACHE] discard {key} (gen {gen} -> {_GEN})", flush=True)
+            tprint(f"[CACHE] discard {key} (gen {gen} -> {_GEN})", flush=True)
         return gz, gen
     finally:
         if _INFLIGHT.get(key) is me:
@@ -165,17 +166,17 @@ async def _warm(gen: int, delay: float) -> None:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            print(f"[CACHE] warm {key} failed: {type(e).__name__}: {e}", flush=True)
+            tprint(f"[CACHE] warm {key} failed: {type(e).__name__}: {e}", flush=True)
             continue
         if gen == _GEN:
-            print(f"[CACHE] warm {key} {(time.perf_counter() - t) * 1000:.0f}", flush=True)
+            tprint(f"[CACHE] warm {key} {(time.perf_counter() - t) * 1000:.0f}", flush=True)
 
 
 def _invalidate_response_cache():
     global _GEN
     _GEN += 1
     if _RESPONSE_CACHE:
-        print(f"[CACHE] invalidate: {list(_RESPONSE_CACHE.keys())}")
+        tprint(f"[CACHE] invalidate: {list(_RESPONSE_CACHE.keys())}")
     _RESPONSE_CACHE.clear()
     _STALE.update(_INFLIGHT.values())
     _INFLIGHT.clear()

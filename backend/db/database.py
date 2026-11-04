@@ -1,6 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
+from log_time import tprint
 
 _DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 _DB_PATH = os.path.join(_DB_DIR, "scrim.db")
@@ -42,7 +43,7 @@ def _apply_column_patches(sync_conn):
         if cols and col not in cols:
             sync_conn.execute(text(ddl))
             added.append(f"{table}.{col}")
-    print(f"[DB] schema check: {'added columns ' + str(added) if added else 'ok'}")
+    tprint(f"[DB] schema check: {'added columns ' + str(added) if added else 'ok'}")
 
 
 def _backfill_winner_source(sync_conn):
@@ -60,7 +61,7 @@ def _backfill_winner_source(sync_conn):
             sync_conn.execute(text("UPDATE matches SET winner_source = :ws WHERE id = :id"),
                               {"ws": ws, "id": r["id"]})
             n += 1
-    print(f"[DB] winner_source backfill: {n} rows" + (f" ({len(rows) - n} left NULL: no winner)" if len(rows) > n else ""))
+    tprint(f"[DB] winner_source backfill: {n} rows" + (f" ({len(rows) - n} left NULL: no winner)" if len(rows) > n else ""))
 
 
 def _backfill_draw_detail(sync_conn):
@@ -101,7 +102,7 @@ def _backfill_draw_detail(sync_conn):
         if ws != r["winner_source"]:
             sync_conn.execute(text("UPDATE matches SET winner_source = :ws WHERE id = :id"), {"ws": ws, "id": r["id"]})
             n_ws += 1
-    print(f"[DB] draw reclassify: {len(rows)} draws, detail filled {n_detail}, winner_source changed {n_ws}")
+    tprint(f"[DB] draw reclassify: {len(rows)} draws, detail filled {n_detail}, winner_source changed {n_ws}")
 
 
 async def init_db():

@@ -42,6 +42,7 @@ from services.summary import summarize_session, format_session_message
 from services.discord_webhook import schedule_webhook
 from schemas_summary import SessionCompleteResponse
 from schemas_roster import RosterResponse
+from log_time import tprint
 
 _json_lock = threading.Lock()
 router = APIRouter()
@@ -84,9 +85,9 @@ def _delete_scrim_files(scrim_id: str) -> list[str]:
         if os.path.exists(path):
             try:
                 os.remove(path)
-                print(f"[DELETE] 파일 삭제: {path}")
+                tprint(f"[DELETE] 파일 삭제: {path}")
             except Exception as e:
-                print(f"[DELETE] 파일 삭제 실패: {path}: {e}")
+                tprint(f"[DELETE] 파일 삭제 실패: {path}: {e}")
                 warnings.append(f"파일 삭제 실패 ({os.path.basename(path)})")
     return warnings
 
@@ -98,9 +99,9 @@ def _delete_match_file(scrim_id: str, match_index: int) -> list[str]:
     if os.path.exists(path):
         try:
             os.remove(path)
-            print(f"[DELETE] 파일 삭제: {path}")
+            tprint(f"[DELETE] 파일 삭제: {path}")
         except Exception as e:
-            print(f"[DELETE] 파일 삭제 실패: {path}: {e}")
+            tprint(f"[DELETE] 파일 삭제 실패: {path}: {e}")
             warnings.append(f"파일 삭제 실패 ({os.path.basename(path)})")
     return warnings
 
@@ -429,7 +430,7 @@ async def register_scrim_manual(request: Request):
                 existing.date = data.date
                 existing.start_time = data.start_time
                 existing.end_time = data.end_time
-                print(f"[DB] register: 삭제된 세션 ID 재사용 {new_scrim_id}")
+                tprint(f"[DB] register: 삭제된 세션 ID 재사용 {new_scrim_id}")
             for m in processed_matches:
                 db.add(DBMatch(
                     id=m["id"],
@@ -458,9 +459,9 @@ async def register_scrim_manual(request: Request):
                         duration=p["duration"],
                     ))
             await db.commit()
-            print(f"[DB] register OK: {new_scrim_id}")
+            tprint(f"[DB] register OK: {new_scrim_id}")
     except Exception as e:
-        print(f"[DB] register_scrim_manual failed: {e}")
+        tprint(f"[DB] register_scrim_manual failed: {e}")
         raise HTTPException(status_code=500, detail="DB write failed")
 
     _invalidate_response_cache()
@@ -632,7 +633,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                         team=ev.get("team"),
                     ))
             await db.commit()
-            print(f"[DB] upload OK: match={match_id_val}")
+            tprint(f"[DB] upload OK: match={match_id_val}")
             await store_match_abilities(match_id_val, ability)  # 로그 교체면 그 매치 스킬 행을 통째로 바꾼다
             _invalidate_response_cache()  # 커밋 직후(아래 meta 쓰기가 실패해도 캐시가 DB 보다 낡지 않게)
             # meta.json 동기화(rebuild 소스): source 전환·(채택 결과) 맵·winner_override
@@ -649,7 +650,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] upload_match_log failed: {e}")
+        tprint(f"[DB] upload_match_log failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -659,7 +660,7 @@ def _parse_upload_log(log_text: str, enc_fallback: bool, c_t1: str, c_t2: str,
     반환: (사전 검사 결과, parse_overwatch_log 결과, calculate_pure_stats 로 채운 매치 dict, game_setup_sec)."""
     # 사전 검사(경고 수집 전용 — 거부하지 않음). 파서가 조용히 버릴 줄을 응답·meta·서버 로그에 남긴다.
     pre = precheck_log_text(log_text, encoding_fallback=enc_fallback)
-    print(f"[PRECHECK] {scrim_id} #{match_index}{' (dry_run)' if is_dry else ''}: {precheck_summary(pre)}")
+    tprint(f"[PRECHECK] {scrim_id} #{match_index}{' (dry_run)' if is_dry else ''}: {precheck_summary(pre)}")
 
     parsed = parse_overwatch_log(log_text, custom_t1=c_t1, custom_t2=c_t2)
     target_match: dict = {}
@@ -765,7 +766,7 @@ def _extract_roster_from_bytes(content: bytes) -> dict:
 @router.get("/api/admin/db-status")
 async def db_status():
     if not _DB_AVAILABLE:
-        print(f"[DB] db_status: import failed: {_DB_IMPORT_ERROR}")
+        tprint(f"[DB] db_status: import failed: {_DB_IMPORT_ERROR}")
         return {"db_available": False, "error": "DB modules not available"}
     try:
         from sqlalchemy import func as sa_func
@@ -789,7 +790,7 @@ async def db_status():
             "legacy_json_backup_exists": os.path.exists("scrim_data.json.phase5_backup"),
         }
     except Exception as e:
-        print(f"[DB] db_status failed: {e}")
+        tprint(f"[DB] db_status failed: {e}")
         return {"db_available": True, "error": "DB query failed"}
 
 
@@ -805,12 +806,12 @@ async def rebuild_database():
     backup_path = f"data/scrim.db.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     try:
         _shutil.copy(db_path, backup_path)
-        print(f"[REBUILD] DB backup: {backup_path}")
+        tprint(f"[REBUILD] DB backup: {backup_path}")
     except Exception as e:
-        print(f"[REBUILD] DB backup failed: {e}")
+        tprint(f"[REBUILD] DB backup failed: {e}")
         raise HTTPException(status_code=500, detail="Backup failed")
 
-    print("[REBUILD] raw 파일 파싱 시작...")
+    tprint("[REBUILD] raw 파일 파싱 시작...")
     meta_files = sorted(glob.glob(f"{ROW_DATA_DIR}/*_meta.json"), reverse=True)
     new_scrims: list = []
     parse_errors: list[str] = []
@@ -823,12 +824,12 @@ async def rebuild_database():
             scrim_id = scrim_obj["id"]
             if not is_valid_session_id(scrim_id):
                 parse_errors.append(f"{os.path.basename(meta_path)}: invalid session id")
-                print(f"[REBUILD] 건너뜀(형식 밖 세션 ID): {meta_path}")
+                tprint(f"[REBUILD] 건너뜀(형식 밖 세션 ID): {meta_path}")
                 continue
             # '{id}_{n}.txt' 정확 일치만 — 접두 glob 은 형제 '{id}_1_2.txt' 를 int('1_2')=12 로 붙였다
             log_files = list_log_files(ROW_DATA_DIR, scrim_id)
             if not log_files:
-                print(f"[REBUILD] 경고: {scrim_id} 로그 없음 (메타만 등록)")
+                tprint(f"[REBUILD] 경고: {scrim_id} 로그 없음 (메타만 등록)")
             for match_index, log_path in log_files:
                 cur_file = log_path
                 with open(log_path, "r", encoding="utf-8") as lf:
@@ -864,9 +865,9 @@ async def rebuild_database():
             if isinstance(e, json.JSONDecodeError):
                 where += f" line {e.lineno}"
             parse_errors.append(f"{where}: {type(e).__name__}")
-            print(f"[REBUILD] 파싱 실패: {meta_path}: {e}")
+            tprint(f"[REBUILD] 파싱 실패: {meta_path}: {e}")
 
-    print(f"[REBUILD] 파싱 완료: {len(new_scrims)} scrims. DB 재구축 시작...")
+    tprint(f"[REBUILD] 파싱 완료: {len(new_scrims)} scrims. DB 재구축 시작...")
 
     total_sessions = total_matches = total_rounds = total_events = 0
     try:
@@ -1003,10 +1004,10 @@ async def rebuild_database():
                     await _swap_team_slots_db(db, dbm)
 
             await db.commit()
-            print(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
+            tprint(f"[REBUILD] 완료: sessions={total_sessions} matches={total_matches} rounds={total_rounds} events={total_events}")
             start_backfill(force=True)  # 스킬 저장소도 재파싱한 매치 단위로 교체(백그라운드, 응답을 기다리게 하지 않음)
     except Exception as e:
-        print(f"[REBUILD] rebuild_database failed: {e}")
+        tprint(f"[REBUILD] rebuild_database failed: {e}")
         raise HTTPException(status_code=500, detail="DB rebuild failed")
 
     _invalidate_response_cache()
@@ -1041,7 +1042,7 @@ async def get_scrim_detail(scrim_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] get_scrim_detail failed: {e}")
+        tprint(f"[DB] get_scrim_detail failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -1085,7 +1086,7 @@ async def get_match_detail(match_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] get_match_detail failed: {e}")
+        tprint(f"[DB] get_match_detail failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
 
@@ -1119,11 +1120,11 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
             ws = m.winner_source
             scrim_id = m.session_id
             await db.commit()
-            print(f"[DB] winner_override 갱신: match={match_id} → {wo!r}")
+            tprint(f"[DB] winner_override 갱신: match={match_id} → {wo!r}")
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] update_match_winner_override failed: {e}")
+        tprint(f"[DB] update_match_winner_override failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
@@ -1182,7 +1183,7 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] patch_session failed: {e}")
+        tprint(f"[DB] patch_session failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
@@ -1370,7 +1371,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] patch_match failed: {e}")
+        tprint(f"[DB] patch_match failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
     _invalidate_response_cache()  # meta 쓰기보다 먼저(실패해도 캐시가 DB 보다 낡지 않게)
@@ -1429,7 +1430,7 @@ async def complete_session(session_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] complete_session failed: {e}")
+        tprint(f"[DB] complete_session failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
 
     session = summarize_session(scrim, BASE_TEAM)
@@ -1468,20 +1469,20 @@ async def delete_session(scrim_id: str):
                 if m.deleted_at is None:
                     m.deleted_at = now
             await db.commit()
-            print(f"[DB] soft-delete session: {scrim_id}")
+            tprint(f"[DB] soft-delete session: {scrim_id}")
             _forget = [m.id for m in (sess.matches or [])]
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[DB] delete_session failed: {e}")
+        tprint(f"[DB] delete_session failed: {e}")
         raise HTTPException(status_code=500, detail="DB error: session not deleted")
     # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 삭제는 확정이므로 파일 삭제까지 진행
     try:
         await forget_match_abilities(_forget)
     except Exception as e:
-        print(f"[DB] delete_session forget_match_abilities failed: {e}")
+        tprint(f"[DB] delete_session forget_match_abilities failed: {e}")
 
-    print(f"[DELETE] 세션 삭제: {scrim_id}  ({datetime.now().isoformat()})")
+    tprint(f"[DELETE] 세션 삭제: {scrim_id}  ({datetime.now().isoformat()})")
     warnings = _delete_scrim_files(scrim_id)
     _invalidate_response_cache()
     return {"success": True, "deleted_count": 1, "warnings": warnings, "failed_ids": []}
@@ -1523,17 +1524,17 @@ async def delete_sessions_batch(req: BatchDeleteRequest):
                 else:
                     failed_ids.append(sid)
             await db.commit()
-        print(f"[DB] soft-delete sessions batch: {deleted_ids}")
+        tprint(f"[DB] soft-delete sessions batch: {deleted_ids}")
     except Exception as e:
-        print(f"[DB] delete_sessions_batch failed: {e}")
+        tprint(f"[DB] delete_sessions_batch failed: {e}")
         raise HTTPException(status_code=500, detail="DB error: sessions not deleted")
     # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 에서 지운 세션의 파일 삭제는 진행
     try:
         await forget_match_abilities(_ability_forget)
     except Exception as e:
-        print(f"[DB] delete_sessions_batch forget_match_abilities failed: {e}")
+        tprint(f"[DB] delete_sessions_batch forget_match_abilities failed: {e}")
 
-    print(f"[DELETE] 세션 배치 삭제: {deleted_ids}  ({datetime.now().isoformat()})")
+    tprint(f"[DELETE] 세션 배치 삭제: {deleted_ids}  ({datetime.now().isoformat()})")
     warnings: list[str] = []
     for sid in deleted_ids:
         warnings.extend(_delete_scrim_files(sid))
@@ -1566,16 +1567,16 @@ async def delete_match(match_id: str):
                     found_match_index = m.match_index
                     m.deleted_at = datetime.utcnow()
                     await db.commit()
-                    print(f"[DB] soft-delete match: {match_id}")
+                    tprint(f"[DB] soft-delete match: {match_id}")
                     await forget_match_abilities([match_id])
         except Exception as e:
-            print(f"[DB] delete_match failed: {e}")
+            tprint(f"[DB] delete_match failed: {e}")
 
     if not found_scrim_id:
         raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
     warnings: list[str] = []
 
-    print(f"[DELETE] 매치 삭제: {match_id} (scrim={found_scrim_id}, index={found_match_index})  ({datetime.now().isoformat()})")
+    tprint(f"[DELETE] 매치 삭제: {match_id} (scrim={found_scrim_id}, index={found_match_index})  ({datetime.now().isoformat()})")
     warnings.extend(_delete_match_file(found_scrim_id, found_match_index))
     _invalidate_response_cache()
     return {"success": True, "deleted_count": 1, "warnings": warnings, "failed_ids": []}
@@ -1607,18 +1608,18 @@ async def delete_matches_batch(req: BatchDeleteRequest):
                     else:
                         failed_ids.append(mid)
                 await db.commit()
-            print(f"[DB] soft-delete matches batch: {[x[2] for x in db_deleted]}")
+            tprint(f"[DB] soft-delete matches batch: {[x[2] for x in db_deleted]}")
         except Exception as e:
-            print(f"[DB] delete_matches_batch failed: {e}")
+            tprint(f"[DB] delete_matches_batch failed: {e}")
             raise HTTPException(status_code=500, detail="DB error: matches not deleted")
         # 스킬 저장소 정리는 부가 작업 — 실패해도 DB 에서 지운 매치의 파일 삭제·응답은 DB 결과 기준
         try:
             await forget_match_abilities([x[2] for x in db_deleted])
         except Exception as e:
-            print(f"[DB] delete_matches_batch forget_match_abilities failed: {e}")
+            tprint(f"[DB] delete_matches_batch forget_match_abilities failed: {e}")
 
     warnings: list[str] = []
-    print(f"[DELETE] 매치 배치 삭제: {[x[2] for x in db_deleted]}  ({datetime.now().isoformat()})")
+    tprint(f"[DELETE] 매치 배치 삭제: {[x[2] for x in db_deleted]}  ({datetime.now().isoformat()})")
     for scrim_id, match_index, _ in db_deleted:
         if scrim_id and match_index is not None:
             warnings.extend(_delete_match_file(scrim_id, match_index))
