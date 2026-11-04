@@ -3,8 +3,25 @@
 
 main.py 에서 이동. main.py 는 하위호환을 위해 이 모듈의 이름을 re-export 한다.
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Any, Optional
+from urllib.parse import urlsplit
+
+
+def check_video_url(value):
+    """video_url: 빈 값(또는 None) 아니면 http/https 절대 URL 만. 그 외(javascript:·data: 등)는 ValueError → 422.
+    저장값은 바꾸지 않는다(검사만). 제어 문자가 섞인 값도 거부(브라우저는 스킴 안의 탭·개행을 지우고 해석한다)."""
+    if value is None:
+        return value
+    s = value.strip()
+    if not s:
+        return value
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in s):
+        raise ValueError("video_url must be an http(s) URL")
+    u = urlsplit(s)
+    if u.scheme.lower() not in ("http", "https") or not u.netloc:
+        raise ValueError("video_url must be an http(s) URL")
+    return value
 
 
 class PauseInput(BaseModel):
@@ -30,6 +47,11 @@ class MatchSegment(BaseModel):
     score_t2: Optional[int] = None
     video_start_sec: Optional[int] = Field(default=None, alias="videoStartSec")
     video_end_sec: Optional[int] = Field(default=None, alias="videoEndSec")
+
+    @field_validator("video_url")
+    @classmethod
+    def _video_url_scheme(cls, v):
+        return check_video_url(v)
 
     class Config:
         populate_by_name = True
@@ -100,6 +122,11 @@ class MatchPatchInput(BaseModel):
     rounds_delta: Optional[List[RoundDeltaInput]] = Field(default=None, alias="roundsDelta")
     # 퍼즈 구간 전체 치환(로그 매치 전용). [] = 전부 삭제. None = 무변경.
     pauses: Optional[List[PauseSecInput]] = None
+
+    @field_validator("video_url")
+    @classmethod
+    def _video_url_scheme(cls, v):
+        return check_video_url(v)
 
     class Config:
         populate_by_name = True

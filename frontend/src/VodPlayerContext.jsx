@@ -6,6 +6,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { X, ExternalLink } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
+import { isSafeVideoUrl } from "./utils/videoLink";
 
 const VodContext = createContext(null);
 
@@ -42,7 +43,7 @@ export function VodProvider({ children }) {
   };
 
   const openVod = useCallback((url, label = "") => {
-    if (!url) return;
+    if (!isSafeVideoUrl(url)) return;   // http/https 만 연다(모달·새 탭 공통)
     const parsed = getVodMode() === "player" ? parseVodUrl(url) : null;
     if (parsed) setModal({ ...parsed, url, label });
     else window.open(url, "_blank", "noopener,noreferrer"); // 'tab' 모드 or 파싱 실패 폴백
@@ -59,7 +60,7 @@ export function VodProvider({ children }) {
 export function useVod() {
   // Provider 밖(예: 테스트)에서도 새 탭 폴백으로 동작하도록 기본값 제공
   return useContext(VodContext) || {
-    openVod: (url) => url && window.open(url, "_blank", "noopener,noreferrer"),
+    openVod: (url) => isSafeVideoUrl(url) && window.open(url, "_blank", "noopener,noreferrer"),
     vodMode: "tab", setVodMode: () => {},
   };
 }

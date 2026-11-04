@@ -11,6 +11,20 @@
  *   video_offset = 영상에서 match_start 시점 (초)
  *   youtube_t = video_offset + event.timestamp
  */
+// 새 탭으로 열어도 되는 영상 주소: http/https 절대 URL 만(javascript:·data: 등 거부). 서버 schemas.check_video_url 과 같은 규칙.
+// URL 파서는 스킴 안의 탭·개행을 지우고 해석하므로 그 결과의 protocol 로 판단한다.
+export function isSafeVideoUrl(url) {
+  if (typeof url !== 'string') return false;
+  const s = url.trim();
+  if (!s) return false;
+  try {
+    const u = new URL(s);
+    return (u.protocol === 'http:' || u.protocol === 'https:') && !!u.host;
+  } catch {
+    return false;
+  }
+}
+
 export function hasVideo(videoUrl) {
   return !!(videoUrl && videoUrl.trim() !== '');
 }
