@@ -315,6 +315,17 @@ def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
     return _update_meta_json(scrim_id, mutate)
 
 
+# rebuild 진행 상태(프로세스 내). rebuild 는 DB 를 통째로 지우고 meta·원문 로그로 다시 만드는 긴 트랜잭션이라,
+# 그동안 들어온 쓰기는 SQLite 잠금 대기 끝에 "locked" 500 이 나거나, 이미 읽어 둔 meta 기준 재구축에 덮여 DB 에서
+# 사라졌다. 진행 중이면 쓰기 API·중복 rebuild 는 409. 구조는 {job_id, started_at} — 묶음 3(작업 ID) 과 호환.
+_REBUILD_JOB: "dict | None" = None
+
+
+def _raise_if_rebuilding():
+    if _REBUILD_JOB is not None:
+        raise HTTPException(status_code=409, detail="DB rebuild in progress")
+
+
 # 등록 직렬화: "ID 고르기 → DB 커밋 → meta 확정" 사이에 다른 등록이 끼면 같은 ID 를 골라 PK 충돌(500)이나
 # 삭제 ID 재사용 시 두 세션의 매치가 한 ID 에 섞였다. 프로세스(=이벤트 루프)당 잠금 1개 — 운영은 uvicorn 단일 워커.
 # 루프별로 따로 두는 것은 테스트에서 TestClient 마다 루프가 달라서다(asyncio.Lock 은 처음 기다린 루프에 묶인다).
@@ -331,6 +342,7 @@ def _register_lock() -> asyncio.Lock:
 
 @router.post("/api/scrim/manual-register")
 async def register_scrim_manual(request: Request):
+    _raise_if_rebuilding()
     async with _register_lock():
         return await _register_scrim_manual_locked(request)
 
@@ -547,6 +559,7 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
     adopt: 수기(source='manual') 매치에 로그를 붙일 때 차이 처리 방식 —
       'parsed'(기본) = 맵·승자·스코어 전부 파싱값 채택,
       'keep'   = 맵은 수기값 유지, 파싱 winner/score는 컬럼에 저장하고 수기 winner를 winner_override로 이동(원본 보존 규칙과 일관)."""
+    _raise_if_rebuilding()
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     require_session_id(scrim_id)
@@ -875,6 +888,19 @@ async def db_status():
 
 @router.post("/api/admin/rebuild-db")
 async def rebuild_database():
+    global _REBUILD_JOB
+    if not _DB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Database not available")
+    _raise_if_rebuilding()   # 중복 실행 409. 검사와 설정 사이에 await 가 없어 단일 이벤트 루프에서 원자적
+    _REBUILD_JOB = {"job_id": uuid.uuid4().hex, "started_at": datetime.utcnow().isoformat(timespec="seconds") + "Z"}
+    tprint(f"[REBUILD] 시작 job={_REBUILD_JOB['job_id']}")
+    try:
+        return await _rebuild_database_locked()
+    finally:
+        _REBUILD_JOB = None
+
+
+async def _rebuild_database_locked():
     import shutil as _shutil
     from sqlalchemy import delete as sa_delete
 
@@ -885,7 +911,8 @@ async def rebuild_database():
     db_path = _database._DB_PATH
     backup_path = f"{db_path}.before_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     try:
-        _shutil.copy(db_path, backup_path)
+        # 스레드풀 — 큰 DB 복사가 이벤트 루프를 막지 않게(그동안 들어온 쓰기는 위 상태로 409)
+        await run_in_threadpool(_shutil.copy, db_path, backup_path)
         tprint(f"[REBUILD] DB backup: {backup_path}")
     except Exception as e:
         tprint(f"[REBUILD] DB backup failed: {e}")
@@ -1176,6 +1203,7 @@ async def update_match_winner_override(match_id: str, body: WinnerOverrideInput)
     """이미 등록된 매치의 수기 승패 보정을 갱신한다(무승부/미기록 매치 교정용).
     검증: 값은 해당 매치의 team1_name/team2_name 중 하나 또는 null(해제)만 허용.
     원본 winner 컬럼은 무변경 — winner_override 만 갱신하고 meta.json(rebuild 소스)도 동기화."""
+    _raise_if_rebuilding()
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -1219,6 +1247,7 @@ async def patch_session(scrim_id: str, body: SessionPatchInput):
     BASE_TEAM(기준 팀)은 변경 거부, 상대팀명만 치환 가능.
     치환 시 그 세션의 matches(team1/team2/winner/winner_override)·player_stats·events
     팀 컬럼을 한 트랜잭션에서 일괄 갱신하고 meta.json도 동기화한다."""
+    _raise_if_rebuilding()
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -1294,6 +1323,7 @@ async def patch_match(match_id: str, body: MatchPatchInput):
     """매치 정보 수정: 맵·VOD(URL/오프셋/구간)·순서(match_index)·(수기 매치 한정) winner/score.
     로그 매치(source='log')의 승패 정정은 winner-override 엔드포인트 사용 — 원본 winner 불변 규칙 유지.
     match_index 변경 시 같은 세션에서 그 순번을 쓰던 매치와 자리를 맞바꾼다."""
+    _raise_if_rebuilding()
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -1527,6 +1557,7 @@ async def complete_session(session_id: str):
 # ── 세션 단건 삭제 ─────────────────────────────────────────────
 @router.delete("/api/sessions/{scrim_id}")
 async def delete_session(scrim_id: str):
+    _raise_if_rebuilding()
     require_session_id(scrim_id)
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -1571,6 +1602,7 @@ async def delete_session(scrim_id: str):
 # ── 세션 배치 삭제 ─────────────────────────────────────────────
 @router.post("/api/sessions/delete-batch")
 async def delete_sessions_batch(req: BatchDeleteRequest):
+    _raise_if_rebuilding()
     if not req.ids:
         raise HTTPException(status_code=400, detail="ids 배열이 비어 있습니다")
     for sid in req.ids:  # 하나라도 형식 밖이면 전체 거부(부분 삭제 없음)
@@ -1631,6 +1663,7 @@ async def delete_sessions_batch(req: BatchDeleteRequest):
 # ── 매치 단건 삭제 ─────────────────────────────────────────────
 @router.delete("/api/matches/{match_id}")
 async def delete_match(match_id: str):
+    _raise_if_rebuilding()
     found_scrim_id = None
     found_match_index = None
 
@@ -1671,6 +1704,7 @@ async def delete_match(match_id: str):
 # ── 매치 배치 삭제 ─────────────────────────────────────────────
 @router.post("/api/matches/delete-batch")
 async def delete_matches_batch(req: BatchDeleteRequest):
+    _raise_if_rebuilding()
     if not req.ids:
         raise HTTPException(status_code=400, detail="ids 배열이 비어 있습니다")
 

@@ -445,9 +445,9 @@ def test_d4_upload_failure_keeps_previous_log(iso, monkeypatch):
 
 
 # ── rebuild 중 쓰기 ─────────────────────────────────────────────────────────
-@pytest.mark.xfail(strict=True, reason="D6: rebuild 중 쓰기 API·중복 rebuild 가 409 가 아니다")
 def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
-    c, rows, _ = iso
+    # D6: rebuild 진행 중({job_id, started_at})엔 쓰기 API 9종·중복 rebuild 가 409, complete(읽기)는 대상 아님
+    c, rows, scrims = iso
     sid, mids = _register(c, "d6", [_seg()], date="2026-11-09", hours=("07", "08"))
     started, release = threading.Event(), threading.Event()
     real_copy = shutil.copy
@@ -480,6 +480,8 @@ def test_d6_writes_rejected_while_rebuild_runs(iso, monkeypatch):
         t.join(10)
     assert codes == [409] * 10
     assert out["rebuild"].status_code == 200
+    assert scrims._REBUILD_JOB is None                                          # 끝나면 상태 해제
+    assert c.patch(f"/api/sessions/{sid}", json={"scrimName": "d6-after"}).status_code == 200
     assert c.post(f"/api/sessions/{sid}/complete").status_code == 200     # complete 는 대상 아님
 
 
