@@ -338,14 +338,16 @@ def test_d1_deleted_match_stays_deleted_after_rebuild(iso):
     assert [m["match_index"] for m in c.get(f"/api/scrims/{sid}").json()["matches"]] == [1]
 
 
-@pytest.mark.xfail(strict=True, reason="D5: 자리 바꾸기 뒤 재업로드는 현재 슬롯명으로 파싱해 rebuild(원본 순서+교환)와 달라진다")
 def test_d5_swap_then_reupload_matches_rebuild(iso):
+    # D5: 자리 바꾸기 매치에 로그를 다시 올려도 rebuild 와 같은 경로(원본 순서로 파싱 → 슬롯 재교환)
     c, rows, _ = iso
     sid, mids = _register(c, "d5", [_seg()], date="2026-11-08", hours=("16", "18"))
     assert _upload(c, sid, 1).status_code == 200
     assert c.patch(f"/api/matches/{mids[1]}", json={"swapTeams": True}).status_code == 200
+    swapped_once = _snap(c, mids[1])
     assert _upload(c, sid, 1).status_code == 200
     live = _snap(c, mids[1])
+    assert live == swapped_once                 # 같은 로그 재업로드 = 교환 직후와 같은 결과
     _rebuild(c)
     assert _snap(c, mids[1]) == live
 

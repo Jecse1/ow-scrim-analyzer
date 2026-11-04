@@ -293,6 +293,16 @@ def _exchange_team_names_in_meta_match(scrim_id: str, match_id: str, a: str, b: 
     return r1 or r2 or r3
 
 
+def _meta_teams_swapped(scrim_id: str, match_id: str) -> bool:
+    """meta.json 에서 그 매치의 teams_swapped(자리 바꾸기) 플래그. meta 가 없거나 읽을 수 없으면 False."""
+    try:
+        with open(f"{ROW_DATA_DIR}/{scrim_id}_meta.json", "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except (OSError, ValueError):
+        return False
+    return any(m.get("id") == match_id and bool(m.get("teams_swapped")) for m in meta.get("matches", []))
+
+
 def _toggle_swap_in_meta_match(scrim_id: str, match_id: str) -> bool:
     """meta.json의 해당 매치 teams_swapped 플래그 토글. meta 팀명은 로그 원본 순서로 두고
     이 플래그로만 표시 방향을 기록한다 — rebuild가 재파싱(원본 순서) 후 _swap_team_slots_db 재적용."""
@@ -577,8 +587,11 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                 raise HTTPException(status_code=404, detail="Match not found")
 
             match_id_val = db_match.id
-            c_t1 = db_match.team1_name
-            c_t2 = db_match.team2_name
+            # 자리 바꾸기(teams_swapped) 매치: rebuild 는 로그 원본 순서 팀명으로 파싱한 뒤 _swap_team_slots_db 를
+            # 다시 적용한다. 업로드도 같은 경로 — 교환된 현재 슬롯명으로 파싱하면 선수 소속·점수가 rebuild 와 달라졌다.
+            swapped = _meta_teams_swapped(scrim_id, match_id_val)
+            c_t1 = db_match.team2_name if swapped else db_match.team1_name   # 로그 원본 순서
+            c_t2 = db_match.team1_name if swapped else db_match.team2_name
 
             # 사전 검사·파싱·계산(DB 쓰기 전 구간)은 CPU 작업 — 스레드풀에서 돌려 이벤트 루프를 막지 않는다.
             pre, parsed, target_match, game_setup_sec = await run_in_threadpool(
@@ -598,9 +611,13 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                     diff["map_name"] = {"manual": db_match.map_name or "", "parsed": parsed_map}
                 if (target_match.get("winner") or "") != (db_match.winner or ""):
                     diff["winner"] = {"manual": db_match.winner or "", "parsed": target_match.get("winner") or ""}
-                if (target_match.get("score_t1", 0), target_match.get("score_t2", 0)) != (db_match.score_t1 or 0, db_match.score_t2 or 0):
+                # 비교는 화면(현재 슬롯) 기준 — 자리 바꾸기 매치는 파싱 점수(원본 순서)를 뒤집어 맞춘다
+                p1, p2 = target_match.get("score_t1", 0), target_match.get("score_t2", 0)
+                if swapped:
+                    p1, p2 = p2, p1
+                if (p1, p2) != (db_match.score_t1 or 0, db_match.score_t2 or 0):
                     diff["score"] = {"manual": f"{db_match.score_t1 or 0}:{db_match.score_t2 or 0}",
-                                     "parsed": f"{target_match.get('score_t1', 0)}:{target_match.get('score_t2', 0)}"}
+                                     "parsed": f"{p1}:{p2}"}
             if is_dry:
                 # 파싱만 — DB·파일 무변경. 프론트가 diff를 보여주고 adopt를 정해 재호출한다.
                 return {"status": "dry_run", "source": prev_source, "diff": diff, **pre_resp}
@@ -614,6 +631,8 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
             elif prev_source == "manual" and parsed_map:
                 db_match.map_name = parsed_map  # 파싱값 채택
             db_match.source = "log"
+            if swapped:   # 원본 순서로 되돌린 뒤 파싱값을 넣고, 라운드·이벤트까지 넣은 다음 슬롯을 다시 교환한다
+                db_match.team1_name, db_match.team2_name = c_t1, c_t2
 
             db_match.winner = target_match.get("winner", "")
             db_match.score_t1 = target_match.get("score_t1", 0)
@@ -683,6 +702,9 @@ async def upload_match_log(scrim_id: str = Form(...), match_index: int = Form(..
                         old_index=int(ev["old_index"]) if ev.get("old_index") is not None else None,
                         team=ev.get("team"),
                     ))
+            if swapped:
+                await db.flush()   # 방금 넣은 rounds/events 가 UPDATE 대상이 되도록
+                await _swap_team_slots_db(db, db_match)
             await db.commit()
             tprint(f"[DB] upload OK: match={match_id_val}")
             os.replace(log_tmp, log_path)
