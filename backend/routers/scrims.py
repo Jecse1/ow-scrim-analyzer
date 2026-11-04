@@ -421,7 +421,11 @@ async def register_scrim_manual(request: Request):
         "matches": processed_matches
     }
 
-    with open(f"{ROW_DATA_DIR}/{new_scrim_id}_meta.json", "w", encoding="utf-8") as f:
+    # meta.json 은 DB 커밋이 성공한 뒤에만 확정한다 — 먼저 임시 파일에 쓰고 커밋 후 os.replace.
+    # (예전: meta 를 먼저 써서 DB 실패·PK 충돌 시 고아 meta 가 남거나 다른 요청의 meta 를 덮었다)
+    meta_path = f"{ROW_DATA_DIR}/{new_scrim_id}_meta.json"
+    fd, meta_tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(meta_path)), suffix=".tmp")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(new_scrim, f, ensure_ascii=False, indent=4)
 
     try:
@@ -475,10 +479,18 @@ async def register_scrim_manual(request: Request):
             tprint(f"[DB] register OK: {new_scrim_id}")
     except Exception as e:
         tprint(f"[DB] register_scrim_manual failed: {e}")
+        try: os.unlink(meta_tmp)
+        except OSError: pass
         raise HTTPException(status_code=500, detail="DB write failed")
 
     _invalidate_response_cache()
-    return {"status": "success", "scrim_id": new_scrim_id}
+    resp = {"status": "success", "scrim_id": new_scrim_id}
+    try:
+        os.replace(meta_tmp, meta_path)
+    except OSError as e:   # DB 는 커밋됨 — 응답·로그로 알린다(rebuild 소스 누락)
+        tprint(f"[DB] register meta sync failed: {new_scrim_id}: {e}")
+        resp["meta_warning"] = "meta_sync_failed"
+    return resp
 
 
 async def _raise_if_session_deleted(scrim_id: str):

@@ -351,8 +351,8 @@ def test_d5_swap_then_reupload_matches_rebuild(iso):
 
 
 # ── 등록 실패·동시 등록 ────────────────────────────────────────────────────────
-@pytest.mark.xfail(strict=True, reason="D2: 등록이 meta 를 DB 커밋 전에 써 DB 실패 시 고아 meta 가 남는다")
 def test_d2_register_db_failure_leaves_no_meta(iso, monkeypatch):
+    # D2: meta 는 DB 커밋 뒤에만 확정(임시 파일 → os.replace). DB 실패면 meta·임시 파일 없음, 재등록은 같은 ID.
     c, rows, scrims = iso
     real = scrims.AsyncSessionLocal
     calls = {"n": 0}
@@ -368,6 +368,7 @@ def test_d2_register_db_failure_leaves_no_meta(iso, monkeypatch):
     monkeypatch.setattr(scrims, "AsyncSessionLocal", real)
     assert r.status_code == 500
     assert not os.path.exists(f"{rows}/2611090102_meta.json")
+    assert not [f for f in os.listdir(rows) if f.endswith(".tmp")]
     sid, _ = _register(c, "d2-retry", [_seg()], date="2026-11-09", hours=("01", "02"))
     assert sid == "2611090102"
 
