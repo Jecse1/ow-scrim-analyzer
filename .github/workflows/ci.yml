@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# 체크아웃·테스트·빌드만 한다 — GITHUB_TOKEN 은 저장소 읽기만(기본 쓰기 권한 불필요).
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: backend (pytest)

@@ -15,7 +15,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   server: {
-    host: '0.0.0.0', // 외부 접속 허용
+    // 개발 서버는 기본(localhost)에만 바인딩 — 운영은 nginx 가 dist 정적 파일을 서빙한다.
+    // 같은 망의 다른 기기에서 열어 봐야 할 때만 `npm run dev -- --host`.
     port: 5173,
     fs: {
       // frontend 루트 밖(backend/game_data)의 JSON 임포트 허용
