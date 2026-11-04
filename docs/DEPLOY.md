@@ -217,3 +217,24 @@ pm2 restart scrim-backend
 ```bash
 cd ~/app/backend && ./venv/bin/pip install -r requirements.txt
 ```
+
+## 9. DB 재구축 (rebuild-db)
+
+`POST /api/admin/rebuild-db` 는 `meta.json` + 원문 로그로 DB 를 다시 만든다(화면: 스크림 세션 → Rebuild DB).
+요청은 **202 `{job_id, started_at, state}` 로 바로 끝나고** 작업은 백그라운드에서 돈다 — nginx 60초 제한과 무관.
+진행·결과는 `GET /api/admin/rebuild-db/status`(`state` idle·running·done·failed, `phase`, `sessions`·`matches`, `error`·`reason`).
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/admin/rebuild-db
+curl -s http://127.0.0.1:8000/api/admin/rebuild-db/status
+```
+
+- 운영 DB 사본 `scrim.db.rebuild-<job_id>.tmp`(같은 폴더) 위에서 재구축한 뒤 원자 교체한다. 그동안 조회는 기존 DB 로 계속 되고,
+  쓰기 API(등록·업로드·편집·삭제·전술판 저장)와 중복 rebuild 는 **409**.
+- 교체 직전 상태는 `scrim.db.before_rebuild_<시각>` 으로 남는다(하드링크 — 추가 공간 없음. 링크를 못 만드는 파일시스템이면 복사,
+  로그 `[DB] backup hardlink unavailable`). 이 백업은 자동 정리되지 않는다 — 오래된 것은 직접 지운다.
+- 디스크 여유가 DB 크기×2 + 64MB 미만이면 시작하지 않고 **507**(status `reason` 에 free/need MB).
+- 실패하면 임시 파일만 지우고 운영 DB 는 그대로(status `failed`, 로그 `[REBUILD] rebuild_database failed`).
+- 작업 중 `pm2 restart` 하면 작업은 사라지고(운영 DB 는 교체 전이면 그대로, 교체는 원자라 옛/새 둘 중 하나) status 는 idle.
+  남은 임시 파일은 다음 기동 때 지운다(로그 `[DB] stale rebuild files removed`).
+- 로그: `[REBUILD] 시작 job=…` → `임시 사본` → `파싱 완료` → `완료: sessions=…` → `교체 완료(백업 link)` → `done job=…`.

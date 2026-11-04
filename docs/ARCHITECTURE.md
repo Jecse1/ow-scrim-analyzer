@@ -57,7 +57,7 @@ main → routers(include).  분리 모듈은 main 을 import 하지 않는다(�
 - **SQLAlchemy async(aiosqlite)**: 관례로 도입했고 현 부하(동시 사용자 소수, SQLite 단일 파일)에서 이득은 없다.
   동기 전환은 db·routers·services 전 계층 수정이라 비용으로 유지. 더 나은 방법이 확인되면 교체.
   CPU 작업 중 명단 추출·업로드 파싱/계산(DB 쓰기 전)·summary 집계·fight-records/player-fight-stats/full-events 의
-  변환·직렬화는 `run_in_threadpool` 로 루프 밖에서 돈다(DB 로드는 AsyncSession 이라 루프에 남김). rebuild-db 는 아직 루프에서 실행.
+  변환·직렬화는 `run_in_threadpool` 로 루프 밖에서 돈다(DB 로드는 AsyncSession 이라 루프에 남김). rebuild-db 는 파싱만 스레드풀, 삽입은 임시 사본 엔진(AsyncSession)으로 루프에서 돈다(운영 DB 잠금 없음 — DECISIONS 2026-11-05).
   한계: GIL 때문에 한 번에 오래 걸리는 C 호출(큰 `json.loads`/`json.dumps`)은 스레드에서도 그 시간만큼 루프를 멈춘다.
 - **pm2**: Python 프로세스 관리로는 비표준(systemd 가 표준)이지만 운영 중인 3서버의 절차를 하나로 통일하기 위해 유지([DEPLOY.md](DEPLOY.md)).
 - **인라인 스타일 + theme 객체**(Tailwind 미도입): 전환 비용 대비 이득 없음. 색은 `ThemeContext` 토큰만 사용.
