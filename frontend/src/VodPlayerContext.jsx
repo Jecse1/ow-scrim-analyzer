@@ -2,7 +2,7 @@
 // openVod(url, label): 설정 vodMode('player'|'tab', localStorage)에 따라
 //   'player' → embed iframe 모달(정확한 t에서 시작), 'tab' → 기존 새 탭.
 // t 계산(buildVideoLink·라운드 보정·pause)은 호출처에서 끝난 최종 watch URL을 그대로 받아 분해만 한다.
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { X, ExternalLink } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
@@ -78,6 +78,7 @@ function VodPlayerModal({ videoId, t, url, label, onClose }) {
   const { theme } = useTheme();
   const { t: tr } = useLanguage();
   const [blocked, setBlocked] = useState(false); // 퍼가기 금지(embed error 101/150/153)
+  const frameRef = useRef(null);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -104,6 +105,13 @@ function VodPlayerModal({ videoId, t, url, label, onClose }) {
     catch { /* ignore */ }
   };
 
+  // "YouTube에서 열기": 새 탭이 열리는 동안 모달 플레이어가 같이 재생되지 않게 일시정지(IFrame API 명령).
+  // 새 탭 링크(href)는 그대로 — 클릭 시점에 호출처가 만든 시각(t=)을 쓴다.
+  const pauseEmbed = () => {
+    try { frameRef.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "*"); }
+    catch { /* ignore */ }
+  };
+
   const src = `https://www.youtube.com/embed/${videoId}?start=${Math.max(0, Math.floor(t))}&autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
 
   return (
@@ -115,7 +123,7 @@ function VodPlayerModal({ videoId, t, url, label, onClose }) {
           <div style={{ flex: 1, fontSize: 14, fontWeight: 800, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {label || tr.vodPlayerTitle}
           </div>
-          <a href={url} target="_blank" rel="noopener noreferrer"
+          <a href={url} target="_blank" rel="noopener noreferrer" onClick={pauseEmbed}
             style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: theme.text, background: theme.surfaceHighlight, border: `1px solid ${theme.borderHighlight}`, borderRadius: 8, padding: "6px 10px", textDecoration: "none" }}>
             <ExternalLink size={13} /> {tr.vodOpenYoutube}
           </a>
@@ -135,6 +143,7 @@ function VodPlayerModal({ videoId, t, url, label, onClose }) {
             </div>
           ) : (
             <iframe
+              ref={frameRef}
               title="VOD"
               src={src}
               onLoad={subscribe}
