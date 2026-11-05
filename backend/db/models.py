@@ -15,6 +15,9 @@ class Session(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime, nullable=True, index=True)
+    # NULL = 스크림, 'tournament' = 대회 공식 경기(services/session_kind.py). 출처 URL 은 대회 결과용.
+    kind = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
 
     matches = relationship(
         "Match",

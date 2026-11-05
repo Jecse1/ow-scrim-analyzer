@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Any, Optional
 from urllib.parse import urlsplit
 
+from services.session_kind import check_stored_kind
+
 
 def check_video_url(value):
     """video_url: 빈 값(또는 None) 아니면 http/https 절대 URL 만. 그 외(javascript:·data: 등)는 ValueError → 422.
@@ -65,6 +67,23 @@ class ScrimManualInput(BaseModel):
     end_time: str = Field(alias="endHour")
     matches: List[MatchSegment]
     files: Optional[List[Any]] = None
+    # 대회 결과 등록(스크립트 전용, 모달은 보내지 않음): kind='tournament' + 출처 URL. 생략 = 스크림(기존 동작).
+    kind: Optional[str] = None
+    source_url: Optional[str] = Field(default=None, alias="sourceUrl")
+
+    @field_validator("kind")
+    @classmethod
+    def _kind_value(cls, v):
+        return check_stored_kind(v)
+
+    @field_validator("source_url")
+    @classmethod
+    def _source_url_scheme(cls, v):
+        try:
+            v = check_video_url(v)
+        except ValueError:
+            raise ValueError("source_url must be an http(s) URL")
+        return (v.strip() or None) if v is not None else None
 
     class Config:
         populate_by_name = True

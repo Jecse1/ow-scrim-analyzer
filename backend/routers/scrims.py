@@ -479,6 +479,11 @@ async def _register_scrim_manual_locked(request: Request):
         "end_time": data.end_time,
         "matches": processed_matches
     }
+    # 세션 종류·출처(대회 결과)는 값이 있을 때만 meta 에 남긴다 — 스크림 meta 는 예전과 같은 모양. rebuild 가 복원.
+    if data.kind:
+        new_scrim["kind"] = data.kind
+    if data.source_url:
+        new_scrim["source_url"] = data.source_url
 
     # meta.json 은 DB 커밋이 성공한 뒤에만 확정한다 — 먼저 임시 파일에 쓰고 커밋 후 os.replace.
     # (예전: meta 를 먼저 써서 DB 실패·PK 충돌 시 고아 meta 가 남거나 다른 요청의 meta 를 덮었다)
@@ -497,6 +502,8 @@ async def _register_scrim_manual_locked(request: Request):
                     date=data.date,
                     start_time=data.start_time,
                     end_time=data.end_time,
+                    kind=data.kind,
+                    source_url=data.source_url,
                 ))
             elif existing.deleted_at is not None:
                 # 삭제된 세션의 ID 재사용: 삭제 표시를 풀고 새 입력값으로 갱신. 이전 매치는 삭제 상태 그대로 둔다.
@@ -506,6 +513,8 @@ async def _register_scrim_manual_locked(request: Request):
                 existing.date = data.date
                 existing.start_time = data.start_time
                 existing.end_time = data.end_time
+                existing.kind = data.kind
+                existing.source_url = data.source_url
                 tprint(f"[DB] register: 삭제된 세션 ID 재사용 {new_scrim_id}")
             for m in processed_matches:
                 db.add(DBMatch(
@@ -1112,6 +1121,9 @@ async def _rebuild_into(session_factory, new_scrims: list) -> dict:
                 date=scrim_obj.get("date", ""),
                 start_time=scrim_obj.get("start_time", ""),
                 end_time=scrim_obj.get("end_time", ""),
+                # 세션 종류·출처는 DB 에만 두면 재구축 때 스크림으로 되돌아간다 → meta 값 복원(없으면 NULL = 스크림)
+                kind=scrim_obj.get("kind") or None,
+                source_url=scrim_obj.get("source_url") or None,
             ))
             total_sessions += 1
 

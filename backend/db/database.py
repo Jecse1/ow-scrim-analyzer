@@ -32,6 +32,9 @@ _COLUMN_PATCHES = [
     ("matches", "winner_source", "ALTER TABLE matches ADD COLUMN winner_source VARCHAR"),
     # 판정 경로·근거(JSON 텍스트)
     ("matches", "winner_detail", "ALTER TABLE matches ADD COLUMN winner_detail TEXT"),
+    # 세션 종류(NULL = 스크림, 'tournament' = 대회 공식 경기)·대회 결과 출처 URL
+    ("sessions", "kind", "ALTER TABLE sessions ADD COLUMN kind VARCHAR"),
+    ("sessions", "source_url", "ALTER TABLE sessions ADD COLUMN source_url VARCHAR"),
 ]
 
 
