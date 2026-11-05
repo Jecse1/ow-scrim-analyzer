@@ -18,7 +18,9 @@ from sqlalchemy.orm import sessionmaker
 
 from db import database
 
-BASE, OPP = "Team A", "Team Z"
+# 기준 팀 = config.BASE_TEAM — 조회 API 의 기본 base_team 과 같아야 기본 응답 비교가 의미 있다(포크마다 기본값이 다름)
+from config import BASE_TEAM as BASE  # noqa: E402
+OPP = "Team Z"
 SRC = "https://example.org/wiki/League/Stage_1#Week_1"
 
 
