@@ -2,13 +2,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { invalidateApiCache } from "./utils/apiCache";
-import { ChevronLeft, BarChart3, Trash2, Pencil, Upload } from "lucide-react";
+import { ChevronLeft, BarChart3, Trash2, Pencil, Upload, Trophy, ExternalLink } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { getMapDisplayName } from "./gameData";
 import { BASE_TEAM } from "./config";
 import WinnerOverrideControl from "./WinnerOverrideControl";
 import { precheckLine } from "./utils/precheckText";
+import { isTournament } from "./utils/sessionRecord";
+import { isSafeVideoUrl } from "./utils/videoLink";
 
 const API_BASE = import.meta.env.PROD ? "" : "";
 // 승자 출처 → 배지 i18n 키. 목록에 없는 값(score·manual·null)은 배지 없음
@@ -334,9 +336,25 @@ export default function ScrimDetail({ scrimId, onSelectMatch, onBack, onGoOveral
             <ChevronLeft size={16} /> {t.backToList}
           </button>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>{scrim.scrim_name}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>
+              {isTournament(scrim) && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10, verticalAlign: "middle", fontSize: 12, fontWeight: 700, color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 999, padding: "2px 9px" }}>
+                  <Trophy size={12} /> {t.ssTournamentBadge}
+                </span>
+              )}
+              {scrim.scrim_name}
+            </div>
             <div style={{ color: theme.textSub, fontSize: 13 }}>
               {scrim.date} · {scrim.start_time} ~ {scrim.end_time} · {t.matchCount.replace('{n}', matches.length)}
+              {/* 대회 결과 출처(있을 때만, http(s) 만 링크) */}
+              {isSafeVideoUrl(scrim.source_url) && (
+                <>
+                  {" · "}
+                  <a href={scrim.source_url.trim()} target="_blank" rel="noopener noreferrer" style={{ color: theme.primary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                    {t.sdSourceLink} <ExternalLink size={12} />
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>

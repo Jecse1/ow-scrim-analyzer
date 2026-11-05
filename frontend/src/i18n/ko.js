@@ -6,6 +6,7 @@ export default {
   navGroupStats: "통계", navGroupAnalysis: "분석", navBanpick: "밴픽", navPlans: "드래프트 플랜",
   ssCalendar: "달력", ssList: "리스트",
   ssUndetermined: "미확정 {n}건",
+  ssKindFilter: "세션 종류", ssKindScrim: "스크림", ssKindTournament: "대회", ssKindAll: "전체", ssTournamentBadge: "대회", sdSourceLink: "출처 보기",
   title: "스크림 데이터 센터", desc: "오버워치 스크림 로그를 업로드하여 팀의 퍼포먼스를 분석하세요.", desc2: "데이터는 서버에 안전하게 저장됩니다.",
   createScrim: "스크림 생성하기", viewHistory: "기록 보기", uploading: "업로드 중...",
   modalTitle: "스크림 기록 생성", step1Title: "기본 정보 입력", step1Desc: "스크림 날짜와 시간을 입력해주세요.",

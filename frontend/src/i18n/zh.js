@@ -6,6 +6,7 @@ export default {
   navGroupStats: "统计", navGroupAnalysis: "分析", navBanpick: "禁选", navPlans: "草案计划",
   ssCalendar: "日历", ssList: "列表",
   ssUndetermined: "未确定 {n} 场",
+  ssKindFilter: "场次类型", ssKindScrim: "训练赛", ssKindTournament: "正式比赛", ssKindAll: "全部", ssTournamentBadge: "正式比赛", sdSourceLink: "来源",
   title: "训练赛数据中心", desc: "上传守望先锋训练赛日志，分析队伍表现。", desc2: "数据将安全存储在服务器。",
   createScrim: "创建训练赛", viewHistory: "查看记录", uploading: "上传中...",
   modalTitle: "创建训练赛记录", step1Title: "基本信息", step1Desc: "请输入训练赛日期与时间。",

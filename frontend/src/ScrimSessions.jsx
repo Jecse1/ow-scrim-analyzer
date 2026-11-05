@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { fetchCached, invalidateApiCache } from './utils/apiCache';
-import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, RefreshCw, Filter, Trash2, AlertCircle } from 'lucide-react';
+import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, RefreshCw, Filter, Trash2, AlertCircle, Trophy } from 'lucide-react';
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { BASE_TEAM } from "./config";
-import { sessionRecord as computeSessionRecord } from "./utils/sessionRecord";
+import { sessionRecord as computeSessionRecord, sessionsUrl, isTournament, SESSION_KINDS } from "./utils/sessionRecord";
 import { REBUILD_URL, REBUILD_STATUS_URL, pollRebuildJob, rebuildMessage, failMessage } from "./utils/rebuildJob";
 
 // 세션명(YYMMDD-TEAM)에서 상대팀 추출 — 첫 하이픈 뒤 전체.
@@ -33,6 +33,10 @@ const ScrimSessions = ({ onSelectScrim }) => {
 
   const [scrims, setScrims] = useState([]);
   const [loading, setLoading] = useState(true);
+  // 세션 종류 필터(스크림/대회/전체). 기본 스크림 = 예전 화면·요청 그대로.
+  const [kind, setKind] = useState('scrim');
+  const kindRef = useRef(kind);
+  kindRef.current = kind;
   const [rebuilding, setRebuilding] = useState(false);
 
   const [startDate, setStartDate] = useState("");
@@ -68,8 +72,10 @@ const ScrimSessions = ({ onSelectScrim }) => {
   }, [popover]);
 
   const fetchScrims = async () => {
+    const k = kindRef.current;
     try {
-      const data = await fetchCached('/api/scrims');
+      const data = await fetchCached(sessionsUrl(k));
+      if (kindRef.current !== k) return;   // 응답 전에 필터를 바꿨으면 버린다(늦은 응답이 덮지 않게)
       setScrims(data);
     } catch (err) {
       console.error(err);
@@ -78,7 +84,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
     }
   };
 
-  useEffect(() => { fetchScrims(); }, []);
+  useEffect(() => { fetchScrims(); }, [kind]);
 
   // rebuild-db 는 202 {job_id} 즉시 응답 + 백그라운드 작업 → status 폴링(utils/rebuildJob). 화면을 떠나면 폴링 중단.
   const unmountedRef = useRef(false);
@@ -302,6 +308,26 @@ const ScrimSessions = ({ onSelectScrim }) => {
               {segBtn('list', t.ssList, List)}
             </div>
           )}
+          {/* 세션 종류 필터 (선택 모드에선 숨김) */}
+          {!isSelectMode && (
+            <div role="group" aria-label={t.ssKindFilter} data-kind-filter="" style={{ display: 'flex', gap: '2px', background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '9px', padding: '3px' }}>
+              {SESSION_KINDS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setKind(k)}
+                  aria-pressed={kind === k}
+                  style={{
+                    background: kind === k ? theme.surfaceHighlight : 'transparent',
+                    color: kind === k ? theme.text : theme.textSub,
+                    border: 'none', padding: '7px 12px', borderRadius: '7px', cursor: 'pointer',
+                    fontSize: '13px', fontWeight: kind === k ? 700 : 500, transition: 'all 0.15s',
+                  }}
+                >
+                  {k === 'scrim' ? t.ssKindScrim : k === 'tournament' ? t.ssKindTournament : t.ssKindAll}
+                </button>
+              ))}
+            </div>
+          )}
           {isSelectMode ? (
             <button
               onClick={exitSelectMode}
@@ -446,7 +472,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                         <div
                           key={s.id}
                           className="ssc-chip"
-                          title={`${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : language === 'zh' ? '胜 ' : 'W '}${rec.l}${language === 'ko' ? '패' : language === 'zh' ? '负' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : language === 'zh' ? ` ${rec.d}平` : ` ${rec.d}D`) : ''}${rec.u ? ` · ${t.ssUndetermined.replace('{n}', rec.u)}` : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
+                          title={`${isTournament(s) ? `[${t.ssTournamentBadge}] ` : ''}${s.scrim_name} · ${rec.w}${language === 'ko' ? '승 ' : language === 'zh' ? '胜 ' : 'W '}${rec.l}${language === 'ko' ? '패' : language === 'zh' ? '负' : 'L'}${rec.d ? (language === 'ko' ? ` ${rec.d}무` : language === 'zh' ? ` ${rec.d}平` : ` ${rec.d}D`) : ''}${rec.u ? ` · ${t.ssUndetermined.replace('{n}', rec.u)}` : ''} · ${t.matchCount.replace('{n}', s.matches?.length || 0)}`}
                           onClick={(e) => { e.stopPropagation(); onSelectScrim(s.id); }}
                           style={{
                             background: col.bg, color: col.fg, border: `1px solid ${col.bd}`, borderRadius: '6px',
@@ -455,7 +481,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                             gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden',
                           }}
                         >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{opp}</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{isTournament(s) && <Trophy size={10} aria-label={t.ssTournamentBadge} style={{ marginRight: '3px', verticalAlign: '-1px' }} />}{opp}</span>
                           <span style={{ fontWeight: 700, fontSize: '10.5px', flexShrink: 0, letterSpacing: '0.02em' }}>{rec.w}-{rec.l}</span>
                         </div>
                       );
@@ -485,6 +511,7 @@ const ScrimSessions = ({ onSelectScrim }) => {
                       style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderRadius: '8px', padding: '10px 8px', cursor: 'pointer', color: theme.text, minHeight: '44px' }}
                     >
                       <span style={{ width: 9, height: 9, borderRadius: '999px', background: col.fg, flexShrink: 0 }} />
+                      {isTournament(s) && <Trophy size={12} aria-label={t.ssTournamentBadge} color={theme.primary} style={{ flexShrink: 0 }} />}
                       <span style={{ flex: 1, minWidth: 0, fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.scrim_name}</span>
                       <span style={{ flexShrink: 0, fontSize: '12px', fontWeight: 700, color: col.fg }}>{rec.w}-{rec.l}{rec.d + rec.u + rec.n ? `-${rec.d + rec.u + rec.n}` : ''}</span>
                     </button>
@@ -551,7 +578,14 @@ const ScrimSessions = ({ onSelectScrim }) => {
                         />
                       )}
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', color: theme.text }}>{scrim.scrim_name}</h3>
+                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', color: theme.text }}>
+                          {isTournament(scrim) && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '8px', verticalAlign: 'middle', fontSize: '11px', fontWeight: 700, color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: '999px', padding: '1px 8px' }}>
+                              <Trophy size={11} /> {t.ssTournamentBadge}
+                            </span>
+                          )}
+                          {scrim.scrim_name}
+                        </h3>
                         <div style={{ display: 'flex', gap: '16px', color: theme.textSub, fontSize: '13px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {scrim.date}</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {t.matchCount.replace('{n}', scrim.matches ? scrim.matches.length : 0)}</span>

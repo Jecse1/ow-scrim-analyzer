@@ -18,3 +18,15 @@ export function sessionRecord(s, ourTeam) {
   const outcome = w > l ? 'win' : w < l ? 'loss' : 'draw';
   return { w, l, d, u, n, outcome };
 }
+
+// 세션 종류 — 서버 services/session_kind.py 와 같은 값. 스크림 세션 응답에는 kind 키가 없다(NULL).
+// 기본(스크림)은 파라미터 없는 '/api/scrims' 그대로 — 다른 화면과 같은 URL 이라 공유 캐시·요청이 예전과 같다.
+export const SESSION_KINDS = ['scrim', 'tournament', 'all'];
+
+export function sessionsUrl(kind) {
+  return kind === 'tournament' || kind === 'all' ? `/api/scrims?kind=${kind}` : '/api/scrims';
+}
+
+export function isTournament(s) {
+  return s?.kind === 'tournament';
+}

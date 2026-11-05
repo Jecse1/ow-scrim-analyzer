@@ -6,6 +6,7 @@ export default {
   navGroupStats: "Stats", navGroupAnalysis: "Analysis", navBanpick: "Ban/Pick", navPlans: "Draft Plans",
   ssCalendar: "Calendar", ssList: "List",
   ssUndetermined: "{n} undetermined",
+  ssKindFilter: "Session type", ssKindScrim: "Scrims", ssKindTournament: "Tournament", ssKindAll: "All", ssTournamentBadge: "Tournament", sdSourceLink: "Source",
   title: "Scrim Data Center", desc: "Upload Overwatch scrim logs to analyze team performance.", desc2: "Data is safely stored on the server.",
   createScrim: "Create Scrim", viewHistory: "View History", uploading: "Uploading...",
   modalTitle: "Create Scrim Record", step1Title: "Basic Information", step1Desc: "Please enter the scrim date and time.",
