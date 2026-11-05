@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sessionRecord, sessionsUrl, isTournament, SESSION_KINDS } from "./sessionRecord";
+import { sessionRecord, sessionsUrl, isTournament, SESSION_KINDS, loadSessionKind, saveSessionKind, SESSION_KIND_STORAGE_KEY } from "./sessionRecord";
 
 const m = (winner, winner_source) => ({ winner, winner_source });
 
@@ -16,10 +16,12 @@ describe("sessionRecord", () => {
 });
 
 describe("sessionsUrl / isTournament", () => {
-  it("기본·스크림은 파라미터 없는 기존 URL(공유 캐시 키 동일)", () => {
+  it("스크림은 파라미터 없는 기존 URL(공유 캐시 키 동일)", () => {
     expect(sessionsUrl("scrim")).toBe("/api/scrims");
-    expect(sessionsUrl(undefined)).toBe("/api/scrims");
-    expect(sessionsUrl("bogus")).toBe("/api/scrims");
+  });
+  it("값이 없거나 잘못되면 세션 목록 기본(전체)", () => {
+    expect(sessionsUrl(undefined)).toBe("/api/scrims?kind=all");
+    expect(sessionsUrl("bogus")).toBe("/api/scrims?kind=all");
   });
   it("대회·전체만 kind 파라미터", () => {
     expect(sessionsUrl("tournament")).toBe("/api/scrims?kind=tournament");
@@ -31,5 +33,27 @@ describe("sessionsUrl / isTournament", () => {
     expect(isTournament({})).toBe(false);
     expect(isTournament({ kind: null })).toBe(false);
     expect(isTournament(null)).toBe(false);
+  });
+});
+
+describe("loadSessionKind / saveSessionKind", () => {
+  const mem = (init = {}) => {
+    const d = { ...init };
+    return { getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => { d[k] = String(v); }, d };
+  };
+  it("저장값이 없거나 잘못되면 all", () => {
+    expect(loadSessionKind(mem())).toBe("all");
+    expect(loadSessionKind(mem({ [SESSION_KIND_STORAGE_KEY]: "bogus" }))).toBe("all");
+    expect(loadSessionKind(undefined)).toBe("all");
+    expect(loadSessionKind({ getItem: () => { throw new Error("blocked"); } })).toBe("all");
+  });
+  it("저장한 값을 다시 읽는다", () => {
+    const st = mem();
+    saveSessionKind(st, "scrim");
+    expect(st.d[SESSION_KIND_STORAGE_KEY]).toBe("scrim");
+    expect(loadSessionKind(st)).toBe("scrim");
+    saveSessionKind(st, "tournament");
+    expect(loadSessionKind(st)).toBe("tournament");
+    expect(() => saveSessionKind({ setItem: () => { throw new Error("full"); } }, "all")).not.toThrow();
   });
 });

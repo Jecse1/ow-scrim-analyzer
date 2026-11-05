@@ -5,7 +5,7 @@ import { Calendar, CalendarDays, List, ChevronLeft, ChevronRight, Clock, Refresh
 import { useTheme } from "./ThemeContext";
 import { useLanguage } from "./LanguageContext";
 import { BASE_TEAM } from "./config";
-import { sessionRecord as computeSessionRecord, sessionsUrl, isTournament, SESSION_KINDS } from "./utils/sessionRecord";
+import { sessionRecord as computeSessionRecord, sessionsUrl, isTournament, SESSION_KINDS, loadSessionKind, saveSessionKind } from "./utils/sessionRecord";
 import { REBUILD_URL, REBUILD_STATUS_URL, pollRebuildJob, rebuildMessage, failMessage } from "./utils/rebuildJob";
 
 // 세션명(YYMMDD-TEAM)에서 상대팀 추출 — 첫 하이픈 뒤 전체.
@@ -19,6 +19,8 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
 
 const OUR_TEAM = BASE_TEAM;
+// localStorage 접근 자체가 막힌 환경(SecurityError)이면 undefined → 기본값(utils/sessionRecord)
+const localStore = () => { try { return window.localStorage; } catch { return undefined; } };
 // 세션 전적(w·l·d·u·n) — utils/sessionRecord.js(요약 API 와 같은 분류, 무 = 실제 무승부만)
 const sessionRecord = (s) => computeSessionRecord(s, OUR_TEAM);
 
@@ -33,8 +35,9 @@ const ScrimSessions = ({ onSelectScrim }) => {
 
   const [scrims, setScrims] = useState([]);
   const [loading, setLoading] = useState(true);
-  // 세션 종류 필터(스크림/대회/전체). 기본 스크림 = 예전 화면·요청 그대로.
-  const [kind, setKind] = useState('scrim');
+  // 세션 종류 필터(스크림/대회/전체). 기본 전체, 고른 값은 localStorage 에 기억(다음 방문에도 유지).
+  const [kind, setKindState] = useState(() => loadSessionKind(localStore()));
+  const setKind = (k) => { setKindState(k); saveSessionKind(localStore(), k); };
   const kindRef = useRef(kind);
   kindRef.current = kind;
   const [rebuilding, setRebuilding] = useState(false);

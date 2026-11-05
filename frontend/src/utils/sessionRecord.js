@@ -20,11 +20,29 @@ export function sessionRecord(s, ourTeam) {
 }
 
 // 세션 종류 — 서버 services/session_kind.py 와 같은 값. 스크림 세션 응답에는 kind 키가 없다(NULL).
-// 기본(스크림)은 파라미터 없는 '/api/scrims' 그대로 — 다른 화면과 같은 URL 이라 공유 캐시·요청이 예전과 같다.
+// 스크림은 파라미터 없는 '/api/scrims' 그대로 — 다른 화면과 같은 URL 이라 공유 캐시·요청이 예전과 같다.
+// 세션 목록 화면의 기본은 전체(all). 통계·요약 API 의 기본(scrim)과는 별개.
 export const SESSION_KINDS = ['scrim', 'tournament', 'all'];
+export const DEFAULT_SESSION_KIND = 'all';
+export const SESSION_KIND_STORAGE_KEY = 'sessionKindFilter';
 
 export function sessionsUrl(kind) {
-  return kind === 'tournament' || kind === 'all' ? `/api/scrims?kind=${kind}` : '/api/scrims';
+  if (kind === 'scrim') return '/api/scrims';
+  return `/api/scrims?kind=${kind === 'tournament' ? 'tournament' : DEFAULT_SESSION_KIND}`;
+}
+
+// 세션 목록 필터 기억값(localStorage). 값이 없거나 목록 밖이면 기본(all). 저장소 접근 실패도 기본.
+export function loadSessionKind(storage) {
+  try {
+    const v = storage?.getItem(SESSION_KIND_STORAGE_KEY);
+    return SESSION_KINDS.includes(v) ? v : DEFAULT_SESSION_KIND;
+  } catch {
+    return DEFAULT_SESSION_KIND;
+  }
+}
+
+export function saveSessionKind(storage, kind) {
+  try { storage?.setItem(SESSION_KIND_STORAGE_KEY, kind); } catch { /* ignore */ }
 }
 
 export function isTournament(s) {
