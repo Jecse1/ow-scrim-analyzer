@@ -5,7 +5,7 @@ main.py 의 @app 엔드포인트를 APIRouter 로 이동(경로·메서드·함�
 @app.->@router. 만 변경). main 은 include_router(router) 로 등록.
 services/routers → main import 금지: 필요한 전역은 하위 모듈에서 직접 import.
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 # DB 접근(가용성 가드는 main 과 독립적으로 자체 판정 — main import 금지 규칙)
 _DB_IMPORT_ERROR = None
@@ -38,18 +38,24 @@ from services.fight_metrics import (
 )
 from services.stats import compute_player_fight_stats
 from services.fight_records import _build_fight_records_payload
+from services.session_kind import KIND_SCRIM, QueryKind, kind_cache_key, kind_condition
 from log_time import tprint
 
 router = APIRouter()
 
 
-async def _compute_scrims() -> bytes:
+# 세션 종류 선택(services/session_kind) — 기본 scrim 이라 대회 세션은 기존 응답·집계에 섞이지 않는다
+_KIND_Q = Query(KIND_SCRIM, description="세션 종류: scrim(기본) | tournament(대회) | all")
+
+
+async def _compute_scrims(kind: str = KIND_SCRIM) -> bytes:
     """/api/scrims 본문 bytes. 바이트는 기존(FastAPI 기본 직렬화: jsonable_encoder → JSONResponse)과 같다."""
     from sqlalchemy.orm import selectinload
+    cond = kind_condition(DBSession.kind, kind)
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(DBSession)
-            .where(DBSession.deleted_at.is_(None))
+            .where(DBSession.deleted_at.is_(None), *([cond] if cond is not None else []))
             .options(
                 selectinload(DBSession.matches).selectinload(DBMatch.pauses),
             )
@@ -63,13 +69,13 @@ async def _compute_scrims() -> bytes:
 
 
 @router.get("/api/scrims")
-async def get_scrim_list(request: Request):
-    # 세션 목록(경량). 응답 캐시 키 "scrims" — 히트면 DB 왕복 없이 저장된 bytes 그대로(무효화 규칙은 다른 키와 같음).
+async def get_scrim_list(request: Request, kind: QueryKind = _KIND_Q):
+    # 세션 목록(경량). 응답 캐시 키 "scrims"(kind≠scrim 은 "scrims:kind=…") — 히트면 DB 왕복 없이 저장된 bytes 그대로(무효화 규칙은 다른 키와 같음).
     # (docstring 이 아닌 주석: openapi 설명 불변)
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
     try:
-        return await cached_json_response(request, "scrims", _compute_scrims)
+        return await cached_json_response(request, kind_cache_key("scrims", kind), partial(_compute_scrims, kind))
     except Exception as e:
         tprint(f"[DB] get_scrim_list failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")
@@ -262,15 +268,15 @@ async def get_first_fights():
         raise HTTPException(status_code=500, detail="DB error")
 
 
-async def _compute_fight_records(base_team: str) -> bytes:
+async def _compute_fight_records(base_team: str, kind: str = KIND_SCRIM) -> bytes:
     async with AsyncSessionLocal() as db:
-        sessions = await load_stat_sessions(db, events=True, pauses=True)
+        sessions = await load_stat_sessions(db, events=True, pauses=True, kind=kind)
     # 변환(한타 계산)·직렬화는 스레드풀
     return await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(sessions, base_team)))
 
 
 @router.get("/api/fight-records")
-async def get_fight_records(request: Request, base_team: str = BASE_TEAM):
+async def get_fight_records(request: Request, base_team: str = BASE_TEAM, kind: QueryKind = _KIND_Q):
     """한타 분석(베타) 탭 전용. 모든 한타를 평탄 리스트로 반환하고 프론트가 기간별 집계만 수행.
     - 한타 그룹핑/승자: compute_fights 재사용(미수정). 라운드 단위로 계산(기존 UltimateStats와 동일).
     - 승자 판정: 생존자 수 비교(fight_analysis.py). 무승부(동수)는 winner='unknown' → 프론트 집계 제외.
@@ -280,7 +286,7 @@ async def get_fight_records(request: Request, base_team: str = BASE_TEAM):
         raise HTTPException(status_code=503, detail="Database not available")
     try:
         return await cached_json_response(
-            request, f"fight-records:{base_team}", partial(_compute_fight_records, base_team))
+            request, kind_cache_key(f"fight-records:{base_team}", kind), partial(_compute_fight_records, base_team, kind))
     except Exception as e:
         tprint(f"[DB] get_fight_records failed: {e}")
         raise HTTPException(status_code=500, detail="DB error")

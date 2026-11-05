@@ -189,7 +189,7 @@ def _db_match_to_dict(m: "DBMatch", *, full: bool = False) -> dict:
 
 
 def _db_session_to_dict(s: "DBSession", *, full: bool = False) -> dict:
-    return {
+    d = {
         "id": s.id,
         "scrim_name": s.scrim_name,
         "date": s.date,
@@ -197,3 +197,9 @@ def _db_session_to_dict(s: "DBSession", *, full: bool = False) -> dict:
         "end_time": s.end_time or "",
         "matches": [_db_match_to_dict(m, full=full) for m in (s.matches or [])],
     }
+    # 세션 종류·출처(대회 결과)는 값이 있을 때만 — 스크림 세션 응답 바이트는 예전 그대로
+    if getattr(s, "kind", None):
+        d["kind"] = s.kind
+    if getattr(s, "source_url", None):
+        d["source_url"] = s.source_url
+    return d

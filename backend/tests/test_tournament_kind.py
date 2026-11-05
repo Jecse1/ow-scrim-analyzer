@@ -199,3 +199,141 @@ def test_column_patches_add_kind_columns_to_old_db_idempotently(tmp_path):
     con.close()
     assert cols.count("kind") == 1 and cols.count("source_url") == 1
     assert row == [(None, None)]
+
+
+# ── 집계 분리: 기본 kind=scrim 응답은 대회 세션 등록 전후 바이트 동일, ?kind=tournament|all 로 선택 ──
+FROM_TO = "from=2026-01-01&to=2026-12-31"
+DEFAULT_5 = ["/api/scrims", "/api/fight-records", "/api/first-fights", "/api/scrims/full-events",
+             "/api/player-fight-stats"]
+SUMMARY_4 = [f"/api/summary/{x}?{FROM_TO}" for x in ("maps", "opponents", "period", "ults")]
+
+
+@pytest.fixture(scope="module")
+def agg():
+    """전용 임시 DB 를 등록·조회 라우터(scrims·stats·summary) 모두에 물린다. 응답 캐시는 앞뒤로 비운다."""
+    import main
+    import cache
+    import routers.scrims as scrims
+    import routers.stats as stats
+    import routers.summary as summary
+    import golden_util
+    from db import models  # noqa: F401
+
+    tmp = tempfile.mkdtemp(prefix="scrim_tournament_agg_")
+    db_path = os.path.join(tmp, "scrim.db")
+    rows = os.path.join(tmp, "rows")
+    os.makedirs(rows)
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", connect_args={"check_same_thread": False})
+
+    async def _init():
+        async with engine.begin() as conn:
+            await conn.run_sync(database.Base.metadata.create_all)
+            await conn.run_sync(database._apply_column_patches)
+        await engine.dispose()
+    asyncio.run(_init())
+
+    factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    mp = pytest.MonkeyPatch()
+    for mod in (scrims, stats, summary):
+        mp.setattr(mod, "AsyncSessionLocal", factory)
+    mp.setattr(scrims, "ROW_DATA_DIR", rows)
+    mp.setattr(database, "_DB_PATH", db_path)
+    mp.setattr(scrims, "start_backfill", lambda force=False: None)
+    mp.setattr(scrims, "BASE_TEAM", BASE)
+    cache._invalidate_response_cache()
+    with TestClient(main.app) as c:
+        # 스크림: 로그 매치 1 + 수기 매치 1(수기 매치도 fight-records match_summaries 에 실리는 경로)
+        body = _scrim_body(date="2026-04-01")
+        body["matches"].append({"map_name": "부산", "team1Name": BASE, "team2Name": OPP, "start_time": "00:00",
+                                "end_time": "00:00", "result": "2:1", "source": "manual", "winner": BASE,
+                                "score_t1": 2, "score_t2": 1})
+        sid = c.post("/api/scrim/manual-register", json=body).json()["scrim_id"]
+        with open(golden_util.SAMPLE_LOG, "rb") as f:
+            c.post("/api/matches/upload", data={"scrim_id": sid, "match_index": "1"},
+                   files={"file": ("log.txt", f.read(), "text/plain")}).raise_for_status()
+        yield c, scrims, sid
+        c.portal.call(engine.dispose)
+    cache._invalidate_response_cache()
+    mp.undo()
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _summary_bytes(c, url):
+    r = c.get(url)
+    assert r.status_code == 200, (url, r.text)
+    d = r.json()
+    d["meta"].pop("generated_at", None)   # 호출 시각 — 그 외 바이트는 그대로 비교
+    return json.dumps(d, ensure_ascii=False, sort_keys=True).encode()
+
+
+def _discord_body(c, scrims, monkeypatch, sid):
+    sent = []
+    monkeypatch.setattr(scrims._config, "DISCORD_WEBHOOK_URL", "https://example.org/hook")
+    monkeypatch.setattr(scrims, "schedule_webhook", lambda url, build, on_result=None: sent.append(build()))
+    scrims._WEBHOOK_SENT.pop(sid, None)
+    r = c.post(f"/api/sessions/{sid}/complete")
+    assert r.status_code == 200 and r.json()["webhook"] == "queued", r.text
+    return r.content, sent[0]
+
+
+def _snapshot(c, scrims, monkeypatch, sid):
+    snap = {u: c.get(u).content for u in DEFAULT_5}
+    snap.update({u: _summary_bytes(c, u) for u in SUMMARY_4})
+    snap["complete"], snap["discord"] = _discord_body(c, scrims, monkeypatch, sid)
+    return snap
+
+
+def test_tournament_session_not_mixed_into_default_responses(agg, monkeypatch):
+    c, scrims, sid = agg
+    before = _snapshot(c, scrims, monkeypatch, sid)
+    assert len(c.get("/api/scrims").json()) == 1
+    assert c.get("/api/fight-records").json()["match_summaries"], "기준 데이터에 매치 요약이 있어야 비교 의미가 있다"
+
+    tid = c.post("/api/scrim/manual-register", json=_tournament_body(date="2026-04-02")).json()["scrim_id"]
+    after = _snapshot(c, scrims, monkeypatch, sid)
+    assert {k: v for k, v in after.items()} == before          # 기본 응답 5종·요약 4종·디스코드 본문 바이트 동일
+    assert tid not in {s["id"] for s in c.get("/api/scrims").json()}
+    # 명시적 kind=scrim 도 기본과 같은 바이트
+    assert c.get("/api/scrims?kind=scrim").content == before["/api/scrims"]
+    assert c.get("/api/fight-records?kind=scrim").content == before["/api/fight-records"]
+
+
+def test_kind_tournament_and_all(agg):
+    c, _, sid = agg
+    tour = c.get("/api/scrims?kind=tournament").json()
+    assert [s.get("kind") for s in tour] == ["tournament"] and tour[0]["source_url"] == SRC
+    tid = tour[0]["id"]
+    assert len(tour[0]["matches"]) == 4
+    every = c.get("/api/scrims?kind=all").json()
+    assert {s["id"] for s in every} == {sid, tid}
+    scrim_only = c.get("/api/scrims").json()
+    assert all("kind" not in s and "source_url" not in s for s in scrim_only)
+    detail = c.get(f"/api/scrims/{tid}").json()
+    assert detail["kind"] == "tournament" and detail["source_url"] == SRC
+
+    def ms_sessions(kind):
+        return sorted(m["session_id"] for m in c.get(f"/api/fight-records?kind={kind}").json()["match_summaries"])
+    assert set(ms_sessions("tournament")) == {tid} and len(ms_sessions("tournament")) == 4
+    assert set(ms_sessions("scrim")) == {sid}
+    assert ms_sessions("all") == sorted(ms_sessions("scrim") + ms_sessions("tournament"))
+
+    def played(kind):
+        d = c.get(f"/api/summary/opponents?{FROM_TO}&kind={kind}").json()
+        return {o["opponent"]: o for o in d["opponents"]}
+    t = played("tournament")[OPP]
+    assert (t["wins"], t["losses"]) == (3, 1)                     # 대회 4맵: 3승 1패
+    s, a = played("scrim")[OPP], played("all")[OPP]
+    assert a["wins"] == s["wins"] + t["wins"] and a["losses"] == s["losses"] + t["losses"]
+
+    def period_ids(kind):
+        return {x["session_id"] for x in c.get(f"/api/summary/period?{FROM_TO}&kind={kind}").json()["sessions"]}
+    assert period_ids("tournament") == {tid} and period_ids("scrim") == {sid} and period_ids("all") == {sid, tid}
+    maps_t = c.get(f"/api/summary/maps?{FROM_TO}&kind=tournament").json()
+    assert (maps_t["total"]["wins"], maps_t["total"]["losses"]) == (3, 1) and len(maps_t["maps"]) == 4
+
+
+@pytest.mark.parametrize("url", ["/api/scrims?kind=bogus", "/api/fight-records?kind=Tournament",
+                                 f"/api/summary/period?{FROM_TO}&kind=x"])
+def test_invalid_kind_query_is_422(agg, url):
+    c, _, _ = agg
+    assert c.get(url).status_code == 422

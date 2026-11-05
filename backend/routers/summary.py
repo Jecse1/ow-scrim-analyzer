@@ -31,6 +31,7 @@ from config import BASE_TEAM
 from cache import cache_get_json_bytes, _json_bytes
 from serializers import _db_match_to_dict
 from services.fight_records import _build_fight_records_payload
+from services.session_kind import KIND_SCRIM, QueryKind, kind_cache_key, kind_condition
 from services.summary import (
     DEFINITIONS_VERSION, RESPONSE_WINDOW_SEC, DEFAULT_MIN_SAMPLE, DEFAULT_COUNTER_LIMIT,
     PERIOD_TZ, POPULATION_FIGHT_MATCHES_PLUS_MANUAL, POPULATION_ALL_MATCHES, POPULATION_LOG_FIGHTS,
@@ -48,6 +49,7 @@ _DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _FROM_Q = Query(None, alias="from", description="기간 시작 YYYY-MM-DD(포함). 미지정 시 to − 13일")
 _TO_Q = Query(None, description="기간 끝 YYYY-MM-DD(포함). 미지정 시 오늘(Asia/Seoul)")
 _BASE_Q = Query(BASE_TEAM, description="기준 팀(기본 = 환경변수 BASE_TEAM)")
+_KIND_Q = Query(KIND_SCRIM, description="세션 종류: scrim(기본) | tournament(대회) | all")
 
 
 def _parse_day(value: Optional[str], name: str) -> Optional[date]:
@@ -81,26 +83,27 @@ def _meta(base_team: str, frm: str, to: str, population: str) -> dict:
     }
 
 
-async def _load(base_team: str) -> tuple[dict, list]:
+async def _load(base_team: str, kind: str = KIND_SCRIM) -> tuple[dict, list]:
     """(fight-records payload, /api/scrims 형식 세션 목록). 조회 조건·정렬은 두 기존 엔드포인트와 동일.
     payload 는 항상 캐시에 저장된 JSON bytes 를 디코드한 값을 쓴다(히트·미스 결과가 같도록)."""
     if not _DB_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
-    cache_key = f"fight-records:{base_team}"  # routers/stats.py get_fight_records 와 같은 키
+    cache_key = kind_cache_key(f"fight-records:{base_team}", kind)  # routers/stats.py get_fight_records 와 같은 키
 
     async def _compute_fight_records() -> bytes:
         # /api/fight-records 와 같은 컬럼 SELECT 로더 → 같은 빌더 → 같은 키(단일 비행 공유)
         async with AsyncSessionLocal() as db:
-            rows = await load_stat_sessions(db, events=True, pauses=True)
+            rows = await load_stat_sessions(db, events=True, pauses=True, kind=kind)
         return await run_in_threadpool(lambda: _json_bytes(_build_fight_records_payload(rows, base_team)))
 
     try:
         from sqlalchemy.orm import selectinload
+        cond = kind_condition(DBSession.kind, kind)
         async with AsyncSessionLocal() as db:
             # 세션 목록용으로는 매치·퍼즈만 읽는다(라운드·이벤트 불필요) — 히트·미스 공통.
             result = await db.execute(
                 select(DBSession)
-                .where(DBSession.deleted_at.is_(None))
+                .where(DBSession.deleted_at.is_(None), *([cond] if cond is not None else []))
                 .options(selectinload(DBSession.matches).selectinload(DBMatch.pauses))
                 .order_by(DBSession.date.desc(), DBSession.id.desc())
             )
@@ -124,9 +127,9 @@ async def _load(base_team: str) -> tuple[dict, list]:
 @router.get("/api/summary/maps", response_model=MapSummaryResponse)
 async def get_summary_maps(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO_Q,
                            opponent: Optional[str] = Query(None, description="상대 팀명(정확 일치)"),
-                           base_team: str = _BASE_Q):
+                           base_team: str = _BASE_Q, kind: QueryKind = _KIND_Q):
     f, t = _resolve_period(frm, to)
-    payload, scrims = await _load(base_team)
+    payload, scrims = await _load(base_team, kind)
     out = await run_in_threadpool(summarize_maps, payload["records"], payload["match_summaries"], f, t,
                                   opponent=opponent, scrims=scrims)
     return {"meta": _meta(base_team, f, t, POPULATION_FIGHT_MATCHES_PLUS_MANUAL), **out}
@@ -134,9 +137,9 @@ async def get_summary_maps(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO
 
 @router.get("/api/summary/opponents", response_model=OpponentSummaryResponse)
 async def get_summary_opponents(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO_Q,
-                                base_team: str = _BASE_Q):
+                                base_team: str = _BASE_Q, kind: QueryKind = _KIND_Q):
     f, t = _resolve_period(frm, to)
-    payload, scrims = await _load(base_team)
+    payload, scrims = await _load(base_team, kind)
     out = await run_in_threadpool(summarize_opponents, payload["records"], payload["match_summaries"], f, t,
                                   scrims=scrims)
     return {"meta": _meta(base_team, f, t, POPULATION_FIGHT_MATCHES_PLUS_MANUAL), **out}
@@ -144,9 +147,9 @@ async def get_summary_opponents(frm: Optional[str] = _FROM_Q, to: Optional[str] 
 
 @router.get("/api/summary/period", response_model=PeriodSummaryResponse)
 async def get_summary_period(frm: Optional[str] = _FROM_Q, to: Optional[str] = _TO_Q,
-                             base_team: str = _BASE_Q):
+                             base_team: str = _BASE_Q, kind: QueryKind = _KIND_Q):
     f, t = _resolve_period(frm, to)
-    _, scrims = await _load(base_team)
+    _, scrims = await _load(base_team, kind)
     out = await run_in_threadpool(summarize_period, scrims, f, t, base_team=base_team)
     return {"meta": _meta(base_team, f, t, POPULATION_ALL_MATCHES), **out}
 

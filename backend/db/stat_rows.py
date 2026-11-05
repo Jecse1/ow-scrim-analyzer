@@ -22,6 +22,7 @@ from collections import defaultdict
 from sqlalchemy import literal_column, select
 
 from db.models import Event, Match, Pause, PlayerStat, Round, Session
+from services.session_kind import KIND_SCRIM, kind_condition
 
 # _db_event_to_dict 가 읽는 컬럼(+ 묶음 키 round_id)
 _EVENT_COLS = (
@@ -45,25 +46,30 @@ def _rowid(table):
     return literal_column(f"{table.name}.rowid")
 
 
-def _live(stmt):
-    """soft delete 되지 않은 세션의 soft delete 되지 않은 매치로 한정(matches·sessions 가 조인돼 있어야 함)."""
-    return stmt.where(Session.deleted_at.is_(None), Match.deleted_at.is_(None))
+def _live(stmt, kind: str = KIND_SCRIM):
+    """soft delete 되지 않은 세션의 soft delete 되지 않은 매치로 한정(matches·sessions 가 조인돼 있어야 함).
+    kind: 세션 종류(services/session_kind) — 기본 스크림만."""
+    stmt = stmt.where(Session.deleted_at.is_(None), Match.deleted_at.is_(None))
+    cond = kind_condition(Session.kind, kind)
+    return stmt if cond is None else stmt.where(cond)
 
 
 async def load_stat_sessions(db, *, events: bool = True, pauses: bool = False,
-                             player_stats: bool = False) -> list:
+                             player_stats: bool = False, kind: str = KIND_SCRIM) -> list:
     """살아 있는 세션(date DESC, id DESC) → .matches(살아 있는 매치, 수기 포함) → .rounds(→ .events / .player_stats), .pauses.
-    db: AsyncSession. 관계는 인자로 요청한 것만 붙인다."""
+    db: AsyncSession. 관계는 인자로 요청한 것만 붙인다. kind: scrim(기본, 대회 세션 제외) | tournament | all."""
     S, M, R = Session.__table__, Match.__table__, Round.__table__
 
-    sessions = (await db.execute(
-        select(S).where(S.c.deleted_at.is_(None)).order_by(S.c.date.desc(), S.c.id.desc())
-    )).all()
+    sess_stmt = select(S).where(S.c.deleted_at.is_(None))
+    cond = kind_condition(S.c.kind, kind)
+    if cond is not None:
+        sess_stmt = sess_stmt.where(cond)
+    sessions = (await db.execute(sess_stmt.order_by(S.c.date.desc(), S.c.id.desc()))).all()
     matches = (await db.execute(
-        _live(select(M).join(S, S.c.id == M.c.session_id)).order_by(M.c.session_id, M.c.match_index, _rowid(M))
+        _live(select(M).join(S, S.c.id == M.c.session_id), kind).order_by(M.c.session_id, M.c.match_index, _rowid(M))
     )).all()
     rounds = (await db.execute(
-        _live(select(R).join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id))
+        _live(select(R).join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id), kind)
         .order_by(R.c.match_id, R.c.round_number, _rowid(R))
     )).all()
 
@@ -74,7 +80,7 @@ async def load_stat_sessions(db, *, events: bool = True, pauses: bool = False,
         for e in (await db.execute(
             _live(select(*(E.c[c] for c in _EVENT_COLS))
                   .select_from(E).join(R, R.c.id == E.c.round_id)
-                  .join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id))
+                  .join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id), kind)
             .order_by(E.c.round_id, E.c.timestamp, E.c.id)
         )).all():
             ev_by_round[e.round_id].append(e)
@@ -83,7 +89,7 @@ async def load_stat_sessions(db, *, events: bool = True, pauses: bool = False,
         ps_by_round = defaultdict(list)
         for p in (await db.execute(
             _live(select(P).join(R, R.c.id == P.c.round_id)
-                  .join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id))
+                  .join(M, M.c.id == R.c.match_id).join(S, S.c.id == M.c.session_id), kind)
             .order_by(P.c.round_id, P.c.id)
         )).all():
             ps_by_round[p.round_id].append(p)
@@ -91,7 +97,7 @@ async def load_stat_sessions(db, *, events: bool = True, pauses: bool = False,
         Z = Pause.__table__
         pz_by_match = defaultdict(list)
         for z in (await db.execute(
-            _live(select(Z).join(M, M.c.id == Z.c.match_id).join(S, S.c.id == M.c.session_id))
+            _live(select(Z).join(M, M.c.id == Z.c.match_id).join(S, S.c.id == M.c.session_id), kind)
             .order_by(Z.c.match_id, Z.c.id)
         )).all():
             pz_by_match[z.match_id].append(RowObj(z))
