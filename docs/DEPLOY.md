@@ -233,6 +233,7 @@ curl -s http://127.0.0.1:8000/api/admin/rebuild-db/status
   쓰기 API(등록·업로드·편집·삭제·전술판 저장)와 중복 rebuild 는 **409**.
 - 교체 직전 상태는 `scrim.db.before_rebuild_<시각>` 으로 남는다(하드링크 — 추가 공간 없음. 링크를 못 만드는 파일시스템이면 복사,
   로그 `[DB] backup hardlink unavailable`). 이 백업은 자동 정리되지 않는다 — 오래된 것은 직접 지운다.
+  예: `find ~/app/backend/data -name 'scrim.db.before_rebuild_*' -mtime +30 -print` 로 확인한 뒤 같은 명령 끝에 `-delete`.
 - 디스크 여유가 DB 크기×2 + 64MB 미만이면 시작하지 않고 **507**(status `reason` 에 free/need MB).
 - 실패하면 임시 파일만 지우고 운영 DB 는 그대로(status `failed`, 로그 `[REBUILD] rebuild_database failed`).
 - 작업 중 `pm2 restart` 하면 작업은 사라지고(운영 DB 는 교체 전이면 그대로, 교체는 원자라 옛/새 둘 중 하나) status 는 idle.
