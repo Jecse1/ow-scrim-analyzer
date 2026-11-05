@@ -239,3 +239,41 @@ curl -s http://127.0.0.1:8000/api/admin/rebuild-db/status
 - 작업 중 `pm2 restart` 하면 작업은 사라지고(운영 DB 는 교체 전이면 그대로, 교체는 원자라 옛/새 둘 중 하나) status 는 idle.
   남은 임시 파일은 다음 기동 때 지운다(로그 `[DB] stale rebuild files removed`).
 - 로그: `[REBUILD] 시작 job=…` → `임시 사본` → `파싱 완료` → `완료: sessions=…` → `교체 완료(백업 link)` → `done job=…`.
+
+## 10. 대회(공식 경기) 결과 등록
+
+로그 없이 맵·맵 승패·출처 URL 만 남기는 대회 세션(`kind=tournament`)은 `backend/scripts/register_tournament.py` 로 등록한다
+(등록 모달에는 없다). 경기 1개 = 세션 1개, 맵 = 수기 매치. 스크림 통계와 분리되어 화면·집계 기본값(스크림)에는 나오지 않고,
+세션 목록 상단 필터 "대회"·"전체" 또는 API `?kind=tournament|all` 로 본다.
+
+입력 JSON(형식은 스크립트 머리 주석이 정본):
+
+```json
+{"base_team": "Team A",
+ "matches": [
+  {"date": "2026-03-21", "start_hour": "16", "end_hour": "18", "opponent": "Team Z",
+   "source_url": "https://liquipedia.net/overwatch/<대회 페이지>#<섹션>",
+   "video_url": "https://youtu.be/<id>",
+   "maps": [{"map": "부산", "winner": "Team A", "score": "2:0"},
+            {"map": "이스페란사", "winner": "Team Z", "score": "63.70:110.47"}]}]}
+```
+
+- `score` 는 base_team:상대 순. 정수가 아니면(밀기 거리) 점수 0:0 + 매치 result 에 원문, 승자는 `winner` 로 명시.
+- 세션명 기본 `YYMMDD-상대`(세션 목록이 첫 하이픈 뒤를 상대로 표시). 같은 날 두 경기는 시작 시각이 달라 세션 ID 가 갈린다.
+- 출처는 Liquipedia 대회 페이지 + 섹션 앵커(경기 단위 페이지가 없다).
+
+```bash
+cd ~/app/backend
+# 1) dry-run — 조회만, 등록 예정 목록과 맵 승패 출력
+./venv/bin/python scripts/register_tournament.py --input /path/tournament.json --dry-run
+# 2) 등록 — localhost API(기본 http://127.0.0.1:8000)
+./venv/bin/python scripts/register_tournament.py --input /path/tournament.json
+```
+
+- **멱등**: `GET /api/scrims?kind=tournament` 의 (날짜·상대·source_url) 이 같으면 건너뛴다(`skip`). 같은 JSON 을 다시 실행해도
+  0건 추가 — 이후 경기는 JSON 에 덧붙여 다시 실행하면 된다.
+- 입력 검증(날짜·시각·URL·승자·점수 형식·입력 안 중복)에 하나라도 걸리면 아무것도 등록하지 않는다(종료 코드 1).
+  등록 실패가 하나라도 있으면 종료 코드 1, 이미 등록된 것은 그대로.
+- rebuild-db 중이면 등록 API 가 409 → 끝난 뒤 다시 실행. 디스코드 알림(`/complete`)은 보내지 않는다.
+- 등록 뒤 서버 데이터(scrim.db·meta.json)를 커밋하는 절차는 스크림 등록과 같다.
+- 잘못 등록한 세션은 세션 목록 "대회" 필터에서 선택 삭제한다(같은 JSON 재실행 시 다시 등록됨).

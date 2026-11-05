@@ -21,6 +21,18 @@
 - 형식이 틀리면(`2026-1-01`, `2026-W40-1`, 존재하지 않는 날짜) 또는 `from > to`면 **422**.
 - `base_team`(문자열, 기본 = 백엔드 환경변수 `BASE_TEAM`)이 "우리 팀"이다. 팀명은 정확히 일치해야 한다.
 
+### 세션 종류 (`kind`)
+| 파라미터 | 값 | 기본값 |
+|---|---|---|
+| `kind` | `scrim` · `tournament` · `all` (그 외 422) | `scrim` |
+
+- `scrim` = 스크림 세션(`sessions.kind` NULL), `tournament` = 대회(공식 경기) 세션 — 로그 없는 수기 매치만, `all` = 둘 다.
+- 받는 엔드포인트: `/api/summary/{maps,opponents,period}`, `GET /api/scrims`, `GET /api/fight-records`.
+  `/api/summary/ults`·full-events·first-fights·player-fight-stats 는 파라미터 없이 항상 스크림만(대회 세션은 로그가 없다).
+- `kind` 를 생략하거나 `scrim` 이면 응답은 대회 세션 도입 전과 바이트 동일하다(응답 캐시 키도 같음, 그 외 값만 `:kind=…` 로 분리).
+- 세션 목록·상세 응답의 세션 객체에는 값이 있을 때만 `kind`(`"tournament"`)·`source_url`(출처, Liquipedia 대회 페이지) 키가 붙는다.
+- `meta` 에는 kind 를 싣지 않는다(기존 meta 바이트 유지) — 호출자가 요청한 값을 기억한다.
+
 ### meta (모든 `/api/summary/*` 응답)
 | 필드 | 설명 |
 |---|---|
@@ -68,7 +80,7 @@
 
 | 파라미터 | 타입 | 기본 | 설명 |
 |---|---|---|---|
-| `from`, `to`, `base_team` | | 공통 | |
+| `from`, `to`, `base_team`, `kind` | | 공통 | |
 | `opponent` | string | 없음(전체) | 상대 팀명 정확 일치 필터 |
 
 응답: `{meta, maps[], total, excluded}`. `maps[]`는 매치 수 내림차순, 같으면 맵명 순이다.
@@ -91,7 +103,7 @@
 `excluded`: `no_fight_matches`, `null_result_matches`, `manual_matches_in_first_fight` (전부 참고).
 
 ## GET /api/summary/opponents
-상대별 전적. population `fight_matches_plus_manual`. 파라미터: `from`, `to`, `base_team`.
+상대별 전적. population `fight_matches_plus_manual`. 파라미터: `from`, `to`, `base_team`, `kind`.
 
 응답: `{meta, opponents[], total, excluded}`. 매치 수 내림차순이다. `total.opponent = "__total__"`.
 
@@ -104,7 +116,7 @@
 | `first_fights_unknown` | 참고 | |
 
 ## GET /api/summary/period
-기간 내 세션별 요약. population `all_matches`. 파라미터: `from`, `to`, `base_team`.
+기간 내 세션별 요약. population `all_matches`. 파라미터: `from`, `to`, `base_team`, `kind`.
 
 응답: `{meta, sessions[], total, excluded}`. 세션 순서는 날짜 내림차순(최신 먼저)이다. 매치 순서는 등록 순서다.
 
