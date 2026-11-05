@@ -36,6 +36,19 @@ def _stored(key):
     return gzip.decompress(cache._RESPONSE_CACHE[key])
 
 
+async def _until(cond, timeout=2.0):
+    """cond() 가 참이 될 때까지 0.01초 간격으로 기다린다(최대 timeout). 고정 sleep 은 느린 환경에서 깨졌다."""
+    loop = asyncio.get_running_loop()
+    end = loop.time() + timeout
+    while not cond():
+        assert loop.time() < end, "timed out waiting for condition"
+        await asyncio.sleep(0.01)
+
+
+def _warm_done():
+    return cache._WARM_TASK is not None and cache._WARM_TASK.done()
+
+
 def _counting(calls, body=b"[]", gate=None):
     async def compute():
         calls.append(1)
@@ -121,7 +134,7 @@ async def test_consecutive_invalidations_warm_once_in_order(monkeypatch, capsys)
     for _ in range(3):                            # 업로드처럼 연속 무효화
         cache._invalidate_response_cache()
         await asyncio.sleep(0.01)
-    await asyncio.sleep(0.4)
+    await _until(_warm_done)
     assert order == ["scrims", "full-events", "fight-records:X", "player-fight-stats:X"]  # 1회, 순서대로
     assert set(cache._RESPONSE_CACHE) == set(order)
     out = capsys.readouterr().out
@@ -143,11 +156,11 @@ async def test_invalidation_during_warm_discards_and_rewarms(monkeypatch):
 
     cache.register_warmer("k", slow)
     cache._invalidate_response_cache()
-    await asyncio.sleep(0.05)                     # 선채우기 1차 시작(계산 중)
+    await _until(lambda: len(calls) == 1)         # 선채우기 1차 시작(계산 중)
     assert len(calls) == 1
     cache._invalidate_response_cache()            # 선채우기 도중 무효화
     gate.set()
-    await asyncio.sleep(0.15)
+    await _until(lambda: len(calls) == 2 and _warm_done())
     assert len(calls) == 2                        # 버려진 계산이 끝난 뒤 새 세대로 1회 더
     assert _stored("k") == b"gen%d" % cache._GEN
 

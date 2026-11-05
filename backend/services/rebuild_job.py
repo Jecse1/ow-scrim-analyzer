@@ -85,4 +85,3 @@ async def _runner(run, job: dict) -> None:
         if _JOB is job:
             _JOB = None
             _TASK = None
-
