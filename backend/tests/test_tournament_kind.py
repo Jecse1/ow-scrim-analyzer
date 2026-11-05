@@ -337,3 +337,82 @@ def test_kind_tournament_and_all(agg):
 def test_invalid_kind_query_is_422(agg, url):
     c, _, _ = agg
     assert c.get(url).status_code == 422
+
+
+# ── scripts/register_tournament.py: 검증·본문·dry-run·멱등 ──
+def _script():
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "register_tournament.py")
+    spec = importlib.util.spec_from_file_location("register_tournament", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _doc():
+    return {"base_team": BASE, "matches": [
+        {"date": "2026-05-05", "start_hour": "16", "end_hour": "18", "opponent": OPP,
+         "source_url": "https://example.org/wiki/League/Stage_1#Day_1", "video_url": "https://youtu.be/abc?t=10",
+         "maps": [{"map": "오아시스", "winner": OPP, "score": "0:2"},
+                  {"map": "이스페란사", "winner": BASE, "score": "110.47:63.70"},
+                  {"map": "부산", "winner": OPP, "score": "1:2"}]},
+        {"date": "2026-05-05", "start_hour": "20", "end_hour": "22", "opponent": "Team Y",
+         "source_url": "https://example.org/wiki/League/Stage_1#Day_1",
+         "maps": [{"map": "리장 타워", "winner": BASE, "score": "2:0"},
+                  {"map": "루나사피", "winner": BASE, "score": "1:0"}]},
+    ]}
+
+
+class _ClientApi:
+    def __init__(self, c):
+        self.c = c
+
+    def get_json(self, path):
+        r = self.c.get(path)
+        assert r.status_code == 200, r.text
+        return r.status_code, r.json()
+
+    def post_json(self, path, body):
+        r = self.c.post(path, json=body)
+        return r.status_code, r.json()
+
+
+def test_script_validate_and_body():
+    rt = _script()
+    assert rt.validate(_doc()) == []
+    bad = _doc()
+    bad["matches"][0]["maps"][0]["winner"] = "Nobody"
+    bad["matches"][1]["source_url"] = "javascript:alert(1)"
+    bad["matches"].append(dict(_doc()["matches"][0]))
+    errs = rt.validate(bad)
+    assert any("winner" in e for e in errs) and any("source_url" in e for e in errs) and any("중복" in e for e in errs)
+
+    body = rt.build_body(BASE, _doc()["matches"][0])
+    assert body["scrimName"] == "260505-Team Z" and body["kind"] == "tournament"
+    assert body["startHour"] == "16" and body["endHour"] == "18"
+    push = body["matches"][1]
+    assert (push["score_t1"], push["score_t2"], push["result"], push["winner"]) == (0, 0, "110.47:63.70", BASE)
+    assert (body["matches"][2]["score_t1"], body["matches"][2]["score_t2"]) == (1, 2)
+    assert all(m["videoUrl"] == "https://youtu.be/abc?t=10" and m["source"] == "manual" for m in body["matches"])
+
+
+def test_script_dry_run_register_and_rerun_is_idempotent(agg):
+    c, _, _ = agg
+    rt = _script()
+    api, log = _ClientApi(c), []
+    before = {s["id"] for s in c.get("/api/scrims?kind=all").json()}
+
+    res = rt.run(_doc(), api, dry_run=True, out=log.append)
+    assert res == {"added": 0, "skipped": 0, "failed": 0, "planned": 2}
+    assert {s["id"] for s in c.get("/api/scrims?kind=all").json()} == before
+
+    res = rt.run(_doc(), api, out=log.append)
+    assert res == {"added": 2, "skipped": 0, "failed": 0, "planned": 0}
+    new = [s for s in c.get("/api/scrims?kind=tournament").json() if s["id"] not in before]
+    assert sorted(s["scrim_name"] for s in new) == ["260505-Team Y", "260505-Team Z"]
+    assert all(s["kind"] == "tournament" and s["source_url"].endswith("#Day_1") for s in new)
+    z = next(s for s in new if s["scrim_name"].endswith("Team Z"))
+    assert [m["winner"] for m in z["matches"]] == [OPP, BASE, OPP]
+
+    res = rt.run(_doc(), api, out=log.append)          # 같은 JSON 재실행 → 0건 추가
+    assert res == {"added": 0, "skipped": 2, "failed": 0, "planned": 0}
